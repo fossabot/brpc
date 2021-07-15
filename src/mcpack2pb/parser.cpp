@@ -34,6 +34,7 @@ public:
     size_t value_offset() const { return name_offset() + name_size(); }
     size_t value_size() const { return (_type & FIELD_FIXED_MASK); }
     size_t full_size() const { return value_offset() + value_size(); }
+
 private:
     uint8_t _type;  // FieldType
     uint8_t _name_size;
@@ -51,6 +52,7 @@ public:
     size_t value_size() const { return _value_size; }
     void set_value_size(size_t value_size) { _value_size = value_size; }
     size_t full_size() const { return value_offset() + value_size(); }
+
 private:
     uint8_t _type;
     uint8_t _name_size;
@@ -69,6 +71,7 @@ public:
     size_t value_size() const { return _value_size; }
     void set_value_size(size_t value_size) { _value_size = value_size; }
     size_t full_size() const { return value_offset() + value_size(); }
+
 private:
     uint8_t _type;
     uint8_t _name_size;
@@ -91,13 +94,14 @@ void ObjectIterator::operator++() {
         } else if (_stream->popped_bytes() < _expected_popped_bytes) {
             CHECK(false) << "value of name=" << _current_field.name
                          << " is not fully consumed, expected="
-                         << _expected_popped_bytes << " actually="
-                         << _stream->popped_bytes();
+                         << _expected_popped_bytes
+                         << " actually=" << _stream->popped_bytes();
             return set_bad();
         } else {
-            CHECK(false) << "Over popped in value of name=" << _current_field.name
-                       << " expected=" << _expected_popped_bytes << " actually="
-                       << _stream->popped_bytes();
+            CHECK(false) << "Over popped in value of name="
+                         << _current_field.name
+                         << " expected=" << _expected_popped_bytes
+                         << " actually=" << _stream->popped_bytes();
             return set_bad();
         }
     }
@@ -112,17 +116,19 @@ void ObjectIterator::operator++() {
             CHECK(false) << "buffer(size=" << left_size() << ") is not enough";
             return set_bad();
         }
-        _expected_popped_bytes = _stream->popped_bytes() + head.full_size()
-            - sizeof(FieldFixedHead);
+        _expected_popped_bytes =
+            _stream->popped_bytes() + head.full_size() - sizeof(FieldFixedHead);
         if (!(head.type() & FIELD_NON_DELETED_MASK)) {
             _stream->popn(head.full_size() - sizeof(FieldFixedHead));
             return operator++();  // tailr
         }
-        _current_field.name = _stream->ref_cut(&_name_backup_string, head.name_size());
+        _current_field.name =
+            _stream->ref_cut(&_name_backup_string, head.name_size());
         if (!_current_field.name.empty()) {
             _current_field.name.remove_suffix(1);
         }
-        _current_field.value.set((FieldType)head.type(), _stream, head.value_size());
+        _current_field.value.set((FieldType)head.type(), _stream,
+                                 head.value_size());
     } else if (first_byte & FIELD_SHORT_MASK) {
         FieldShortHead head;
         if (_stream->cut_packed_pod(&head) != sizeof(FieldShortHead) ||
@@ -130,8 +136,8 @@ void ObjectIterator::operator++() {
             CHECK(false) << "buffer(size=" << left_size() << ") is not enough";
             return set_bad();
         }
-        _expected_popped_bytes = _stream->popped_bytes() + head.full_size()
-            - sizeof(FieldShortHead);
+        _expected_popped_bytes =
+            _stream->popped_bytes() + head.full_size() - sizeof(FieldShortHead);
         if (!(head.type() & FIELD_NON_DELETED_MASK)) {
             // Skip deleted field.
             _stream->popn(head.full_size() - sizeof(FieldShortHead));
@@ -139,7 +145,8 @@ void ObjectIterator::operator++() {
         }
         // Remove FIELD_SHORT_MASK.
         FieldType type = (FieldType)(head.type() & ~FIELD_SHORT_MASK);
-        _current_field.name = _stream->ref_cut(&_name_backup_string, head.name_size());
+        _current_field.name =
+            _stream->ref_cut(&_name_backup_string, head.name_size());
         if (!_current_field.name.empty()) {
             _current_field.name.remove_suffix(1);
         }
@@ -151,18 +158,20 @@ void ObjectIterator::operator++() {
             CHECK(false) << "buffer(size=" << left_size() << ") is not enough";
             return set_bad();
         }
-        _expected_popped_bytes = _stream->popped_bytes() + head.full_size()
-            - sizeof(FieldLongHead);
+        _expected_popped_bytes =
+            _stream->popped_bytes() + head.full_size() - sizeof(FieldLongHead);
         if (!(head.type() & FIELD_NON_DELETED_MASK)) {
             // Skip deleted field.
             _stream->popn(head.full_size() - sizeof(FieldLongHead));
             return operator++();  // tailr
         }
-        _current_field.name = _stream->ref_cut(&_name_backup_string, head.name_size());
+        _current_field.name =
+            _stream->ref_cut(&_name_backup_string, head.name_size());
         if (!_current_field.name.empty()) {
             _current_field.name.remove_suffix(1);
         }
-        _current_field.value.set((FieldType)head.type(), _stream, head.value_size());
+        _current_field.value.set((FieldType)head.type(), _stream,
+                                 head.value_size());
     }
 }
 
@@ -174,13 +183,13 @@ void ArrayIterator::operator++() {
             _stream->popn(_current_field.size());
         } else if (_stream->popped_bytes() < _expected_popped_bytes) {
             CHECK(false) << "previous value is not fully consumed, expected="
-                         << _expected_popped_bytes << " actually="
-                         << _stream->popped_bytes();
+                         << _expected_popped_bytes
+                         << " actually=" << _stream->popped_bytes();
             return set_bad();
         } else {
             CHECK(false) << "Over popped in previous value, expected="
-                       << _expected_popped_bytes << " actually="
-                       << _stream->popped_bytes();
+                         << _expected_popped_bytes
+                         << " actually=" << _stream->popped_bytes();
             return set_bad();
         }
     }
@@ -195,8 +204,8 @@ void ArrayIterator::operator++() {
             CHECK(false) << "buffer(size=" << left_size() << ") is not enough";
             return set_bad();
         }
-        _expected_popped_bytes = _stream->popped_bytes() + head.full_size()
-            - sizeof(FieldFixedHead);
+        _expected_popped_bytes =
+            _stream->popped_bytes() + head.full_size() - sizeof(FieldFixedHead);
         if (!(head.type() & FIELD_NON_DELETED_MASK)) {
             // Skip deleted fields.
             _stream->popn(head.full_size() - sizeof(FieldFixedHead));
@@ -214,15 +223,15 @@ void ArrayIterator::operator++() {
             CHECK(false) << "buffer(size=" << left_size() << ") is not enough";
             return set_bad();
         }
-        _expected_popped_bytes = _stream->popped_bytes() + head.full_size()
-            - sizeof(FieldShortHead);
+        _expected_popped_bytes =
+            _stream->popped_bytes() + head.full_size() - sizeof(FieldShortHead);
         if (!(head.type() & FIELD_NON_DELETED_MASK)) {
             // Skip deleted field.
             _stream->popn(head.full_size() - sizeof(FieldShortHead));
             return operator++();  // tailr
         }
         // Remove FIELD_SHORT_MASK.
-        const FieldType type = (FieldType)(head.type() & ~FIELD_SHORT_MASK);
+        const FieldType type     = (FieldType)(head.type() & ~FIELD_SHORT_MASK);
         const uint32_t name_size = head.name_size();
         if (name_size) {
             _stream->popn(name_size);
@@ -235,8 +244,8 @@ void ArrayIterator::operator++() {
             CHECK(false) << "buffer(size=" << left_size() << ") is not enough";
             return set_bad();
         }
-        _expected_popped_bytes = _stream->popped_bytes() + head.full_size()
-            - sizeof(FieldLongHead);
+        _expected_popped_bytes =
+            _stream->popped_bytes() + head.full_size() - sizeof(FieldLongHead);
         if (!(head.type() & FIELD_NON_DELETED_MASK)) {
             // Skip deleted field.
             _stream->popn(head.full_size() - sizeof(FieldLongHead));

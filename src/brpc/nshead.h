@@ -18,7 +18,6 @@
 #ifndef BRPC_NSHEAD_H
 #define BRPC_NSHEAD_H
 
-
 namespace brpc {
 
 // Copied from public/nshead/nshead.h which is essentially unchangable. (Or
@@ -27,15 +26,14 @@ namespace brpc {
 static const unsigned int NSHEAD_MAGICNUM = 0xfb709394;
 struct nshead_t {
     unsigned short id;
-    unsigned short version;       
-    unsigned int   log_id;
-    char           provider[16];
-    unsigned int   magic_num;
-    unsigned int   reserved;       
-    unsigned int   body_len;
+    unsigned short version;
+    unsigned int log_id;
+    char provider[16];
+    unsigned int magic_num;
+    unsigned int reserved;
+    unsigned int body_len;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_NSHEAD_H
+#endif  // BRPC_NSHEAD_H

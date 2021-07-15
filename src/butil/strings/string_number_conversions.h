@@ -124,7 +124,7 @@ BUTIL_EXPORT bool HexStringToUInt64(const StringPiece& input, uint64_t* output);
 // error.  There is no overflow, but input.size() must be evenly divisible by 2.
 // Leading 0x or +/- are not allowed.
 BUTIL_EXPORT bool HexStringToBytes(const std::string& input,
-                                  std::vector<uint8_t>* output);
+                                   std::vector<uint8_t>* output);
 
 }  // namespace butil
 

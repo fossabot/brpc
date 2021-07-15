@@ -15,9 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#ifndef  BRPC_GET_FAVICON_SERVICE_H
-#define  BRPC_GET_FAVICON_SERVICE_H
+#ifndef BRPC_GET_FAVICON_SERVICE_H
+#define BRPC_GET_FAVICON_SERVICE_H
 
 #include "brpc/get_favicon.pb.h"
 
@@ -31,7 +30,6 @@ public:
                         ::google::protobuf::Closure* done);
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_GET_FAVICON_SERVICE_H

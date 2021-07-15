@@ -30,63 +30,63 @@
 namespace butil {
 
 class BUTIL_EXPORT Watchdog {
- public:
-  // Constructor specifies how long the Watchdog will wait before alarming.
-  Watchdog(const TimeDelta& duration,
-           const std::string& thread_watched_name,
-           bool enabled);
-  virtual ~Watchdog();
+public:
+    // Constructor specifies how long the Watchdog will wait before alarming.
+    Watchdog(const TimeDelta& duration, const std::string& thread_watched_name,
+             bool enabled);
+    virtual ~Watchdog();
 
-  // Notify watchdog thread to finish up. Sets the state_ to SHUTDOWN.
-  void Cleanup();
+    // Notify watchdog thread to finish up. Sets the state_ to SHUTDOWN.
+    void Cleanup();
 
-  // Returns true if we state_ is JOINABLE (which indicates that Watchdog has
-  // exited).
-  bool IsJoinable();
+    // Returns true if we state_ is JOINABLE (which indicates that Watchdog has
+    // exited).
+    bool IsJoinable();
 
-  // Start timing, and alarm when time expires (unless we're disarm()ed.)
-  void Arm();  // Arm  starting now.
-  void ArmSomeTimeDeltaAgo(const TimeDelta& time_delta);
-  void ArmAtStartTime(const TimeTicks start_time);
+    // Start timing, and alarm when time expires (unless we're disarm()ed.)
+    void Arm();  // Arm  starting now.
+    void ArmSomeTimeDeltaAgo(const TimeDelta& time_delta);
+    void ArmAtStartTime(const TimeTicks start_time);
 
-  // Reset time, and do not set off the alarm.
-  void Disarm();
+    // Reset time, and do not set off the alarm.
+    void Disarm();
 
-  // Alarm is called if the time expires after an Arm() without someone calling
-  // Disarm().  This method can be overridden to create testable classes.
-  virtual void Alarm();
+    // Alarm is called if the time expires after an Arm() without someone
+    // calling Disarm().  This method can be overridden to create testable
+    // classes.
+    virtual void Alarm();
 
-  // Reset static data to initial state. Useful for tests, to ensure
-  // they are independent.
-  static void ResetStaticData();
+    // Reset static data to initial state. Useful for tests, to ensure
+    // they are independent.
+    static void ResetStaticData();
 
- private:
-  class ThreadDelegate : public PlatformThread::Delegate {
-   public:
-    explicit ThreadDelegate(Watchdog* watchdog) : watchdog_(watchdog) {
-    }
-    virtual void ThreadMain() OVERRIDE;
-   private:
-    void SetThreadName() const;
+private:
+    class ThreadDelegate : public PlatformThread::Delegate {
+    public:
+        explicit ThreadDelegate(Watchdog* watchdog) : watchdog_(watchdog) {}
+        virtual void ThreadMain() OVERRIDE;
 
-    Watchdog* watchdog_;
-  };
+    private:
+        void SetThreadName() const;
 
-  enum State {ARMED, DISARMED, SHUTDOWN, JOINABLE };
+        Watchdog* watchdog_;
+    };
 
-  bool enabled_;
+    enum State { ARMED, DISARMED, SHUTDOWN, JOINABLE };
 
-  Lock lock_;  // Mutex for state_.
-  ConditionVariable condition_variable_;
-  State state_;
-  const TimeDelta duration_;  // How long after start_time_ do we alarm?
-  const std::string thread_watched_name_;
-  PlatformThreadHandle handle_;
-  ThreadDelegate delegate_;  // Store it, because it must outlive the thread.
+    bool enabled_;
 
-  TimeTicks start_time_;  // Start of epoch, and alarm after duration_.
+    Lock lock_;  // Mutex for state_.
+    ConditionVariable condition_variable_;
+    State state_;
+    const TimeDelta duration_;  // How long after start_time_ do we alarm?
+    const std::string thread_watched_name_;
+    PlatformThreadHandle handle_;
+    ThreadDelegate delegate_;  // Store it, because it must outlive the thread.
 
-  DISALLOW_COPY_AND_ASSIGN(Watchdog);
+    TimeTicks start_time_;  // Start of epoch, and alarm after duration_.
+
+    DISALLOW_COPY_AND_ASSIGN(Watchdog);
 };
 
 }  // namespace butil

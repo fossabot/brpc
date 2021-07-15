@@ -32,6 +32,6 @@ namespace butil {
 // NOTE: `buf' does not end with zero.
 ssize_t ReadCommandLine(char* buf, size_t len, bool with_args);
 
-} // namespace butil
+}  // namespace butil
 
-#endif // BUTIL_PROCESS_UTIL_H
+#endif  // BUTIL_PROCESS_UTIL_H

@@ -30,7 +30,7 @@ inline bthread_t make_tid(uint32_t version, butil::ResourceId<TaskMeta> slot) {
 }
 
 inline butil::ResourceId<TaskMeta> get_slot(bthread_t tid) {
-    butil::ResourceId<TaskMeta> id = { (tid & 0xFFFFFFFFul) };
+    butil::ResourceId<TaskMeta> id = {(tid & 0xFFFFFFFFul)};
     return id;
 }
 inline uint32_t get_version(bthread_t tid) {
@@ -51,11 +51,11 @@ inline void TaskGroup::exchange(TaskGroup** pg, bthread_t next_tid) {
     if (g->is_current_pthread_task()) {
         return g->ready_to_run(next_tid);
     }
-    ReadyToRunArgs args = { g->current_tid(), false };
-    g->set_remained((g->current_task()->about_to_quit
-                     ? ready_to_run_in_worker_ignoresignal
-                     : ready_to_run_in_worker),
-                    &args);
+    ReadyToRunArgs args = {g->current_tid(), false};
+    g->set_remained(
+        (g->current_task()->about_to_quit ? ready_to_run_in_worker_ignoresignal
+                                          : ready_to_run_in_worker),
+        &args);
     TaskGroup::sched_to(pg, next_tid);
 }
 

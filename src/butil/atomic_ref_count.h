@@ -21,7 +21,7 @@ typedef subtle::Atomic32 AtomicRefCount;
 // Increment a reference count by "increment", which must exceed 0.
 inline void AtomicRefCountIncN(volatile AtomicRefCount *ptr,
                                AtomicRefCount increment) {
-  subtle::NoBarrier_AtomicIncrement(ptr, increment);
+    subtle::NoBarrier_AtomicIncrement(ptr, increment);
 }
 
 // Decrement a reference count by "decrement", which must exceed 0,
@@ -30,24 +30,24 @@ inline void AtomicRefCountIncN(volatile AtomicRefCount *ptr,
 // became zero will be visible to a thread that has just made the count zero.
 inline bool AtomicRefCountDecN(volatile AtomicRefCount *ptr,
                                AtomicRefCount decrement) {
-  ANNOTATE_HAPPENS_BEFORE(ptr);
-  bool res = (subtle::Barrier_AtomicIncrement(ptr, -decrement) != 0);
-  if (!res) {
-    ANNOTATE_HAPPENS_AFTER(ptr);
-  }
-  return res;
+    ANNOTATE_HAPPENS_BEFORE(ptr);
+    bool res = (subtle::Barrier_AtomicIncrement(ptr, -decrement) != 0);
+    if (!res) {
+        ANNOTATE_HAPPENS_AFTER(ptr);
+    }
+    return res;
 }
 
 // Increment a reference count by 1.
 inline void AtomicRefCountInc(volatile AtomicRefCount *ptr) {
-  butil::AtomicRefCountIncN(ptr, 1);
+    butil::AtomicRefCountIncN(ptr, 1);
 }
 
 // Decrement a reference count by 1 and return whether the result is non-zero.
 // Insert barriers to ensure that state written before the reference count
 // became zero will be visible to a thread that has just made the count zero.
 inline bool AtomicRefCountDec(volatile AtomicRefCount *ptr) {
-  return butil::AtomicRefCountDecN(ptr, 1);
+    return butil::AtomicRefCountDecN(ptr, 1);
 }
 
 // Return whether the reference count is one.  If the reference count is used
@@ -57,22 +57,22 @@ inline bool AtomicRefCountDec(volatile AtomicRefCount *ptr) {
 // needed for the owning thread to act on the object, knowing that it has
 // exclusive access to the object.
 inline bool AtomicRefCountIsOne(volatile AtomicRefCount *ptr) {
-  bool res = (subtle::Acquire_Load(ptr) == 1);
-  if (res) {
-    ANNOTATE_HAPPENS_AFTER(ptr);
-  }
-  return res;
+    bool res = (subtle::Acquire_Load(ptr) == 1);
+    if (res) {
+        ANNOTATE_HAPPENS_AFTER(ptr);
+    }
+    return res;
 }
 
 // Return whether the reference count is zero.  With conventional object
 // referencing counting, the object will be destroyed, so the reference count
 // should never be zero.  Hence this is generally used for a debug check.
 inline bool AtomicRefCountIsZero(volatile AtomicRefCount *ptr) {
-  bool res = (subtle::Acquire_Load(ptr) == 0);
-  if (res) {
-    ANNOTATE_HAPPENS_AFTER(ptr);
-  }
-  return res;
+    bool res = (subtle::Acquire_Load(ptr) == 0);
+    if (res) {
+        ANNOTATE_HAPPENS_AFTER(ptr);
+    }
+    return res;
 }
 
 }  // namespace butil

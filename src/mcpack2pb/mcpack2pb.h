@@ -22,8 +22,8 @@
 #ifndef MCPACK2PB_MCPACK_MCPACK2PB_H
 #define MCPACK2PB_MCPACK_MCPACK2PB_H
 
-#include <google/protobuf/message.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+#include <google/protobuf/message.h>
 #include "butil/containers/flat_map.h"
 #include "butil/iobuf.h"
 #include "mcpack2pb/parser.h"
@@ -37,10 +37,7 @@ typedef bool (*SetFieldFn)(::google::protobuf::Message* msg,
 // Mapping from filed name to its parsing&setting function.
 typedef butil::FlatMap<butil::StringPiece, SetFieldFn> FieldMap;
 
-enum SerializationFormat {
-    FORMAT_COMPACK,
-    FORMAT_MCPACK_V2
-};
+enum SerializationFormat { FORMAT_COMPACK, FORMAT_MCPACK_V2 };
 
 struct MessageHandler {
     // Parse `msg' from `input' as a mcpack_v2 or compack object.
@@ -48,12 +45,12 @@ struct MessageHandler {
     size_t (*parse)(::google::protobuf::Message* msg,
                     ::google::protobuf::io::ZeroCopyInputStream* input);
 
-    // Parse `msg' from `input' as a mcpack_v2 or compack object removed with header.
-    // Returns true on success.
+    // Parse `msg' from `input' as a mcpack_v2 or compack object removed with
+    // header. Returns true on success.
     bool (*parse_body)(::google::protobuf::Message* msg,
                        ::google::protobuf::io::ZeroCopyInputStream* input,
                        size_t size);
-    
+
     // Serialize `msg' as a mcpack_v2 or compack object into `output'.
     // The serialization format is decided by `format'.
     // Returns true on success.
@@ -65,8 +62,7 @@ struct MessageHandler {
     // `serializer'. The serialization format is decided by `format'.
     // Returns true on success.
     void (*serialize_body)(const ::google::protobuf::Message& msg,
-                           Serializer& serializer,
-                           SerializationFormat format);
+                           Serializer& serializer, SerializationFormat format);
 
     // -------------------
     //  Helper functions
@@ -83,8 +79,8 @@ struct MessageHandler {
     // Returns true on success.
     bool parse_from_iobuf(::google::protobuf::Message* msg,
                           const ::butil::IOBuf& buf);
-    bool parse_from_array(::google::protobuf::Message* msg,
-                          const void* data, int size);
+    bool parse_from_array(::google::protobuf::Message* msg, const void* data,
+                          int size);
     // Serialize `msg' to IOBuf or string.
     // Returns true on success.
     bool serialize_to_iobuf(const ::google::protobuf::Message& msg,
@@ -119,8 +115,8 @@ inline size_t MessageHandler::parse_from_iobuf_prefix(
     return parse(msg, &zc_stream);
 }
 
-inline bool MessageHandler::parse_from_iobuf(
-    ::google::protobuf::Message* msg, const ::butil::IOBuf& buf) {
+inline bool MessageHandler::parse_from_iobuf(::google::protobuf::Message* msg,
+                                             const ::butil::IOBuf& buf) {
     if (parse == NULL) {
         LOG(ERROR) << "`parse' is NULL";
         return 0;
@@ -139,8 +135,8 @@ inline size_t MessageHandler::parse_from_array_prefix(
     return parse(msg, &zc_stream);
 }
 
-inline bool MessageHandler::parse_from_array(
-    ::google::protobuf::Message* msg, const void* data, int size) {
+inline bool MessageHandler::parse_from_array(::google::protobuf::Message* msg,
+                                             const void* data, int size) {
     if (parse == NULL) {
         LOG(ERROR) << "`parse' is NULL";
         return 0;
@@ -150,8 +146,8 @@ inline bool MessageHandler::parse_from_array(
 }
 
 inline bool MessageHandler::serialize_to_iobuf(
-    const ::google::protobuf::Message& msg,
-    ::butil::IOBuf* buf, SerializationFormat format) {
+    const ::google::protobuf::Message& msg, ::butil::IOBuf* buf,
+    SerializationFormat format) {
     if (serialize == NULL) {
         LOG(ERROR) << "`serialize' is NULL";
         return false;
@@ -160,6 +156,6 @@ inline bool MessageHandler::serialize_to_iobuf(
     return serialize(msg, &zc_stream, format);
 }
 
-} // namespace mcpack2pb
+}  // namespace mcpack2pb
 
-#endif // MCPACK2PB_MCPACK_MCPACK2PB_H
+#endif  // MCPACK2PB_MCPACK_MCPACK2PB_H

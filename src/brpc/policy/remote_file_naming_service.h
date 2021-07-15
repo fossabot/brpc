@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#ifndef BRPC_POLICY_HTTP_FILE_NAMING_SERVICE
+#define BRPC_POLICY_HTTP_FILE_NAMING_SERVICE
 
-#ifndef  BRPC_POLICY_HTTP_FILE_NAMING_SERVICE
-#define  BRPC_POLICY_HTTP_FILE_NAMING_SERVICE
-
-#include "brpc/periodic_naming_service.h"
 #include "brpc/channel.h"
+#include "brpc/periodic_naming_service.h"
 #include "butil/unique_ptr.h"
-
 
 namespace brpc {
 class Channel;
@@ -36,9 +34,9 @@ private:
     void Describe(std::ostream& os, const DescribeOptions&) const override;
 
     NamingService* New() const override;
-    
+
     void Destroy() override;
-    
+
 private:
     std::unique_ptr<Channel> _channel;
     std::string _server_addr;
@@ -46,7 +44,6 @@ private:
 };
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif  //BRPC_POLICY_HTTP_FILE_NAMING_SERVICE
+#endif  // BRPC_POLICY_HTTP_FILE_NAMING_SERVICE

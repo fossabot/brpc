@@ -31,55 +31,51 @@ namespace butil {
 // A Delegate which performs the actions required to perform an injective
 // multimapping in place.
 class InjectionDelegate {
- public:
-  // Duplicate |fd|, an element of the domain, and write a fresh element of the
-  // domain into |result|. Returns true iff successful.
-  virtual bool Duplicate(int* result, int fd) = 0;
-  // Destructively move |src| to |dest|, overwriting |dest|. Returns true iff
-  // successful.
-  virtual bool Move(int src, int dest) = 0;
-  // Delete an element of the domain.
-  virtual void Close(int fd) = 0;
+public:
+    // Duplicate |fd|, an element of the domain, and write a fresh element of
+    // the domain into |result|. Returns true iff successful.
+    virtual bool Duplicate(int* result, int fd) = 0;
+    // Destructively move |src| to |dest|, overwriting |dest|. Returns true iff
+    // successful.
+    virtual bool Move(int src, int dest) = 0;
+    // Delete an element of the domain.
+    virtual void Close(int fd) = 0;
 
- protected:
-  virtual ~InjectionDelegate() {}
+protected:
+    virtual ~InjectionDelegate() {}
 };
 
 // An implementation of the InjectionDelegate interface using the file
 // descriptor table of the current process as the domain.
 class BUTIL_EXPORT FileDescriptorTableInjection : public InjectionDelegate {
-  virtual bool Duplicate(int* result, int fd) OVERRIDE;
-  virtual bool Move(int src, int dest) OVERRIDE;
-  virtual void Close(int fd) OVERRIDE;
+    virtual bool Duplicate(int* result, int fd) OVERRIDE;
+    virtual bool Move(int src, int dest) OVERRIDE;
+    virtual void Close(int fd) OVERRIDE;
 };
 
 // A single arc of the directed graph which describes an injective multimapping.
 struct InjectionArc {
-  InjectionArc(int in_source, int in_dest, bool in_close)
-      : source(in_source),
-        dest(in_dest),
-        close(in_close) {
-  }
+    InjectionArc(int in_source, int in_dest, bool in_close)
+        : source(in_source), dest(in_dest), close(in_close) {}
 
-  int source;
-  int dest;
-  bool close;  // if true, delete the source element after performing the
-               // mapping.
+    int source;
+    int dest;
+    bool close;  // if true, delete the source element after performing the
+                 // mapping.
 };
 
 typedef std::vector<InjectionArc> InjectiveMultimap;
 
 BUTIL_EXPORT bool PerformInjectiveMultimap(const InjectiveMultimap& map,
-                                          InjectionDelegate* delegate);
+                                           InjectionDelegate* delegate);
 
 BUTIL_EXPORT bool PerformInjectiveMultimapDestructive(
-    InjectiveMultimap* map,
-    InjectionDelegate* delegate);
+    InjectiveMultimap* map, InjectionDelegate* delegate);
 
 // This function will not call malloc but will mutate |map|
 static inline bool ShuffleFileDescriptors(InjectiveMultimap* map) {
-  FileDescriptorTableInjection delegate;
-  return PerformInjectiveMultimapDestructive(map, &delegate);
+    FileDescriptorTableInjection delegate;
+    return PerformInjectiveMultimapDestructive(map, &delegate);
 }
 
 }  // namespace butil

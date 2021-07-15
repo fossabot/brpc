@@ -22,24 +22,19 @@
 #ifndef BTHREAD_WORK_STEALING_QUEUE_H
 #define BTHREAD_WORK_STEALING_QUEUE_H
 
-#include "butil/macros.h"
 #include "butil/atomicops.h"
 #include "butil/logging.h"
+#include "butil/macros.h"
 
 namespace bthread {
 
 template <typename T>
 class WorkStealingQueue {
 public:
-    WorkStealingQueue()
-        : _bottom(1)
-        , _capacity(0)
-        , _buffer(NULL)
-        , _top(1) {
-    }
+    WorkStealingQueue() : _bottom(1), _capacity(0), _buffer(NULL), _top(1) {}
 
     ~WorkStealingQueue() {
-        delete [] _buffer;
+        delete[] _buffer;
         _buffer = NULL;
     }
 
@@ -57,7 +52,7 @@ public:
                        << " which must be power of 2";
             return -1;
         }
-        _buffer = new(std::nothrow) T[capacity];
+        _buffer = new (std::nothrow) T[capacity];
         if (NULL == _buffer) {
             return -1;
         }
@@ -72,7 +67,7 @@ public:
     bool push(const T& x) {
         const size_t b = _bottom.load(butil::memory_order_relaxed);
         const size_t t = _top.load(butil::memory_order_acquire);
-        if (b >= t + _capacity) { // Full queue.
+        if (b >= t + _capacity) {  // Full queue.
             return false;
         }
         _buffer[b & (_capacity - 1)] = x;
@@ -86,7 +81,7 @@ public:
     // Never run in parallel with push() or another pop().
     bool pop(T* val) {
         const size_t b = _bottom.load(butil::memory_order_relaxed);
-        size_t t = _top.load(butil::memory_order_relaxed);
+        size_t t       = _top.load(butil::memory_order_relaxed);
         if (t >= b) {
             // fast check since we call pop() in each sched.
             // Stale _top which is smaller should not enter this branch.

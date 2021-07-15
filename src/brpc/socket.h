@@ -15,28 +15,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_SOCKET_H
 #define BRPC_SOCKET_H
 
-#include <iostream>                            // std::ostream
-#include <deque>                               // std::deque
-#include <set>                                 // std::set
-#include "butil/atomicops.h"                    // butil::atomic
-#include "bthread/types.h"                      // bthread_id_t
-#include "butil/iobuf.h"                        // butil::IOBuf, IOPortal
-#include "butil/macros.h"                       // DISALLOW_COPY_AND_ASSIGN
-#include "butil/endpoint.h"                     // butil::EndPoint
-#include "butil/resource_pool.h"                // butil::ResourceId
-#include "bthread/butex.h"                      // butex_create_checked
-#include "brpc/authenticator.h"           // Authenticator
-#include "brpc/errno.pb.h"                // EFAILEDSOCKET
-#include "brpc/details/ssl_helper.h"      // SSLState
-#include "brpc/stream.h"                  // StreamId
-#include "brpc/destroyable.h"             // Destroyable
-#include "brpc/options.pb.h"              // ConnectionType
-#include "brpc/socket_id.h"               // SocketId
-#include "brpc/socket_message.h"          // SocketMessagePtr
+#include <deque>                      // std::deque
+#include <iostream>                   // std::ostream
+#include <set>                        // std::set
+#include "brpc/authenticator.h"       // Authenticator
+#include "brpc/destroyable.h"         // Destroyable
+#include "brpc/details/ssl_helper.h"  // SSLState
+#include "brpc/errno.pb.h"            // EFAILEDSOCKET
+#include "brpc/options.pb.h"          // ConnectionType
+#include "brpc/socket_id.h"           // SocketId
+#include "brpc/socket_message.h"      // SocketMessagePtr
+#include "brpc/stream.h"              // StreamId
+#include "bthread/butex.h"            // butex_create_checked
+#include "bthread/types.h"            // bthread_id_t
+#include "butil/atomicops.h"          // butil::atomic
+#include "butil/endpoint.h"           // butil::EndPoint
+#include "butil/iobuf.h"              // butil::IOBuf, IOPortal
+#include "butil/macros.h"             // DISALLOW_COPY_AND_ASSIGN
+#include "butil/resource_pool.h"      // butil::ResourceId
 #include "bvar/bvar.h"
 
 namespace brpc {
@@ -60,7 +59,7 @@ class Stream;
 class SocketUser {
 public:
     virtual ~SocketUser() {}
-    virtual void BeforeRecycle(Socket*) {};
+    virtual void BeforeRecycle(Socket*){};
 
     // Will be periodically called in a dedicated thread to check the
     // health.
@@ -87,7 +86,8 @@ public:
                         int (*on_connect)(int, int, void*), void*) = 0;
 
     // Cut IOBufs into fd or SSL Channel
-    virtual ssize_t CutMessageIntoFileDescriptor(int, butil::IOBuf**, size_t) = 0;
+    virtual ssize_t CutMessageIntoFileDescriptor(int, butil::IOBuf**,
+                                                 size_t)                   = 0;
     virtual ssize_t CutMessageIntoSSLChannel(SSL*, butil::IOBuf**, size_t) = 0;
 };
 
@@ -121,7 +121,7 @@ struct SocketStat {
     uint32_t out_size_s;
     uint32_t in_num_messages_s;
     uint32_t out_num_messages_s;
-    uint64_t in_size_m; // must be 64-bit
+    uint64_t in_size_m;  // must be 64-bit
     uint64_t out_size_m;
     uint32_t in_num_messages_m;
     uint32_t out_num_messages_m;
@@ -135,8 +135,7 @@ struct SocketVarsCollector {
         , nhealthcheck("rpc_health_check_count")
         , nkeepwrite_second("rpc_keepwrite_second", &nkeepwrite)
         , nwaitepollout("rpc_waitepollout_count")
-        , nwaitepollout_second("rpc_waitepollout_second", &nwaitepollout)
-    {}
+        , nwaitepollout_second("rpc_waitepollout_second", &nwaitepollout) {}
 
     bvar::Adder<int64_t> nsocket;
     bvar::Adder<int64_t> channel_conn;
@@ -152,9 +151,9 @@ struct SocketVarsCollector {
 struct PipelinedInfo {
     PipelinedInfo() { reset(); }
     void reset() {
-        count = 0;
+        count     = 0;
         with_auth = false;
-        id_wait = INVALID_BTHREAD_ID;
+        id_wait   = INVALID_BTHREAD_ID;
     }
     uint32_t count;
     bool with_auth;
@@ -165,8 +164,8 @@ struct SocketSSLContext {
     SocketSSLContext();
     ~SocketSSLContext();
 
-    SSL_CTX* raw_ctx;           // owned
-    std::string sni_name;       // useful for clients
+    SSL_CTX* raw_ctx;      // owned
+    std::string sni_name;  // useful for clients
 };
 
 // TODO: Comment fields
@@ -197,21 +196,21 @@ struct SocketOptions {
 
 // Abstractions on reading from and writing into file descriptors.
 // NOTE: accessed by multiple threads(frequently), align it by cacheline.
-class BAIDU_CACHELINE_ALIGNMENT/*note*/ Socket {
-friend class EventDispatcher;
-friend class InputMessenger;
-friend class Acceptor;
-friend class ConnectionsService;
-friend class SocketUser;
-friend class Stream;
-friend class Controller;
-friend class policy::ConsistentHashingLoadBalancer;
-friend class policy::RtmpContext;
-friend class schan::ChannelBalancer;
-friend class HealthCheckTask;
-friend class OnAppHealthCheckDone;
-friend class HealthCheckManager;
-friend class policy::H2GlobalStreamCreator;
+class BAIDU_CACHELINE_ALIGNMENT /*note*/ Socket {
+    friend class EventDispatcher;
+    friend class InputMessenger;
+    friend class Acceptor;
+    friend class ConnectionsService;
+    friend class SocketUser;
+    friend class Stream;
+    friend class Controller;
+    friend class policy::ConsistentHashingLoadBalancer;
+    friend class policy::RtmpContext;
+    friend class schan::ChannelBalancer;
+    friend class HealthCheckTask;
+    friend class OnAppHealthCheckDone;
+    friend class HealthCheckManager;
+    friend class policy::H2GlobalStreamCreator;
     class SharedPart;
     struct Forbidden {};
     struct WriteRequest;
@@ -263,11 +262,13 @@ public:
         bool ignore_eovercrowded;
 
         WriteOptions()
-            : id_wait(INVALID_BTHREAD_ID), abstime(NULL)
-            , pipelined_count(0), with_auth(false)
+            : id_wait(INVALID_BTHREAD_ID)
+            , abstime(NULL)
+            , pipelined_count(0)
+            , with_auth(false)
             , ignore_eovercrowded(false) {}
     };
-    int Write(butil::IOBuf *msg, const WriteOptions* options = NULL);
+    int Write(butil::IOBuf* msg, const WriteOptions* options = NULL);
 
     // Write an user-defined message. `msg' is released when Write() is
     // successful and *may* remain unchanged otherwise.
@@ -300,13 +301,15 @@ public:
     // recycling of the socket.
     void reset_parsing_context(Destroyable*);
     Destroyable* release_parsing_context();
-    Destroyable* parsing_context() const
-    { return _parsing_context.load(butil::memory_order_consume); }
+    Destroyable* parsing_context() const {
+        return _parsing_context.load(butil::memory_order_consume);
+    }
     // Try to set _parsing_context to *ctx when _parsing_context is NULL.
     // If _parsing_context is NULL, the set is successful and true is returned.
     // Otherwise, *ctx is Destroy()-ed and replaced with the value of
     // _parsing_context, and false is returned. This process is thread-safe.
-    template <typename T> bool initialize_parsing_context(T** ctx);
+    template <typename T>
+    bool initialize_parsing_context(T** ctx);
 
     // Connection-specific result of authentication.
     const AuthContext* auth_context() const { return _auth_context; }
@@ -342,7 +345,7 @@ public:
     // Returns -1 when the Socket was already SetFailed(), 0 otherwise.
     int SetFailed();
     int SetFailed(int error_code, const char* error_fmt, ...)
-        __attribute__ ((__format__ (__printf__, 3, 4)));
+        __attribute__((__format__(__printf__, 3, 4)));
     static int SetFailed(SocketId id);
 
     void AddRecentError();
@@ -355,8 +358,9 @@ public:
 
     bool Failed() const;
 
-    bool DidReleaseAdditionalRereference() const
-    { return _recycle_flag.load(butil::memory_order_relaxed); }
+    bool DidReleaseAdditionalRereference() const {
+        return _recycle_flag.load(butil::memory_order_relaxed);
+    }
 
     // Notify `id' object (by calling bthread_id_error) when this Socket
     // has been `SetFailed'. If it already has, notify `id' immediately
@@ -406,8 +410,9 @@ public:
     // headers (such as nova-pbrpc, http), we have to store it here. Note
     // that there can only be 1 RPC call on this socket at any time, otherwise
     // use PushPipelinedInfo/PopPipelinedInfo instead.
-    void set_correlation_id(uint64_t correlation_id)
-    { _correlation_id = correlation_id; }
+    void set_correlation_id(uint64_t correlation_id) {
+        _correlation_id = correlation_id;
+    }
     uint64_t correlation_id() const { return _correlation_id; }
 
     // For protocols that need positional correspondence between responses
@@ -497,17 +502,21 @@ public:
     // streaming connections which are often referenced by many places,
     // without SetFailed(), the ref-count may never hit zero.
     void fail_me_at_server_stop() { _fail_me_at_server_stop = true; }
-    bool shall_fail_me_at_server_stop() const { return _fail_me_at_server_stop; }
+    bool shall_fail_me_at_server_stop() const {
+        return _fail_me_at_server_stop;
+    }
 
     // Tag the socket so that the response coming back from socket will be
     // parsed progressively. For example: in HTTP, the RPC may end w/o reading
     // the body part fully.
-    void read_will_be_progressive(ConnectionType t)
-    { _connection_type_for_progressive_read = t; }
+    void read_will_be_progressive(ConnectionType t) {
+        _connection_type_for_progressive_read = t;
+    }
 
     // True if read_will_be_progressive() was called.
-    bool is_read_progressive() const
-    { return _connection_type_for_progressive_read != CONNECTION_TYPE_UNKNOWN; }
+    bool is_read_progressive() const {
+        return _connection_type_for_progressive_read != CONNECTION_TYPE_UNKNOWN;
+    }
 
     // Handle the socket according to its connection_type when the progressive
     // reading is finally done.
@@ -515,9 +524,8 @@ public:
 
     // Last cpuwide-time at when this socket was read or write.
     int64_t last_active_time_us() const {
-        return std::max(
-            _last_readtime_us.load(butil::memory_order_relaxed),
-            _last_writetime_us.load(butil::memory_order_relaxed));
+        return std::max(_last_readtime_us.load(butil::memory_order_relaxed),
+                        _last_writetime_us.load(butil::memory_order_relaxed));
     }
 
     // A brief description of this socket, consistent with os << *this
@@ -535,7 +543,7 @@ private:
     int StartWrite(WriteRequest*, const WriteOptions&);
 
     int Dereference();
-friend void DereferenceSocket(Socket*);
+    friend void DereferenceSocket(Socket*);
 
     static int Status(SocketId, int32_t* nref = NULL);  // for unit-test.
 
@@ -599,11 +607,11 @@ friend void DereferenceSocket(Socket*);
     bool IsWriteComplete(WriteRequest* old_head, bool singular_node,
                          WriteRequest** new_tail);
 
-    void ReturnFailedWriteRequest(
-        WriteRequest*, int error_code, const std::string& error_text);
+    void ReturnFailedWriteRequest(WriteRequest*, int error_code,
+                                  const std::string& error_text);
     void ReturnSuccessfulWriteRequest(WriteRequest*);
-    WriteRequest* ReleaseWriteRequestsExceptLast(
-        WriteRequest*, int error_code, const std::string& error_text);
+    WriteRequest* ReleaseWriteRequestsExceptLast(WriteRequest*, int error_code,
+                                                 const std::string& error_text);
     void ReleaseAllFailedWriteRequests(WriteRequest*);
 
     // Generic callback for Socket to handle epollout event
@@ -688,9 +696,9 @@ private:
     bthread_keytable_pool_t* _keytable_pool;
 
     // [ Set in ResetFileDescriptor ]
-    butil::atomic<int> _fd;  // -1 when not connected.
-    int _tos;                // Type of service which is actually only 8bits.
-    int64_t _reset_fd_real_us; // When _fd was reset, in microseconds.
+    butil::atomic<int> _fd;     // -1 when not connected.
+    int _tos;                   // Type of service which is actually only 8bits.
+    int64_t _reset_fd_real_us;  // When _fd was reset, in microseconds.
 
     // Address of peer. Initialized by SocketOptions.remote_side.
     butil::EndPoint _remote_side;
@@ -769,7 +777,7 @@ private:
     AuthContext* _auth_context;
 
     SSLState _ssl_state;
-    SSL* _ssl_session;               // owner
+    SSL* _ssl_session;  // owner
     std::shared_ptr<SocketSSLContext> _ssl_ctx;
 
     // Pass from controller, for progressive reading.
@@ -815,49 +823,52 @@ private:
     butil::atomic<WriteRequest*> _write_head;
 
     butil::Mutex _stream_mutex;
-    std::set<StreamId> *_stream_set;
+    std::set<StreamId>* _stream_set;
 
     butil::atomic<int64_t> _ninflight_app_health_check;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 // Sleep a while when `write_expr' returns negative with errno=EOVERCROWDED
 // Implemented as a macro rather than a field of Socket.WriteOptions because
 // the macro works for other functions besides Socket.Write as well.
-#define BRPC_HANDLE_EOVERCROWDED(write_expr)                       \
-    ({                                                                  \
-        int64_t __ret_code__;                                           \
-        int sleep_time = 250;                                           \
-        while (true) {                                                  \
-            __ret_code__ = (write_expr);                                \
+#define BRPC_HANDLE_EOVERCROWDED(write_expr)                          \
+    ({                                                                \
+        int64_t __ret_code__;                                         \
+        int sleep_time = 250;                                         \
+        while (true) {                                                \
+            __ret_code__ = (write_expr);                              \
             if (__ret_code__ >= 0 || errno != ::brpc::EOVERCROWDED) { \
-                break;                                                  \
-            }                                                           \
-            sleep_time *= 2;                                            \
-            if (sleep_time > 2000) { sleep_time = 2000; }               \
-            ::bthread_usleep(sleep_time);                               \
-        }                                                               \
-        __ret_code__;                                                   \
+                break;                                                \
+            }                                                         \
+            sleep_time *= 2;                                          \
+            if (sleep_time > 2000) {                                  \
+                sleep_time = 2000;                                    \
+            }                                                         \
+            ::bthread_usleep(sleep_time);                             \
+        }                                                             \
+        __ret_code__;                                                 \
     })
 
 // Sleep a while when `write_expr' returns negative with errno=EOVERCROWDED.
 // The sleep is done for at most `nretry' times.
-#define BRPC_HANDLE_EOVERCROWDED_N(write_expr, nretry)                  \
-    ({                                                                  \
-        int64_t __ret_code__ = 0;                                       \
-        int sleep_time = 250;                                           \
-        for (int i = static_cast<int>(nretry); i >= 0; --i) {           \
-            __ret_code__ = (write_expr);                                \
+#define BRPC_HANDLE_EOVERCROWDED_N(write_expr, nretry)                \
+    ({                                                                \
+        int64_t __ret_code__ = 0;                                     \
+        int sleep_time       = 250;                                   \
+        for (int i = static_cast<int>(nretry); i >= 0; --i) {         \
+            __ret_code__ = (write_expr);                              \
             if (__ret_code__ >= 0 || errno != ::brpc::EOVERCROWDED) { \
-                break;                                                  \
-            }                                                           \
-            sleep_time *= 2;                                            \
-            if (sleep_time > 2000) { sleep_time = 2000; }               \
-            ::bthread_usleep(sleep_time);                               \
-        }                                                               \
-        __ret_code__;                                                   \
+                break;                                                \
+            }                                                         \
+            sleep_time *= 2;                                          \
+            if (sleep_time > 2000) {                                  \
+                sleep_time = 2000;                                    \
+            }                                                         \
+            ::bthread_usleep(sleep_time);                             \
+        }                                                             \
+        __ret_code__;                                                 \
     })
 
 namespace std {

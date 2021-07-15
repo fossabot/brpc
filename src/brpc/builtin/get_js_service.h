@@ -15,11 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef  BRPC_GET_JAVASCRIPT_SERVICE_H
-#define  BRPC_GET_JAVASCRIPT_SERVICE_H
+#ifndef BRPC_GET_JAVASCRIPT_SERVICE_H
+#define BRPC_GET_JAVASCRIPT_SERVICE_H
 
 #include "brpc/get_js.pb.h"
-
 
 namespace brpc {
 
@@ -30,27 +29,22 @@ namespace brpc {
 class GetJsService : public ::brpc::js {
 public:
     void sorttable(::google::protobuf::RpcController* controller,
-                   const GetJsRequest* request,
-                   GetJsResponse* response,
+                   const GetJsRequest* request, GetJsResponse* response,
                    ::google::protobuf::Closure* done);
-    
+
     void jquery_min(::google::protobuf::RpcController* controller,
-                    const GetJsRequest* request,
-                    GetJsResponse* response,
+                    const GetJsRequest* request, GetJsResponse* response,
                     ::google::protobuf::Closure* done);
 
     void flot_min(::google::protobuf::RpcController* controller,
-                  const GetJsRequest* request,
-                  GetJsResponse* response,
+                  const GetJsRequest* request, GetJsResponse* response,
                   ::google::protobuf::Closure* done);
 
     void viz_min(::google::protobuf::RpcController* controller,
-                 const GetJsRequest* request,
-                 GetJsResponse* response,
+                 const GetJsRequest* request, GetJsResponse* response,
                  ::google::protobuf::Closure* done);
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_GET_JAVASCRIPT_SERVICE_H

@@ -13,11 +13,11 @@ namespace butil {
 
 // DefaultClock is a Clock implementation that uses Time::Now().
 class BUTIL_EXPORT DefaultClock : public Clock {
- public:
-  virtual ~DefaultClock();
+public:
+    virtual ~DefaultClock();
 
-  // Simply returns Time::Now().
-  virtual Time Now() OVERRIDE;
+    // Simply returns Time::Now().
+    virtual Time Now() OVERRIDE;
 };
 
 }  // namespace butil

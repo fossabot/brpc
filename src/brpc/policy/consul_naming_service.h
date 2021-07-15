@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#ifndef BRPC_POLICY_CONSUL_NAMING_SERVICE
+#define BRPC_POLICY_CONSUL_NAMING_SERVICE
 
-#ifndef  BRPC_POLICY_CONSUL_NAMING_SERVICE
-#define  BRPC_POLICY_CONSUL_NAMING_SERVICE
-
-#include "brpc/naming_service.h"
 #include "brpc/channel.h"
-
+#include "brpc/naming_service.h"
 
 namespace brpc {
 class Channel;
@@ -32,8 +30,7 @@ private:
     int RunNamingService(const char* service_name,
                          NamingServiceActions* actions) override;
 
-    int GetServers(const char* service_name,
-                   std::vector<ServerNode>* servers);
+    int GetServers(const char* service_name, std::vector<ServerNode>* servers);
 
     void Describe(std::ostream& os, const DescribeOptions&) const override;
 
@@ -49,11 +46,10 @@ private:
     std::string _consul_index;
     std::string _consul_url;
     bool _backup_file_loaded = false;
-    bool _consul_connected = false;
+    bool _consul_connected   = false;
 };
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif  //BRPC_POLICY_CONSUL_NAMING_SERVICE
+#endif  // BRPC_POLICY_CONSUL_NAMING_SERVICE

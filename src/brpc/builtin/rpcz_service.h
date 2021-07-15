@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_RPCZ_SERVICE_H
 #define BRPC_RPCZ_SERVICE_H
 
-#include "brpc/builtin_service.pb.h"
 #include "brpc/builtin/tabbed.h"
-
+#include "brpc/builtin_service.pb.h"
 
 namespace brpc {
 
@@ -60,7 +58,6 @@ public:
     void GetTabInfo(brpc::TabInfoList*) const;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_RPCZ_SERVICE_H
+#endif  // BRPC_RPCZ_SERVICE_H

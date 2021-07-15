@@ -15,24 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_SOCKET_MAP_H
 #define BRPC_SOCKET_MAP_H
 
-#include <vector>                             // std::vector
-#include "bvar/bvar.h"                        // bvar::PassiveStatus
-#include "butil/containers/flat_map.h"        // FlatMap
-#include "brpc/socket_id.h"                   // SockdetId
-#include "brpc/options.pb.h"                  // ProtocolType
-#include "brpc/input_messenger.h"             // InputMessageHandler
-#include "brpc/server_node.h"                 // ServerNode
+#include <vector>                       // std::vector
+#include "brpc/input_messenger.h"       // InputMessageHandler
+#include "brpc/options.pb.h"            // ProtocolType
+#include "brpc/server_node.h"           // ServerNode
+#include "brpc/socket_id.h"             // SockdetId
+#include "butil/containers/flat_map.h"  // FlatMap
+#include "bvar/bvar.h"                  // bvar::PassiveStatus
 
 namespace brpc {
 
 // Different signature means that the Channel needs separate sockets.
 struct ChannelSignature {
     uint64_t data[2];
-    
+
     ChannelSignature() { Reset(); }
     void Reset() { data[0] = data[1] = 0; }
 };
@@ -47,15 +46,11 @@ inline bool operator!=(const ChannelSignature& s1, const ChannelSignature& s2) {
 // The following fields uniquely define a Socket. In other word,
 // Socket can't be shared between 2 different SocketMapKeys
 struct SocketMapKey {
-    explicit SocketMapKey(const butil::EndPoint& pt)
-        : peer(pt)
-    {}
+    explicit SocketMapKey(const butil::EndPoint& pt) : peer(pt) {}
     SocketMapKey(const butil::EndPoint& pt, const ChannelSignature& cs)
-        : peer(pt), channel_signature(cs)
-    {}
+        : peer(pt), channel_signature(cs) {}
     SocketMapKey(const ServerNode& sn, const ChannelSignature& cs)
-        : peer(sn), channel_signature(cs)
-    {}
+        : peer(sn), channel_signature(cs) {}
 
     ServerNode peer;
     ChannelSignature channel_signature;
@@ -68,12 +63,11 @@ inline bool operator==(const SocketMapKey& k1, const SocketMapKey& k2) {
 struct SocketMapKeyHasher {
     size_t operator()(const SocketMapKey& key) const {
         size_t h = butil::DefaultHasher<butil::EndPoint>()(key.peer.addr);
-        h = h * 101 + butil::DefaultHasher<std::string>()(key.peer.tag);
-        h = h * 101 + key.channel_signature.data[1];
+        h        = h * 101 + butil::DefaultHasher<std::string>()(key.peer.tag);
+        h        = h * 101 + key.channel_signature.data[1];
         return h;
     }
 };
-
 
 // Try to share the Socket to `key'. If the Socket does not exist, create one.
 // The corresponding SocketId is written to `*id'. If this function returns
@@ -111,7 +105,7 @@ public:
 struct SocketMapOptions {
     // Constructed with default options.
     SocketMapOptions();
-    
+
     // For creating sockets by need. Owned and deleted by SocketMap.
     // Default: NULL (must be set by user).
     SocketCreator* socket_creator;
@@ -119,7 +113,7 @@ struct SocketMapOptions {
     // Initial size of the map (proper size reduces number of resizes)
     // Default: 1024
     size_t suggested_map_size;
-    
+
     // Pooled connections without data transmission for so many seconds will
     // be closed. No effect for non-positive values.
     // If idle_timeout_second_dynamic is not NULL, use the dereferenced value
@@ -174,8 +168,8 @@ private:
 
     // TODO: When RpcChannels connecting to one EndPoint are frequently created
     //       and destroyed, a single map+mutex may become hot-spots.
-    typedef butil::FlatMap<SocketMapKey, SingleConnection,
-                           SocketMapKeyHasher> Map;
+    typedef butil::FlatMap<SocketMapKey, SingleConnection, SocketMapKeyHasher>
+        Map;
     SocketMapOptions _options;
     butil::Mutex _mutex;
     Map _map;
@@ -185,6 +179,6 @@ private:
     bthread_t _close_idle_thread;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_SOCKET_MAP_H

@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_SNAPPY_COMPRESS_H
 #define BRPC_POLICY_SNAPPY_COMPRESS_H
 
-#include <google/protobuf/message.h>          // Message
-#include "butil/iobuf.h"                       // IOBuf
-
+#include <google/protobuf/message.h>  // Message
+#include "butil/iobuf.h"              // IOBuf
 
 namespace brpc {
 namespace policy {
@@ -39,7 +37,6 @@ bool SnappyCompress(const butil::IOBuf& in, butil::IOBuf* out);
 bool SnappyDecompress(const butil::IOBuf& in, butil::IOBuf* out);
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_POLICY_SNAPPY_COMPRESS_H
+#endif  // BRPC_POLICY_SNAPPY_COMPRESS_H

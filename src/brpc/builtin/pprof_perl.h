@@ -15,16 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_BUILTIN_PPROF_PERL_H
 #define BRPC_BUILTIN_PPROF_PERL_H
-
 
 namespace brpc {
 
 const char* pprof_perl();
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_BUILTIN_PPROF_PERL_H
+#endif  // BRPC_BUILTIN_PPROF_PERL_H

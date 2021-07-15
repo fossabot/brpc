@@ -15,17 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_LOAD_BALANCER_H
 #define BRPC_LOAD_BALANCER_H
 
-#include "bvar/passive_status.h"
 #include "brpc/describable.h"
 #include "brpc/destroyable.h"
-#include "brpc/excluded_servers.h"                // ExcludedServers
-#include "brpc/shared_object.h"                   // SharedObject
-#include "brpc/server_id.h"                       // ServerId
-#include "brpc/extension.h"                       // Extension<T>
+#include "brpc/excluded_servers.h"  // ExcludedServers
+#include "brpc/extension.h"         // Extension<T>
+#include "brpc/server_id.h"         // ServerId
+#include "brpc/shared_object.h"     // SharedObject
+#include "bvar/passive_status.h"
 
 namespace brpc {
 
@@ -64,14 +63,14 @@ public:
         const Controller* controller;
     };
 
-    LoadBalancer() { }
+    LoadBalancer() {}
 
     // ====================================================================
     //  All methods must be thread-safe!
     //  Take a look at policy/round_robin_load_balancer.cpp to see how to
     //  make SelectServer() low contended by using DoublyBufferedData<>
     // =====================================================================
-    
+
     // Add `server' into this balancer.
     // Returns true on added.
     virtual bool AddServer(const ServerId& server) = 0;
@@ -86,8 +85,9 @@ public:
 
     // Remove a list of `servers' from this balancer.
     // Returns number of servers removed.
-    virtual size_t RemoveServersInBatch(const std::vector<ServerId>& servers) = 0;
-    
+    virtual size_t RemoveServersInBatch(
+        const std::vector<ServerId>& servers) = 0;
+
     // Select a server and address it into `out->ptr'.
     // If Feedback() should be called when the RPC is done, set
     // out->need_feedback to true.
@@ -97,14 +97,14 @@ public:
     // Feedback this balancer with CallInfo gathered before RPC finishes.
     // This function is only called when corresponding SelectServer was
     // successful and out->need_feedback was set to true.
-    virtual void Feedback(const CallInfo& /*info*/) { }
+    virtual void Feedback(const CallInfo& /*info*/) {}
 
     // Create/destroy an instance.
     // Caller is responsible for Destroy() the instance after usage.
     virtual LoadBalancer* New(const butil::StringPiece& params) const = 0;
 
 protected:
-    virtual ~LoadBalancer() { }
+    virtual ~LoadBalancer() {}
 };
 
 DECLARE_bool(show_lb_in_vars);
@@ -126,7 +126,7 @@ public:
     }
 
     void Feedback(const LoadBalancer::CallInfo& info) { _lb->Feedback(info); }
-    
+
     bool AddServer(const ServerId& server) {
         if (_lb->AddServer(server)) {
             _weight_sum.fetch_add(1, butil::memory_order_relaxed);
@@ -141,7 +141,7 @@ public:
         }
         return false;
     }
-    
+
     size_t AddServersInBatch(const std::vector<ServerId>& servers) {
         size_t n = _lb->AddServersInBatch(servers);
         if (n) {
@@ -183,7 +183,6 @@ inline Extension<const LoadBalancer>* LoadBalancerExtension() {
     return Extension<const LoadBalancer>::instance();
 }
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_LOAD_BALANCER_H

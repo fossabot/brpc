@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_NSHEAD_SERVICE_H
 #define BRPC_NSHEAD_SERVICE_H
 
-#include "brpc/controller.h"                 // Controller
-#include "brpc/nshead_message.h"             // NsheadMessage
+#include "brpc/controller.h"  // Controller
 #include "brpc/describable.h"
-
+#include "brpc/nshead_message.h"  // NsheadMessage
 
 namespace brpc {
 
@@ -44,7 +42,7 @@ public:
 
     // [Optional] Set the full method name. If unset, use name of the service.
     void SetMethodName(const std::string& full_method_name);
-    
+
     // The space required by subclass at NsheadServiceOptions. subclass may
     // utilizes this feature to save the cost of allocating closure separately.
     // If subclass does not require space, this return value is NULL.
@@ -56,8 +54,8 @@ public:
     void DoNotRespond();
 
 private:
-friend void policy::ProcessNsheadRequest(InputMessageBase* msg_base);
-friend class DeleteNsheadClosure;
+    friend void policy::ProcessNsheadRequest(InputMessageBase* msg_base);
+    friend class DeleteNsheadClosure;
     // Only callable by Run().
     ~NsheadClosure();
 
@@ -104,25 +102,24 @@ public:
                                       NsheadClosure* done) = 0;
 
     // Put descriptions into the stream.
-    void Describe(std::ostream &os, const DescribeOptions&) const;
+    void Describe(std::ostream& os, const DescribeOptions&) const;
 
 private:
-DISALLOW_COPY_AND_ASSIGN(NsheadService);
-friend class NsheadClosure;
-friend void policy::ProcessNsheadRequest(InputMessageBase* msg_base);
-friend class StatusService;
-friend class Server;
+    DISALLOW_COPY_AND_ASSIGN(NsheadService);
+    friend class NsheadClosure;
+    friend void policy::ProcessNsheadRequest(InputMessageBase* msg_base);
+    friend class StatusService;
+    friend class Server;
 
 private:
     void Expose(const butil::StringPiece& prefix);
-    
+
     // Tracking status of non NsheadPbService
     MethodStatus* _status;
     size_t _additional_space;
     std::string _cached_name;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_NSHEAD_SERVICE_H
+#endif  // BRPC_NSHEAD_SERVICE_H

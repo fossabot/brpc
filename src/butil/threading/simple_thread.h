@@ -40,105 +40,105 @@
 #ifndef BUTIL_THREADING_SIMPLE_THREAD_H_
 #define BUTIL_THREADING_SIMPLE_THREAD_H_
 
-#include <string>
 #include <queue>
+#include <string>
 #include <vector>
 
 #include "butil/base_export.h"
 #include "butil/basictypes.h"
 #include "butil/compiler_specific.h"
-#include "butil/threading/platform_thread.h"
 #include "butil/synchronization/lock.h"
 #include "butil/synchronization/waitable_event.h"
+#include "butil/threading/platform_thread.h"
 
 namespace butil {
 
 // This is the base SimpleThread.  You can derive from it and implement the
 // virtual Run method, or you can use the DelegateSimpleThread interface.
 class BUTIL_EXPORT SimpleThread : public PlatformThread::Delegate {
- public:
-  class BUTIL_EXPORT Options {
-   public:
-    Options() : stack_size_(0) { }
-    ~Options() { }
+public:
+    class BUTIL_EXPORT Options {
+    public:
+        Options() : stack_size_(0) {}
+        ~Options() {}
 
-    // We use the standard compiler-supplied copy constructor.
+        // We use the standard compiler-supplied copy constructor.
 
-    // A custom stack size, or 0 for the system default.
-    void set_stack_size(size_t size) { stack_size_ = size; }
-    size_t stack_size() const { return stack_size_; }
-   private:
-    size_t stack_size_;
-  };
+        // A custom stack size, or 0 for the system default.
+        void set_stack_size(size_t size) { stack_size_ = size; }
+        size_t stack_size() const { return stack_size_; }
 
-  // Create a SimpleThread.  |options| should be used to manage any specific
-  // configuration involving the thread creation and management.
-  // Every thread has a name, in the form of |name_prefix|/TID, for example
-  // "my_thread/321".  The thread will not be created until Start() is called.
-  explicit SimpleThread(const std::string& name_prefix);
-  SimpleThread(const std::string& name_prefix, const Options& options);
+    private:
+        size_t stack_size_;
+    };
 
-  virtual ~SimpleThread();
+    // Create a SimpleThread.  |options| should be used to manage any specific
+    // configuration involving the thread creation and management.
+    // Every thread has a name, in the form of |name_prefix|/TID, for example
+    // "my_thread/321".  The thread will not be created until Start() is called.
+    explicit SimpleThread(const std::string& name_prefix);
+    SimpleThread(const std::string& name_prefix, const Options& options);
 
-  virtual void Start();
-  virtual void Join();
+    virtual ~SimpleThread();
 
-  // Subclasses should override the Run method.
-  virtual void Run() = 0;
+    virtual void Start();
+    virtual void Join();
 
-  // Return the thread name prefix, or "unnamed" if none was supplied.
-  std::string name_prefix() { return name_prefix_; }
+    // Subclasses should override the Run method.
+    virtual void Run() = 0;
 
-  // Return the completed name including TID, only valid after Start().
-  std::string name() { return name_; }
+    // Return the thread name prefix, or "unnamed" if none was supplied.
+    std::string name_prefix() { return name_prefix_; }
 
-  // Return the thread id, only valid after Start().
-  PlatformThreadId tid() { return tid_; }
+    // Return the completed name including TID, only valid after Start().
+    std::string name() { return name_; }
 
-  // Return True if Start() has ever been called.
-  bool HasBeenStarted();
+    // Return the thread id, only valid after Start().
+    PlatformThreadId tid() { return tid_; }
 
-  // Return True if Join() has evern been called.
-  bool HasBeenJoined() { return joined_; }
+    // Return True if Start() has ever been called.
+    bool HasBeenStarted();
 
-  // Overridden from PlatformThread::Delegate:
-  virtual void ThreadMain() OVERRIDE;
+    // Return True if Join() has evern been called.
+    bool HasBeenJoined() { return joined_; }
 
-  // Only set priorities with a careful understanding of the consequences.
-  // This is meant for very limited use cases.
-  void SetThreadPriority(ThreadPriority priority) {
-    PlatformThread::SetThreadPriority(thread_, priority);
-  }
+    // Overridden from PlatformThread::Delegate:
+    virtual void ThreadMain() OVERRIDE;
 
- private:
-  const std::string name_prefix_;
-  std::string name_;
-  const Options options_;
-  PlatformThreadHandle thread_;  // PlatformThread handle, invalid after Join!
-  WaitableEvent event_;          // Signaled if Start() was ever called.
-  PlatformThreadId tid_;         // The backing thread's id.
-  bool joined_;                  // True if Join has been called.
+    // Only set priorities with a careful understanding of the consequences.
+    // This is meant for very limited use cases.
+    void SetThreadPriority(ThreadPriority priority) {
+        PlatformThread::SetThreadPriority(thread_, priority);
+    }
+
+private:
+    const std::string name_prefix_;
+    std::string name_;
+    const Options options_;
+    PlatformThreadHandle thread_;  // PlatformThread handle, invalid after Join!
+    WaitableEvent event_;          // Signaled if Start() was ever called.
+    PlatformThreadId tid_;         // The backing thread's id.
+    bool joined_;                  // True if Join has been called.
 };
 
 class BUTIL_EXPORT DelegateSimpleThread : public SimpleThread {
- public:
-  class BUTIL_EXPORT Delegate {
-   public:
-    Delegate() { }
-    virtual ~Delegate() { }
-    virtual void Run() = 0;
-  };
+public:
+    class BUTIL_EXPORT Delegate {
+    public:
+        Delegate() {}
+        virtual ~Delegate() {}
+        virtual void Run() = 0;
+    };
 
-  DelegateSimpleThread(Delegate* delegate,
-                       const std::string& name_prefix);
-  DelegateSimpleThread(Delegate* delegate,
-                       const std::string& name_prefix,
-                       const Options& options);
+    DelegateSimpleThread(Delegate* delegate, const std::string& name_prefix);
+    DelegateSimpleThread(Delegate* delegate, const std::string& name_prefix,
+                         const Options& options);
 
-  virtual ~DelegateSimpleThread();
-  virtual void Run() OVERRIDE;
- private:
-  Delegate* delegate_;
+    virtual ~DelegateSimpleThread();
+    virtual void Run() OVERRIDE;
+
+private:
+    Delegate* delegate_;
 };
 
 // DelegateSimpleThreadPool allows you to start up a fixed number of threads,
@@ -152,37 +152,35 @@ class BUTIL_EXPORT DelegateSimpleThread : public SimpleThread {
 // again after you've called JoinAll().
 class BUTIL_EXPORT DelegateSimpleThreadPool
     : public DelegateSimpleThread::Delegate {
- public:
-  typedef DelegateSimpleThread::Delegate Delegate;
+public:
+    typedef DelegateSimpleThread::Delegate Delegate;
 
-  DelegateSimpleThreadPool(const std::string& name_prefix, int num_threads);
-  virtual ~DelegateSimpleThreadPool();
+    DelegateSimpleThreadPool(const std::string& name_prefix, int num_threads);
+    virtual ~DelegateSimpleThreadPool();
 
-  // Start up all of the underlying threads, and start processing work if we
-  // have any.
-  void Start();
+    // Start up all of the underlying threads, and start processing work if we
+    // have any.
+    void Start();
 
-  // Make sure all outstanding work is finished, and wait for and destroy all
-  // of the underlying threads in the pool.
-  void JoinAll();
+    // Make sure all outstanding work is finished, and wait for and destroy all
+    // of the underlying threads in the pool.
+    void JoinAll();
 
-  // It is safe to AddWork() any time, before or after Start().
-  // Delegate* should always be a valid pointer, NULL is reserved internally.
-  void AddWork(Delegate* work, int repeat_count);
-  void AddWork(Delegate* work) {
-    AddWork(work, 1);
-  }
+    // It is safe to AddWork() any time, before or after Start().
+    // Delegate* should always be a valid pointer, NULL is reserved internally.
+    void AddWork(Delegate* work, int repeat_count);
+    void AddWork(Delegate* work) { AddWork(work, 1); }
 
-  // We implement the Delegate interface, for running our internal threads.
-  virtual void Run() OVERRIDE;
+    // We implement the Delegate interface, for running our internal threads.
+    virtual void Run() OVERRIDE;
 
- private:
-  const std::string name_prefix_;
-  int num_threads_;
-  std::vector<DelegateSimpleThread*> threads_;
-  std::queue<Delegate*> delegates_;
-  butil::Lock lock_;            // Locks delegates_
-  WaitableEvent dry_;    // Not signaled when there is no work to do.
+private:
+    const std::string name_prefix_;
+    int num_threads_;
+    std::vector<DelegateSimpleThread*> threads_;
+    std::queue<Delegate*> delegates_;
+    butil::Lock lock_;   // Locks delegates_
+    WaitableEvent dry_;  // Not signaled when there is no work to do.
 };
 
 }  // namespace butil

@@ -15,19 +15,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <iostream>
-#include <vector>
-#include <string>
-#include <sstream>
+#include "pb_to_json.h"
+#include <google/protobuf/descriptor.h>
 #include <sys/time.h>
 #include <time.h>
-#include <google/protobuf/descriptor.h>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
 #include "butil/base64.h"
-#include "zero_copy_stream_writer.h"
 #include "encode_decode.h"
 #include "protobuf_map.h"
 #include "rapidjson.h"
-#include "pb_to_json.h"
+#include "zero_copy_stream_writer.h"
 
 namespace json2pb {
 Pb2JsonOptions::Pb2JsonOptions()
@@ -63,22 +63,23 @@ private:
 };
 
 template <typename Handler>
-bool PbToJsonConverter::Convert(const google::protobuf::Message& message, Handler& handler) {
+bool PbToJsonConverter::Convert(const google::protobuf::Message& message,
+                                Handler& handler) {
     handler.StartObject();
     const google::protobuf::Reflection* reflection = message.GetReflection();
     const google::protobuf::Descriptor* descriptor = message.GetDescriptor();
-    
+
     int ext_range_count = descriptor->extension_range_count();
-    int field_count = descriptor->field_count();
+    int field_count     = descriptor->field_count();
     std::vector<const google::protobuf::FieldDescriptor*> fields;
     fields.reserve(64);
     for (int i = 0; i < ext_range_count; ++i) {
-        const google::protobuf::Descriptor::ExtensionRange*
-            ext_range = descriptor->extension_range(i);
-        for (int tag_number = ext_range->start;
-             tag_number < ext_range->end; ++tag_number) {
+        const google::protobuf::Descriptor::ExtensionRange* ext_range =
+            descriptor->extension_range(i);
+        for (int tag_number = ext_range->start; tag_number < ext_range->end;
+             ++tag_number) {
             const google::protobuf::FieldDescriptor* field =
-                    reflection->FindKnownExtensionByNumber(tag_number);
+                reflection->FindKnownExtensionByNumber(tag_number);
             if (field) {
                 fields.push_back(field);
             }
@@ -108,16 +109,16 @@ bool PbToJsonConverter::Convert(const google::protobuf::Message& message, Handle
             if (!_option.always_print_primitive_fields) {
                 continue;
             }
-        } else if (field->is_repeated()
-                   && reflection->FieldSize(message, field) == 0
-                   && !_option.jsonify_empty_array) {
+        } else if (field->is_repeated() &&
+                   reflection->FieldSize(message, field) == 0 &&
+                   !_option.jsonify_empty_array) {
             // Repeated field that has no entry
             continue;
         }
 
         const std::string& orig_name = field->name();
-        bool decoded = decode_name(orig_name, field_name_str); 
-        const std::string& name = decoded ? field_name_str : orig_name;
+        bool decoded                 = decode_name(orig_name, field_name_str);
+        const std::string& name      = decoded ? field_name_str : orig_name;
         handler.Key(name.data(), name.size(), false);
         if (!_PbFieldToJson(message, field, handler)) {
             return false;
@@ -128,24 +129,25 @@ bool PbToJsonConverter::Convert(const google::protobuf::Message& message, Handle
     for (size_t i = 0; i < map_fields.size(); ++i) {
         const google::protobuf::FieldDescriptor* map_desc = map_fields[i];
         const google::protobuf::FieldDescriptor* key_desc =
-                map_desc->message_type()->field(json2pb::KEY_INDEX);
+            map_desc->message_type()->field(json2pb::KEY_INDEX);
         const google::protobuf::FieldDescriptor* value_desc =
-                map_desc->message_type()->field(json2pb::VALUE_INDEX);
+            map_desc->message_type()->field(json2pb::VALUE_INDEX);
 
         // Write a json object corresponding to hold protobuf map
         // such as {"key": value, ...}
         const std::string& orig_name = map_desc->name();
-        bool decoded = decode_name(orig_name, field_name_str);
-        const std::string& name = decoded ? field_name_str : orig_name;
+        bool decoded                 = decode_name(orig_name, field_name_str);
+        const std::string& name      = decoded ? field_name_str : orig_name;
         handler.Key(name.data(), name.size(), false);
         handler.StartObject();
         std::string entry_name;
         for (int j = 0; j < reflection->FieldSize(message, map_desc); ++j) {
             const google::protobuf::Message& entry =
-                    reflection->GetRepeatedMessage(message, map_desc, j);
-            const google::protobuf::Reflection* entry_reflection = entry.GetReflection();
-            entry_name = entry_reflection->GetStringReference(
-                entry, key_desc, &entry_name);
+                reflection->GetRepeatedMessage(message, map_desc, j);
+            const google::protobuf::Reflection* entry_reflection =
+                entry.GetReflection();
+            entry_name = entry_reflection->GetStringReference(entry, key_desc,
+                                                              &entry_name);
             handler.Key(entry_name.data(), entry_name.size(), false);
 
             // Fill in entries into this json object
@@ -164,36 +166,34 @@ bool PbToJsonConverter::Convert(const google::protobuf::Message& message, Handle
 template <typename Handler>
 bool PbToJsonConverter::_PbFieldToJson(
     const google::protobuf::Message& message,
-    const google::protobuf::FieldDescriptor* field,
-    Handler& handler) {
+    const google::protobuf::FieldDescriptor* field, Handler& handler) {
     const google::protobuf::Reflection* reflection = message.GetReflection();
     switch (field->cpp_type()) {
-#define CASE_FIELD_TYPE(cpptype, method, valuetype, handle)             \
-    case google::protobuf::FieldDescriptor::CPPTYPE_##cpptype: {                          \
-        if (field->is_repeated()) {                                     \
-            int field_size = reflection->FieldSize(message, field);     \
-            handler.StartArray();                                       \
-            for (int index = 0; index < field_size; ++index) {          \
-                handler.handle(static_cast<valuetype>(                  \
-                    reflection->GetRepeated##method(                    \
-                        message, field, index)));                       \
-            }                                                           \
-            handler.EndArray(field_size);                               \
-                                                                        \
-        } else {                                                        \
-            handler.handle(static_cast<valuetype>(                      \
-                reflection->Get##method(message, field)));              \
-        }                                                               \
-        break;                                                          \
+#define CASE_FIELD_TYPE(cpptype, method, valuetype, handle)                   \
+    case google::protobuf::FieldDescriptor::CPPTYPE_##cpptype: {              \
+        if (field->is_repeated()) {                                           \
+            int field_size = reflection->FieldSize(message, field);           \
+            handler.StartArray();                                             \
+            for (int index = 0; index < field_size; ++index) {                \
+                handler.handle(static_cast<valuetype>(                        \
+                    reflection->GetRepeated##method(message, field, index))); \
+            }                                                                 \
+            handler.EndArray(field_size);                                     \
+                                                                              \
+        } else {                                                              \
+            handler.handle(static_cast<valuetype>(                            \
+                reflection->Get##method(message, field)));                    \
+        }                                                                     \
+        break;                                                                \
     }
-        
-    CASE_FIELD_TYPE(BOOL,   Bool,   bool,         Bool);
-    CASE_FIELD_TYPE(INT32,  Int32,  int,          AddInt);
-    CASE_FIELD_TYPE(UINT32, UInt32, unsigned int, AddUint);
-    CASE_FIELD_TYPE(INT64,  Int64,  int64_t,      AddInt64);
-    CASE_FIELD_TYPE(UINT64, UInt64, uint64_t,     AddUint64);
-    CASE_FIELD_TYPE(FLOAT,  Float,  double,       Double);
-    CASE_FIELD_TYPE(DOUBLE, Double, double,       Double);
+
+        CASE_FIELD_TYPE(BOOL, Bool, bool, Bool);
+        CASE_FIELD_TYPE(INT32, Int32, int, AddInt);
+        CASE_FIELD_TYPE(UINT32, UInt32, unsigned int, AddUint);
+        CASE_FIELD_TYPE(INT64, Int64, int64_t, AddInt64);
+        CASE_FIELD_TYPE(UINT64, UInt64, uint64_t, AddUint64);
+        CASE_FIELD_TYPE(FLOAT, Float, double, Double);
+        CASE_FIELD_TYPE(DOUBLE, Double, double, Double);
 #undef CASE_FIELD_TYPE
 
     case google::protobuf::FieldDescriptor::CPPTYPE_STRING: {
@@ -202,26 +202,30 @@ bool PbToJsonConverter::_PbFieldToJson(
             int field_size = reflection->FieldSize(message, field);
             handler.StartArray();
             for (int index = 0; index < field_size; ++index) {
-                value = reflection->GetRepeatedStringReference(
-                    message, field, index, &value);
-                if (field->type() == google::protobuf::FieldDescriptor::TYPE_BYTES
-                    && _option.bytes_to_base64) {
+                value = reflection->GetRepeatedStringReference(message, field,
+                                                               index, &value);
+                if (field->type() ==
+                        google::protobuf::FieldDescriptor::TYPE_BYTES &&
+                    _option.bytes_to_base64) {
                     std::string value_decoded;
                     butil::Base64Encode(value, &value_decoded);
-                    handler.String(value_decoded.data(), value_decoded.size(), false);
+                    handler.String(value_decoded.data(), value_decoded.size(),
+                                   false);
                 } else {
                     handler.String(value.data(), value.size(), false);
                 }
             }
             handler.EndArray(field_size);
-            
+
         } else {
             value = reflection->GetStringReference(message, field, &value);
-            if (field->type() == google::protobuf::FieldDescriptor::TYPE_BYTES
-                && _option.bytes_to_base64) {
+            if (field->type() ==
+                    google::protobuf::FieldDescriptor::TYPE_BYTES &&
+                _option.bytes_to_base64) {
                 std::string value_decoded;
                 butil::Base64Encode(value, &value_decoded);
-                handler.String(value_decoded.data(), value_decoded.size(), false);
+                handler.String(value_decoded.data(), value_decoded.size(),
+                               false);
             } else {
                 handler.String(value.data(), value.size(), false);
             }
@@ -234,23 +238,25 @@ bool PbToJsonConverter::_PbFieldToJson(
             int field_size = reflection->FieldSize(message, field);
             handler.StartArray();
             if (_option.enum_option == OUTPUT_ENUM_BY_NAME) {
-                for (int index = 0; index < field_size; ++index) { 
-                    const std::string& enum_name = reflection->GetRepeatedEnum(
-                        message, field, index)->name();
+                for (int index = 0; index < field_size; ++index) {
+                    const std::string& enum_name =
+                        reflection->GetRepeatedEnum(message, field, index)
+                            ->name();
                     handler.String(enum_name.data(), enum_name.size(), false);
                 }
             } else {
-                for (int index = 0; index < field_size; ++index) { 
-                    handler.AddInt(reflection->GetRepeatedEnum(
-                        message, field, index)->number());
+                for (int index = 0; index < field_size; ++index) {
+                    handler.AddInt(
+                        reflection->GetRepeatedEnum(message, field, index)
+                            ->number());
                 }
             }
             handler.EndArray();
-            
+
         } else {
             if (_option.enum_option == OUTPUT_ENUM_BY_NAME) {
                 const std::string& enum_name =
-                        reflection->GetEnum(message, field)->name();
+                    reflection->GetEnum(message, field)->name();
                 handler.String(enum_name.data(), enum_name.size(), false);
             } else {
                 handler.AddInt(reflection->GetEnum(message, field)->number());
@@ -264,13 +270,14 @@ bool PbToJsonConverter::_PbFieldToJson(
             int field_size = reflection->FieldSize(message, field);
             handler.StartArray();
             for (int index = 0; index < field_size; ++index) {
-                if (!Convert(reflection->GetRepeatedMessage(
-                        message, field, index), handler)) {
+                if (!Convert(
+                        reflection->GetRepeatedMessage(message, field, index),
+                        handler)) {
                     return false;
                 }
             }
             handler.EndArray(field_size);
-            
+
         } else {
             if (!Convert(reflection->GetMessage(message, field), handler)) {
                 return false;
@@ -284,16 +291,16 @@ bool PbToJsonConverter::_PbFieldToJson(
 
 template <typename OutputStream>
 bool ProtoMessageToJsonStream(const google::protobuf::Message& message,
-                              const Pb2JsonOptions& options,
-                              OutputStream& os, std::string* error) {
+                              const Pb2JsonOptions& options, OutputStream& os,
+                              std::string* error) {
     PbToJsonConverter converter(options);
     bool succ = false;
-    if (options.pretty_json) {    
+    if (options.pretty_json) {
         BUTIL_RAPIDJSON_NAMESPACE::PrettyWriter<OutputStream> writer(os);
-        succ = converter.Convert(message, writer); 
+        succ = converter.Convert(message, writer);
     } else {
         BUTIL_RAPIDJSON_NAMESPACE::OptimizedWriter<OutputStream> writer(os);
-        succ = converter.Convert(message, writer); 
+        succ = converter.Convert(message, writer);
     }
     if (!succ && error) {
         error->clear();
@@ -303,8 +310,7 @@ bool ProtoMessageToJsonStream(const google::protobuf::Message& message,
 }
 
 bool ProtoMessageToJson(const google::protobuf::Message& message,
-                        std::string* json,
-                        const Pb2JsonOptions& options,
+                        std::string* json, const Pb2JsonOptions& options,
                         std::string* error) {
     // TODO(gejun): We could further wrap a std::string as a buffer to reduce
     // a copying.
@@ -322,15 +328,15 @@ bool ProtoMessageToJson(const google::protobuf::Message& message,
 }
 
 bool ProtoMessageToJson(const google::protobuf::Message& message,
-                        google::protobuf::io::ZeroCopyOutputStream *stream,
+                        google::protobuf::io::ZeroCopyOutputStream* stream,
                         const Pb2JsonOptions& options, std::string* error) {
     json2pb::ZeroCopyStreamWriter wrapper(stream);
     return json2pb::ProtoMessageToJsonStream(message, options, wrapper, error);
 }
 
 bool ProtoMessageToJson(const google::protobuf::Message& message,
-                        google::protobuf::io::ZeroCopyOutputStream *stream,
+                        google::protobuf::io::ZeroCopyOutputStream* stream,
                         std::string* error) {
     return ProtoMessageToJson(message, stream, Pb2JsonOptions(), error);
 }
-} // namespace json2pb
+}  // namespace json2pb

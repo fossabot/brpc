@@ -15,21 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_DESCRIBABLE_H
 #define BRPC_DESCRIBABLE_H
 
 #include <ostream>
-#include "butil/macros.h"
 #include "butil/class_name.h"
+#include "butil/macros.h"
 
 namespace brpc {
 
 struct DescribeOptions {
-    DescribeOptions()
-        : verbose(true)
-        , use_html(false)
-    {}
+    DescribeOptions() : verbose(true), use_html(false) {}
 
     bool verbose;
     bool use_html;
@@ -58,8 +54,7 @@ inline std::ostream& operator<<(std::ostream& os, const Describable& obj) {
     return os;
 }
 
-inline std::ostream& operator<<(std::ostream& os,
-                                NonConstDescribable& obj) {
+inline std::ostream& operator<<(std::ostream& os, NonConstDescribable& obj) {
     DescribeOptions options;
     options.verbose = false;
     obj.Describe(os, options);
@@ -92,16 +87,17 @@ public:
         : std::ostream(this)
         , _dest(dest.rdbuf())
         , _is_at_start_of_line(false)
-        , _indent(indent, ' ')
-    {}
+        , _indent(indent, ' ') {}
+
 protected:
     int overflow(int ch) override {
-        if (_is_at_start_of_line && ch != '\n' ) {
+        if (_is_at_start_of_line && ch != '\n') {
             _dest->sputn(_indent.data(), _indent.size());
         }
         _is_at_start_of_line = (ch == '\n');
         return _dest->sputc(ch);
     }
+
 private:
     DISALLOW_COPY_AND_ASSIGN(IndentingOStream);
     std::streambuf* _dest;
@@ -109,6 +105,6 @@ private:
     std::string _indent;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_DESCRIBABLE_H

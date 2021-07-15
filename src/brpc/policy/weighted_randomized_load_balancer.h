@@ -15,14 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_WEIGHTED_RANDOMIZED_LOAD_BALANCER_H
 #define BRPC_POLICY_WEIGHTED_RANDOMIZED_LOAD_BALANCER_H
 
 #include <map>
 #include <vector>
-#include "butil/containers/doubly_buffered_data.h"
 #include "brpc/load_balancer.h"
+#include "butil/containers/doubly_buffered_data.h"
 
 namespace brpc {
 namespace policy {
@@ -41,7 +40,8 @@ public:
     void Describe(std::ostream& os, const DescribeOptions&);
 
     struct Server {
-        Server(SocketId s_id = 0, uint32_t s_w = 0, uint64_t s_c_w_s = 0): id(s_id), weight(s_w), current_weight_sum(s_c_w_s) {}
+        Server(SocketId s_id = 0, uint32_t s_w = 0, uint64_t s_c_w_s = 0)
+            : id(s_id), weight(s_w), current_weight_sum(s_c_w_s) {}
         SocketId id;
         uint32_t weight;
         uint64_t current_weight_sum;
@@ -59,12 +59,13 @@ private:
     static bool Add(Servers& bg, const ServerId& id);
     static bool Remove(Servers& bg, const ServerId& id);
     static size_t BatchAdd(Servers& bg, const std::vector<ServerId>& servers);
-    static size_t BatchRemove(Servers& bg, const std::vector<ServerId>& servers);
+    static size_t BatchRemove(Servers& bg,
+                              const std::vector<ServerId>& servers);
 
     butil::DoublyBufferedData<Servers> _db_servers;
 };
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_POLICY_WEIGHTED_RANDOMIZED_LOAD_BALANCER_H

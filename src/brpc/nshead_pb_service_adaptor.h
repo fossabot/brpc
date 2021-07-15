@@ -15,12 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_NSHEAD_PB_SERVICE_ADAPTOR_H
 #define BRPC_NSHEAD_PB_SERVICE_ADAPTOR_H
 
-#include "brpc/nshead_service.h"             // NsheadService
-#include "brpc/nshead_meta.pb.h"            // NsheadMeta
+#include "brpc/nshead_meta.pb.h"  // NsheadMeta
+#include "brpc/nshead_service.h"  // NsheadService
 
 namespace brpc {
 
@@ -39,8 +38,9 @@ extern const size_t SendNsheadPbResponseSize;
 
 class NsheadPbServiceAdaptor : public NsheadService {
 public:
-    NsheadPbServiceAdaptor() : NsheadService(
-        NsheadServiceOptions(false, SendNsheadPbResponseSize)) {}
+    NsheadPbServiceAdaptor()
+        : NsheadService(NsheadServiceOptions(false, SendNsheadPbResponseSize)) {
+    }
     virtual ~NsheadPbServiceAdaptor() {}
 
     // Fetch meta from `nshead_req' into `meta'.
@@ -63,10 +63,9 @@ public:
     //   controller: you can set attachment into the controller. If something
     //               goes wrong, call controller->SetFailed()
     //   pb_req: the pb request should be set by your implementation.
-    virtual void ParseRequestFromIOBuf(const NsheadMeta& meta,
-                                       const NsheadMessage& nshead_req,
-                                       Controller* controller,
-                                       google::protobuf::Message* pb_req) const = 0;
+    virtual void ParseRequestFromIOBuf(
+        const NsheadMeta& meta, const NsheadMessage& nshead_req,
+        Controller* controller, google::protobuf::Message* pb_req) const = 0;
 
     // Transform `pb_res' (and controller) to `nshead_res'.
     // Params:
@@ -77,19 +76,17 @@ public:
     //           Controller::Failed()), in which case you may put error
     //           information into `nshead_res'.
     //   nshead_res: the nshead response that will be sent back to client.
-    virtual void SerializeResponseToIOBuf(const NsheadMeta& meta,
-                                          Controller* controller, 
-                                          const google::protobuf::Message* pb_res,
-                                          NsheadMessage* nshead_res) const = 0;
+    virtual void SerializeResponseToIOBuf(
+        const NsheadMeta& meta, Controller* controller,
+        const google::protobuf::Message* pb_res,
+        NsheadMessage* nshead_res) const = 0;
 
 private:
-    void ProcessNsheadRequest(
-        const Server& server, Controller* controller,
-        const NsheadMessage& request, NsheadMessage* response,
-        NsheadClosure* done);
+    void ProcessNsheadRequest(const Server& server, Controller* controller,
+                              const NsheadMessage& request,
+                              NsheadMessage* response, NsheadClosure* done);
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_NSHEAD_PB_SERVICE_ADAPTOR_H
+#endif  // BRPC_NSHEAD_PB_SERVICE_ADAPTOR_H

@@ -81,32 +81,31 @@ class ConditionVarImpl;
 class TimeDelta;
 
 class BUTIL_EXPORT ConditionVariable {
- public:
-  // Construct a cv for use with ONLY one user lock.
-  explicit ConditionVariable(Mutex* user_lock);
+public:
+    // Construct a cv for use with ONLY one user lock.
+    explicit ConditionVariable(Mutex* user_lock);
 
-  ~ConditionVariable();
+    ~ConditionVariable();
 
-  // Wait() releases the caller's critical section atomically as it starts to
-  // sleep, and the reacquires it when it is signaled.
-  void Wait();
-  void TimedWait(const TimeDelta& max_time);
+    // Wait() releases the caller's critical section atomically as it starts to
+    // sleep, and the reacquires it when it is signaled.
+    void Wait();
+    void TimedWait(const TimeDelta& max_time);
 
-  // Broadcast() revives all waiting threads.
-  void Broadcast();
-  // Signal() revives one waiting thread.
-  void Signal();
+    // Broadcast() revives all waiting threads.
+    void Broadcast();
+    // Signal() revives one waiting thread.
+    void Signal();
 
- private:
-
+private:
 #if defined(OS_WIN)
-  ConditionVarImpl* impl_;
+    ConditionVarImpl* impl_;
 #elif defined(OS_POSIX)
-  pthread_cond_t condition_;
-  pthread_mutex_t* user_mutex_;
+    pthread_cond_t condition_;
+    pthread_mutex_t* user_mutex_;
 #endif
 
-  DISALLOW_COPY_AND_ASSIGN(ConditionVariable);
+    DISALLOW_COPY_AND_ASSIGN(ConditionVariable);
 };
 
 }  // namespace butil

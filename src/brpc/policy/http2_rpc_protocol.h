@@ -15,16 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BAIDU_RPC_POLICY_HTTP2_RPC_PROTOCOL_H
 #define BAIDU_RPC_POLICY_HTTP2_RPC_PROTOCOL_H
 
-#include "brpc/policy/http_rpc_protocol.h"   // HttpContext
-#include "brpc/input_message_base.h"
-#include "brpc/protocol.h"
-#include "brpc/details/hpack.h"
-#include "brpc/stream_creator.h"
 #include "brpc/controller.h"
+#include "brpc/details/hpack.h"
+#include "brpc/input_message_base.h"
+#include "brpc/policy/http_rpc_protocol.h"  // HttpContext
+#include "brpc/protocol.h"
+#include "brpc/stream_creator.h"
 
 #ifndef NDEBUG
 #include "bvar/bvar.h"
@@ -41,7 +40,7 @@ public:
         : _msg(NULL), _err(err), _stream_id(stream_id) {}
     explicit H2ParseResult(H2StreamContext* msg)
         : _msg(msg), _err(H2_NO_ERROR), _stream_id(0) {}
-    
+
     // Return H2_NO_ERROR when the result is successful.
     H2Error error() const { return _err; }
     const char* error_str() const { return H2ErrorToString(_err); }
@@ -50,19 +49,20 @@ public:
 
     // definitely NULL when result is failed.
     H2StreamContext* message() const { return _msg; }
- 
+
 private:
     H2StreamContext* _msg;
     H2Error _err;
     int _stream_id;
 };
 
-inline H2ParseResult MakeH2Error(H2Error err, int stream_id)
-{ return H2ParseResult(err, stream_id); }
-inline H2ParseResult MakeH2Error(H2Error err)
-{ return H2ParseResult(err, 0); }
-inline H2ParseResult MakeH2Message(H2StreamContext* msg)
-{ return H2ParseResult(msg); }
+inline H2ParseResult MakeH2Error(H2Error err, int stream_id) {
+    return H2ParseResult(err, stream_id);
+}
+inline H2ParseResult MakeH2Error(H2Error err) { return H2ParseResult(err, 0); }
+inline H2ParseResult MakeH2Message(H2StreamContext* msg) {
+    return H2ParseResult(msg);
+}
 
 class H2Context;
 
@@ -78,7 +78,7 @@ enum H2FrameType {
     H2_FRAME_WINDOW_UPDATE = 0x8,
     H2_FRAME_CONTINUATION  = 0x9,
     // ============================
-    H2_FRAME_TYPE_MAX      = 0x9
+    H2_FRAME_TYPE_MAX = 0x9
 };
 
 // https://tools.ietf.org/html/rfc7540#section-4.1
@@ -122,24 +122,24 @@ struct H2Bvars {
 
     H2Bvars()
         : h2_unsent_request_count("h2_unsent_request_count")
-        , h2_stream_context_count("h2_stream_context_count") {
-    }
+        , h2_stream_context_count("h2_stream_context_count") {}
 };
-inline H2Bvars* get_h2_bvars() {
-    return butil::get_leaky_singleton<H2Bvars>();
-}
+inline H2Bvars* get_h2_bvars() { return butil::get_leaky_singleton<H2Bvars>(); }
 #endif
 
 class H2UnsentRequest : public SocketMessage, public StreamUserData {
-friend void PackH2Request(butil::IOBuf*, SocketMessage**,
-                          uint64_t, const google::protobuf::MethodDescriptor*,
-                          Controller*, const butil::IOBuf&, const Authenticator*);
+    friend void PackH2Request(butil::IOBuf*, SocketMessage**, uint64_t,
+                              const google::protobuf::MethodDescriptor*,
+                              Controller*, const butil::IOBuf&,
+                              const Authenticator*);
+
 public:
     static H2UnsentRequest* New(Controller* c);
     void Print(std::ostream& os) const;
 
-    int AddRefManually()
-    { return _nref.fetch_add(1, butil::memory_order_relaxed); }
+    int AddRefManually() {
+        return _nref.fetch_add(1, butil::memory_order_relaxed);
+    }
 
     void RemoveRefManually() {
         if (_nref.fetch_sub(1, butil::memory_order_release) == 1) {
@@ -153,23 +153,20 @@ public:
     size_t EstimatedByteSize() override;
 
     // @StreamUserData
-    void DestroyStreamUserData(SocketUniquePtr& sending_sock,
-                               Controller* cntl,
-                               int error_code,
-                               bool end_of_rpc) override;
+    void DestroyStreamUserData(SocketUniquePtr& sending_sock, Controller* cntl,
+                               int error_code, bool end_of_rpc) override;
 
 private:
-    std::string& push(const std::string& name)
-    { return (new (&_list[_size++]) HPacker::Header(name))->value; }
-    
-    void push(const std::string& name, const std::string& value)
-    { new (&_list[_size++]) HPacker::Header(name, value); }
+    std::string& push(const std::string& name) {
+        return (new (&_list[_size++]) HPacker::Header(name))->value;
+    }
+
+    void push(const std::string& name, const std::string& value) {
+        new (&_list[_size++]) HPacker::Header(name, value);
+    }
 
     H2UnsentRequest(Controller* c)
-        : _nref(1)
-        , _size(0)
-        , _stream_id(0)
-        , _cntl(c) {
+        : _nref(1), _size(0), _stream_id(0), _cntl(c) {
 #ifndef NDEBUG
         get_h2_bvars()->h2_unsent_request_count << 1;
 #endif
@@ -201,13 +198,15 @@ public:
     // @SocketMessage
     butil::Status AppendAndDestroySelf(butil::IOBuf* out, Socket*) override;
     size_t EstimatedByteSize() override;
-    
+
 private:
-    std::string& push(const std::string& name)
-    { return (new (&_list[_size++]) HPacker::Header(name))->value; }
-    
-    void push(const std::string& name, const std::string& value)
-    { new (&_list[_size++]) HPacker::Header(name, value); }
+    std::string& push(const std::string& name) {
+        return (new (&_list[_size++]) HPacker::Header(name))->value;
+    }
+
+    void push(const std::string& name, const std::string& value) {
+        new (&_list[_size++]) HPacker::Header(name, value);
+    }
 
     H2UnsentResponse(Controller* c, int stream_id, bool is_grpc);
     ~H2UnsentResponse() {}
@@ -239,15 +238,16 @@ public:
     H2ParseResult OnEndStream();
 
     H2ParseResult OnData(butil::IOBufBytesIterator&, const H2FrameHead&,
-                       uint32_t frag_size, uint8_t pad_length);
+                         uint32_t frag_size, uint8_t pad_length);
     H2ParseResult OnHeaders(butil::IOBufBytesIterator&, const H2FrameHead&,
-                          uint32_t frag_size, uint8_t pad_length);
-    H2ParseResult OnContinuation(butil::IOBufBytesIterator&, const H2FrameHead&);
+                            uint32_t frag_size, uint8_t pad_length);
+    H2ParseResult OnContinuation(butil::IOBufBytesIterator&,
+                                 const H2FrameHead&);
     H2ParseResult OnResetStream(H2Error h2_error, const H2FrameHead&);
-    
+
     uint64_t correlation_id() const { return _correlation_id; }
     void set_correlation_id(uint64_t cid) { _correlation_id = cid; }
-    
+
     size_t parsed_length() const { return this->_parsed_length; }
     int stream_id() const { return _stream_id; }
 
@@ -265,7 +265,7 @@ public:
     void SetState(H2StreamState state);
 #endif
 
-friend class H2Context;
+    friend class H2Context;
     H2Context* _conn_ctx;
 #if defined(BRPC_H2_STREAM_STATE)
     H2StreamState _state;
@@ -280,19 +280,18 @@ friend class H2Context;
 
 StreamCreator* get_h2_global_stream_creator();
 
-ParseResult ParseH2Message(butil::IOBuf *source, Socket *socket,
-                             bool read_eof, const void *arg);
-void PackH2Request(butil::IOBuf* buf,
-                   SocketMessage** user_message_out,
+ParseResult ParseH2Message(butil::IOBuf* source, Socket* socket, bool read_eof,
+                           const void* arg);
+void PackH2Request(butil::IOBuf* buf, SocketMessage** user_message_out,
                    uint64_t correlation_id,
                    const google::protobuf::MethodDescriptor* method,
-                   Controller* controller,
-                   const butil::IOBuf& request,
+                   Controller* controller, const butil::IOBuf& request,
                    const Authenticator* auth);
 
 class H2GlobalStreamCreator : public StreamCreator {
 protected:
-    StreamUserData* OnCreatingStream(SocketUniquePtr* inout, Controller* cntl) override;
+    StreamUserData* OnCreatingStream(SocketUniquePtr* inout,
+                                     Controller* cntl) override;
     void DestroyStreamCreator(Controller* cntl) override;
 };
 
@@ -302,8 +301,7 @@ enum H2ConnectionState {
     H2_CONNECTION_GOAWAY,
 };
 
-void SerializeFrameHead(void* out_buf,
-                        uint32_t payload_size, H2FrameType type,
+void SerializeFrameHead(void* out_buf, uint32_t payload_size, H2FrameType type,
                         uint8_t flags, uint32_t stream_id);
 
 size_t SerializeH2Settings(const H2Settings& in, void* out);
@@ -313,8 +311,8 @@ const size_t FRAME_HEAD_SIZE = 9;
 // Contexts of a http2 connection
 class H2Context : public Destroyable, public Describable {
 public:
-    typedef H2ParseResult (H2Context::*FrameHandler)(
-        butil::IOBufBytesIterator&, const H2FrameHead&);
+    typedef H2ParseResult (H2Context::*FrameHandler)(butil::IOBufBytesIterator&,
+                                                     const H2FrameHead&);
 
     // main_socket: the socket owns this object as parsing_context
     // server: NULL means client-side
@@ -352,10 +350,10 @@ public:
     int64_t ReleaseDeferredWindowUpdate();
 
 private:
-friend class H2StreamContext;
-friend class H2UnsentRequest;
-friend class H2UnsentResponse;
-friend void InitFrameHandlers();
+    friend class H2StreamContext;
+    friend class H2UnsentRequest;
+    friend class H2UnsentResponse;
+    friend void InitFrameHandlers();
 
     ParseResult ConsumeFrameHead(butil::IOBufBytesIterator&, H2FrameHead*);
 
@@ -367,11 +365,14 @@ friend void InitFrameHandlers();
     H2ParseResult OnPushPromise(butil::IOBufBytesIterator&, const H2FrameHead&);
     H2ParseResult OnPing(butil::IOBufBytesIterator&, const H2FrameHead&);
     H2ParseResult OnGoAway(butil::IOBufBytesIterator&, const H2FrameHead&);
-    H2ParseResult OnWindowUpdate(butil::IOBufBytesIterator&, const H2FrameHead&);
-    H2ParseResult OnContinuation(butil::IOBufBytesIterator&, const H2FrameHead&);
+    H2ParseResult OnWindowUpdate(butil::IOBufBytesIterator&,
+                                 const H2FrameHead&);
+    H2ParseResult OnContinuation(butil::IOBufBytesIterator&,
+                                 const H2FrameHead&);
 
     H2StreamContext* RemoveStream(int stream_id);
-    void RemoveGoAwayStreams(int goaway_stream_id, std::vector<H2StreamContext*>* out_streams);
+    void RemoveGoAwayStreams(int goaway_stream_id,
+                             std::vector<H2StreamContext*>* out_streams);
 
     H2StreamContext* FindStream(int stream_id);
     void ClearAbandonedStreamsImpl();
@@ -399,7 +400,8 @@ friend void InitFrameHandlers();
 
 inline int H2Context::AllocateClientStreamId() {
     if (RunOutStreams()) {
-        LOG(WARNING) << "Fail to allocate new client stream, _last_sent_stream_id="
+        LOG(WARNING)
+            << "Fail to allocate new client stream, _last_sent_stream_id="
             << _last_sent_stream_id;
         return -1;
     }
@@ -421,7 +423,7 @@ inline std::ostream& operator<<(std::ostream& os, const H2UnsentResponse& res) {
     return os;
 }
 
-} // namespace policy
-} // namespace brpc
+}  // namespace policy
+}  // namespace brpc
 
-#endif // BAIDU_RPC_POLICY_HTTP2_RPC_PROTOCOL_H
+#endif  // BAIDU_RPC_POLICY_HTTP2_RPC_PROTOCOL_H

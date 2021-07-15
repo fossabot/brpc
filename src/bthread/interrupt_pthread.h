@@ -32,4 +32,4 @@ int interrupt_pthread(pthread_t th);
 
 }  // namespace bthread
 
-#endif // BTHREAD_INTERRUPT_PTHREAD_H
+#endif  // BTHREAD_INTERRUPT_PTHREAD_H

@@ -17,17 +17,17 @@
 
 // Date: Tue Jul 28 18:15:57 CST 2015
 
-#ifndef  BVAR_DETAIL_SAMPLER_H
-#define  BVAR_DETAIL_SAMPLER_H
+#ifndef BVAR_DETAIL_SAMPLER_H
+#define BVAR_DETAIL_SAMPLER_H
 
 #include <vector>
-#include "butil/containers/linked_list.h"// LinkNode
-#include "butil/scoped_lock.h"           // BAIDU_SCOPED_LOCK
-#include "butil/logging.h"               // LOG()
-#include "butil/containers/bounded_queue.h"// BoundedQueue
-#include "butil/type_traits.h"           // is_same
-#include "butil/time.h"                  // gettimeofday_us
 #include "butil/class_name.h"
+#include "butil/containers/bounded_queue.h"  // BoundedQueue
+#include "butil/containers/linked_list.h"    // LinkNode
+#include "butil/logging.h"                   // LOG()
+#include "butil/scoped_lock.h"               // BAIDU_SCOPED_LOCK
+#include "butil/time.h"                      // gettimeofday_us
+#include "butil/type_traits.h"               // is_same
 
 namespace bvar {
 namespace detail {
@@ -38,14 +38,14 @@ struct Sample {
     int64_t time_us;
 
     Sample() : data(), time_us(0) {}
-    Sample(const T& data2, int64_t time2) : data(data2), time_us(time2) {}  
+    Sample(const T& data2, int64_t time2) : data(data2), time_us(time2) {}
 };
 
 // The base class for all samplers whose take_sample() are called periodically.
 class Sampler : public butil::LinkNode<Sampler> {
 public:
     Sampler();
-        
+
     // This function will be called every second(approximately) in a
     // dedicated thread if schedule() is called.
     virtual void take_sample() = 0;
@@ -57,11 +57,11 @@ public:
     // Call this function instead of delete to destroy the sampler. Deletion
     // of the sampler may be delayed for seconds.
     void destroy();
-        
+
 protected:
     virtual ~Sampler();
-    
-friend class SamplerCollector;
+
+    friend class SamplerCollector;
     bool _used;
     // Sync destroy() and take_sample().
     butil::Mutex _mutex;
@@ -89,10 +89,7 @@ class ReducerSampler : public Sampler {
 public:
     static const time_t MAX_SECONDS_LIMIT = 3600;
 
-    explicit ReducerSampler(R* reducer)
-        : _reducer(reducer)
-        , _window_size(1) {
-        
+    explicit ReducerSampler(R* reducer) : _reducer(reducer), _window_size(1) {
         // Invoked take_sample at begining so the value of the first second
         // would not be ignored
         take_sample();
@@ -107,12 +104,12 @@ public:
             const size_t new_cap =
                 std::max(_q.capacity() * 2, (size_t)_window_size + 1);
             const size_t memsize = sizeof(Sample<T>) * new_cap;
-            void* mem = malloc(memsize);
+            void* mem            = malloc(memsize);
             if (NULL == mem) {
                 return;
             }
-            butil::BoundedQueue<Sample<T> > new_q(
-                mem, memsize, butil::OWNS_STORAGE);
+            butil::BoundedQueue<Sample<T> > new_q(mem, memsize,
+                                                  butil::OWNS_STORAGE);
             Sample<T> tmp;
             while (_q.pop(&tmp)) {
                 new_q.push(tmp);
@@ -188,7 +185,7 @@ public:
         return 0;
     }
 
-    void get_samples(std::vector<T> *samples, time_t window_size) {
+    void get_samples(std::vector<T>* samples, time_t window_size) {
         if (window_size <= 0) {
             LOG(FATAL) << "Invalid window_size=" << window_size;
             return;

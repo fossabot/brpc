@@ -15,37 +15,35 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <gflags/gflags.h>                            // DEFINE_int32
-#include "butil/compat.h"
-#include "butil/fd_utility.h"                         // make_close_on_exec
-#include "butil/logging.h"                            // LOG
-#include "butil/third_party/murmurhash3/murmurhash3.h"// fmix32
-#include "bthread/bthread.h"                          // bthread_start_background
 #include "brpc/event_dispatcher.h"
+#include <gflags/gflags.h>    // DEFINE_int32
+#include "bthread/bthread.h"  // bthread_start_background
+#include "butil/compat.h"
+#include "butil/fd_utility.h"                           // make_close_on_exec
+#include "butil/logging.h"                              // LOG
+#include "butil/third_party/murmurhash3/murmurhash3.h"  // fmix32
 #ifdef BRPC_SOCKET_HAS_EOF
 #include "brpc/details/has_epollrdhup.h"
 #endif
 #include "brpc/reloadable_flags.h"
 #if defined(OS_MACOSX)
-#include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #endif
 
 namespace brpc {
 
 DEFINE_int32(event_dispatcher_num, 1, "Number of event dispatcher");
 
-DEFINE_bool(usercode_in_pthread, false, 
+DEFINE_bool(usercode_in_pthread, false,
             "Call user's callback in pthreads, use bthreads otherwise");
 
 EventDispatcher::EventDispatcher()
     : _epfd(-1)
     , _stop(false)
     , _tid(0)
-    , _consumer_thread_attr(BTHREAD_ATTR_NORMAL)
-{
+    , _consumer_thread_attr(BTHREAD_ATTR_NORMAL) {
 #if defined(OS_LINUX)
     _epfd = epoll_create(1024 * 1024);
     if (_epfd < 0) {
@@ -59,7 +57,7 @@ EventDispatcher::EventDispatcher()
         return;
     }
 #else
-    #error Not implemented
+#error Not implemented
 #endif
     CHECK_EQ(0, butil::make_close_on_exec(_epfd));
 
@@ -93,19 +91,20 @@ int EventDispatcher::Start(const bthread_attr_t* consumer_thread_attr) {
 #endif
         return -1;
     }
-    
+
     if (_tid != 0) {
-        LOG(FATAL) << "Already started this dispatcher(" << this 
+        LOG(FATAL) << "Already started this dispatcher(" << this
                    << ") in bthread=" << _tid;
         return -1;
     }
 
-    // Set _consumer_thread_attr before creating epoll/kqueue thread to make sure
-    // everyting seems sane to the thread.
-    _consumer_thread_attr = (consumer_thread_attr  ?
-                             *consumer_thread_attr : BTHREAD_ATTR_NORMAL);
+    // Set _consumer_thread_attr before creating epoll/kqueue thread to make
+    // sure everyting seems sane to the thread.
+    _consumer_thread_attr =
+        (consumer_thread_attr ? *consumer_thread_attr : BTHREAD_ATTR_NORMAL);
 
-    //_consumer_thread_attr is used in StartInputEvent(), assign flag NEVER_QUIT to it will cause new bthread
+    //_consumer_thread_attr is used in StartInputEvent(), assign flag NEVER_QUIT
+    //to it will cause new bthread
     // that created by epoll_wait() never to quit.
     _epoll_thread_attr = _consumer_thread_attr | BTHREAD_NEVER_QUIT;
 
@@ -114,8 +113,8 @@ int EventDispatcher::Start(const bthread_attr_t* consumer_thread_attr) {
     // when the older comlog (e.g. 3.1.85) calls com_openlog_r(). Since this
     // is also a potential issue for consumer threads, using the same attr
     // should be a reasonable solution.
-    int rc = bthread_start_background(
-        &_tid, &_epoll_thread_attr, RunThis, this);
+    int rc =
+        bthread_start_background(&_tid, &_epoll_thread_attr, RunThis, this);
     if (rc) {
         LOG(FATAL) << "Fail to create epoll/kqueue thread: " << berror(rc);
         return -1;
@@ -124,7 +123,7 @@ int EventDispatcher::Start(const bthread_attr_t* consumer_thread_attr) {
 }
 
 bool EventDispatcher::Running() const {
-    return !_stop  && _epfd >= 0 && _tid != 0;
+    return !_stop && _epfd >= 0 && _tid != 0;
 }
 
 void EventDispatcher::Stop() {
@@ -132,12 +131,12 @@ void EventDispatcher::Stop() {
 
     if (_epfd >= 0) {
 #if defined(OS_LINUX)
-        epoll_event evt = { EPOLLOUT,  { NULL } };
+        epoll_event evt = {EPOLLOUT, {NULL}};
         epoll_ctl(_epfd, EPOLL_CTL_ADD, _wakeup_fds[1], &evt);
 #elif defined(OS_MACOSX)
         struct kevent kqueue_event;
         EV_SET(&kqueue_event, _wakeup_fds[1], EVFILT_WRITE, EV_ADD | EV_ENABLE,
-                    0, 0, NULL);
+               0, 0, NULL);
         kevent(_epfd, &kqueue_event, 1, NULL, 0, NULL);
 #endif
     }
@@ -159,7 +158,7 @@ int EventDispatcher::AddEpollOut(SocketId socket_id, int fd, bool pollin) {
 #if defined(OS_LINUX)
     epoll_event evt;
     evt.data.u64 = socket_id;
-    evt.events = EPOLLOUT | EPOLLET;
+    evt.events   = EPOLLOUT | EPOLLET;
 #ifdef BRPC_SOCKET_HAS_EOF
     evt.events |= has_epollrdhup;
 #endif
@@ -177,15 +176,15 @@ int EventDispatcher::AddEpollOut(SocketId socket_id, int fd, bool pollin) {
     }
 #elif defined(OS_MACOSX)
     struct kevent evt;
-    //TODO(zhujiashun): add EV_EOF
-    EV_SET(&evt, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_CLEAR,
-                0, 0, (void*)socket_id);
+    // TODO(zhujiashun): add EV_EOF
+    EV_SET(&evt, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0,
+           (void*)socket_id);
     if (kevent(_epfd, &evt, 1, NULL, 0, NULL) < 0) {
         return -1;
     }
     if (pollin) {
-        EV_SET(&evt, fd, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR,
-                    0, 0, (void*)socket_id);
+        EV_SET(&evt, fd, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0,
+               (void*)socket_id);
         if (kevent(_epfd, &evt, 1, NULL, 0, NULL) < 0) {
             return -1;
         }
@@ -194,13 +193,12 @@ int EventDispatcher::AddEpollOut(SocketId socket_id, int fd, bool pollin) {
     return 0;
 }
 
-int EventDispatcher::RemoveEpollOut(SocketId socket_id, 
-                                    int fd, bool pollin) {
+int EventDispatcher::RemoveEpollOut(SocketId socket_id, int fd, bool pollin) {
 #if defined(OS_LINUX)
     if (pollin) {
         epoll_event evt;
         evt.data.u64 = socket_id;
-        evt.events = EPOLLIN | EPOLLET;
+        evt.events   = EPOLLIN | EPOLLET;
 #ifdef BRPC_SOCKET_HAS_EOF
         evt.events |= has_epollrdhup;
 #endif
@@ -215,8 +213,8 @@ int EventDispatcher::RemoveEpollOut(SocketId socket_id,
         return -1;
     }
     if (pollin) {
-        EV_SET(&evt, fd, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR,
-                    0, 0, (void*)socket_id);
+        EV_SET(&evt, fd, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0,
+               (void*)socket_id);
         return kevent(_epfd, &evt, 1, NULL, 0, NULL);
     }
     return 0;
@@ -231,7 +229,7 @@ int EventDispatcher::AddConsumer(SocketId socket_id, int fd) {
     }
 #if defined(OS_LINUX)
     epoll_event evt;
-    evt.events = EPOLLIN | EPOLLET;
+    evt.events   = EPOLLIN | EPOLLET;
     evt.data.u64 = socket_id;
 #ifdef BRPC_SOCKET_HAS_EOF
     evt.events |= has_epollrdhup;
@@ -239,8 +237,8 @@ int EventDispatcher::AddConsumer(SocketId socket_id, int fd) {
     return epoll_ctl(_epfd, EPOLL_CTL_ADD, fd, &evt);
 #elif defined(OS_MACOSX)
     struct kevent evt;
-    EV_SET(&evt, fd, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR,
-                0, 0, (void*)socket_id);
+    EV_SET(&evt, fd, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR, 0, 0,
+           (void*)socket_id);
     return kevent(_epfd, &evt, 1, NULL, 0, NULL);
 #endif
     return -1;
@@ -318,7 +316,7 @@ void EventDispatcher::Run() {
 #ifdef BRPC_SOCKET_HAS_EOF
                 || (e[i].events & has_epollrdhup)
 #endif
-                ) {
+            ) {
                 // We don't care about the return value.
                 Socket::StartInputEvent(e[i].data.u64, e[i].events,
                                         _consumer_thread_attr);
@@ -347,7 +345,7 @@ void EventDispatcher::Run() {
     }
 }
 
-static EventDispatcher* g_edisp = NULL;
+static EventDispatcher* g_edisp    = NULL;
 static pthread_once_t g_edisp_once = PTHREAD_ONCE_INIT;
 
 static void StopAndJoinGlobalDispatchers() {
@@ -359,12 +357,14 @@ static void StopAndJoinGlobalDispatchers() {
 void InitializeGlobalDispatchers() {
     g_edisp = new EventDispatcher[FLAGS_event_dispatcher_num];
     for (int i = 0; i < FLAGS_event_dispatcher_num; ++i) {
-        const bthread_attr_t attr = FLAGS_usercode_in_pthread ?
-            BTHREAD_ATTR_PTHREAD : BTHREAD_ATTR_NORMAL;
+        const bthread_attr_t attr = FLAGS_usercode_in_pthread
+                                        ? BTHREAD_ATTR_PTHREAD
+                                        : BTHREAD_ATTR_NORMAL;
         CHECK_EQ(0, g_edisp[i].Start(&attr));
     }
     // This atexit is will be run before g_task_control.stop() because above
-    // Start() initializes g_task_control by creating bthread (to run epoll/kqueue).
+    // Start() initializes g_task_control by creating bthread (to run
+    // epoll/kqueue).
     CHECK_EQ(0, atexit(StopAndJoinGlobalDispatchers));
 }
 
@@ -377,4 +377,4 @@ EventDispatcher& GetGlobalEventDispatcher(int fd) {
     return g_edisp[index];
 }
 
-} // namespace brpc
+}  // namespace brpc

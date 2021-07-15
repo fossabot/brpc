@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #include "brpc/ssl_options.h"
 
 namespace brpc {
@@ -23,9 +22,7 @@ namespace brpc {
 VerifyOptions::VerifyOptions() : verify_depth(0) {}
 
 ChannelSSLOptions::ChannelSSLOptions()
-    : ciphers("DEFAULT")
-    , protocols("TLSv1, TLSv1.1, TLSv1.2")
-{}
+    : ciphers("DEFAULT"), protocols("TLSv1, TLSv1.1, TLSv1.2") {}
 
 ServerSSLOptions::ServerSSLOptions()
     : strict_sni(false)
@@ -33,7 +30,6 @@ ServerSSLOptions::ServerSSLOptions()
     , release_buffer(false)
     , session_lifetime_s(300)
     , session_cache_size(20480)
-    , ecdhe_curve_name("prime256v1")
-{}
+    , ecdhe_curve_name("prime256v1") {}
 
-} // namespace brpc
+}  // namespace brpc

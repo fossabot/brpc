@@ -17,11 +17,11 @@
 
 // Date: Tue Jul 28 18:14:40 CST 2015
 
-#include "butil/time.h"
-#include "butil/memory/singleton_on_pthread_once.h"
-#include "bvar/reducer.h"
 #include "bvar/detail/sampler.h"
+#include "butil/memory/singleton_on_pthread_once.h"
+#include "butil/time.h"
 #include "bvar/passive_status.h"
+#include "bvar/reducer.h"
 #include "bvar/window.h"
 
 namespace bvar {
@@ -31,7 +31,7 @@ const int WARN_NOSLEEP_THRESHOLD = 2;
 
 // Combine two circular linked list into one.
 struct CombineSampler {
-    void operator()(Sampler* & s1, Sampler* s2) const {
+    void operator()(Sampler*& s1, Sampler* s2) const {
         if (s2 == NULL) {
             return;
         }
@@ -60,10 +60,7 @@ static bool registered_atfork = false;
 // deletion is taken place in the thread as well.
 class SamplerCollector : public bvar::Reducer<Sampler*, CombineSampler> {
 public:
-    SamplerCollector()
-        : _created(false)
-        , _stop(false)
-        , _cumulated_time_us(0) {
+    SamplerCollector() : _created(false), _stop(false), _cumulated_time_us(0) {
         create_sampling_thread();
     }
     ~SamplerCollector() {
@@ -112,7 +109,8 @@ private:
     }
 
     static double get_cumulated_time(void* arg) {
-        return static_cast<SamplerCollector*>(arg)->_cumulated_time_us / 1000.0 / 1000.0;
+        return static_cast<SamplerCollector*>(arg)->_cumulated_time_us /
+               1000.0 / 1000.0;
     }
 
 private:
@@ -124,7 +122,8 @@ private:
 
 #ifndef UNIT_TEST
 static PassiveStatus<double>* s_cumulated_time_bvar = NULL;
-static bvar::PerSecond<bvar::PassiveStatus<double> >* s_sampling_thread_usage_bvar = NULL;
+static bvar::PerSecond<bvar::PassiveStatus<double> >*
+    s_sampling_thread_usage_bvar = NULL;
 #endif
 
 void SamplerCollector::run() {
@@ -141,7 +140,7 @@ void SamplerCollector::run() {
     if (s_sampling_thread_usage_bvar == NULL) {
         s_sampling_thread_usage_bvar =
             new bvar::PerSecond<bvar::PassiveStatus<double> >(
-                    "bvar_sampler_collector_usage", s_cumulated_time_bvar, 10);
+                "bvar_sampler_collector_usage", s_cumulated_time_bvar, 10);
     }
 #endif
 
@@ -149,7 +148,7 @@ void SamplerCollector::run() {
     int consecutive_nosleep = 0;
     while (!_stop) {
         int64_t abstime = butil::gettimeofday_us();
-        Sampler* s = this->reset();
+        Sampler* s      = this->reset();
         if (s) {
             s->InsertBeforeAsList(&root);
         }
@@ -158,7 +157,7 @@ void SamplerCollector::run() {
         for (butil::LinkNode<Sampler>* p = root.next(); p != &root;) {
             // We may remove p from the list, save next first.
             butil::LinkNode<Sampler>* saved_next = p->next();
-            Sampler* s = p->value();
+            Sampler* s                           = p->value();
             s->_mutex.lock();
             if (!s->_used) {
                 s->_mutex.unlock();
@@ -172,18 +171,18 @@ void SamplerCollector::run() {
             }
             p = saved_next;
         }
-        bool slept = false;
+        bool slept  = false;
         int64_t now = butil::gettimeofday_us();
         _cumulated_time_us += now - abstime;
         abstime += 1000000L;
         while (abstime > now) {
             ::usleep(abstime - now);
             slept = true;
-            now = butil::gettimeofday_us();
+            now   = butil::gettimeofday_us();
         }
         if (slept) {
             consecutive_nosleep = 0;
-        } else {            
+        } else {
             if (++consecutive_nosleep >= WARN_NOSLEEP_THRESHOLD) {
                 consecutive_nosleep = 0;
                 LOG(WARNING) << "bvar is busy at sampling for "

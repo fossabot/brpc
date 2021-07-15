@@ -15,15 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "butil/logging.h"
 #include "brpc/adaptive_connection_type.h"
-
+#include "butil/logging.h"
 
 namespace brpc {
 
-inline bool CompareStringPieceWithoutCase(
-        const butil::StringPiece& s1, const char* s2) {
+inline bool CompareStringPieceWithoutCase(const butil::StringPiece& s1,
+                                          const char* s2) {
     if (strlen(s2) != s1.size()) {
         return false;
     }
@@ -61,12 +59,12 @@ const char* ConnectionTypeToString(ConnectionType type) {
 
 void AdaptiveConnectionType::operator=(const butil::StringPiece& name) {
     if (name.empty()) {
-        _type = CONNECTION_TYPE_UNKNOWN;
+        _type  = CONNECTION_TYPE_UNKNOWN;
         _error = false;
     } else {
-        _type = StringToConnectionType(name);
+        _type  = StringToConnectionType(name);
         _error = (_type == CONNECTION_TYPE_UNKNOWN);
     }
 }
 
-} // namespace brpc
+}  // namespace brpc

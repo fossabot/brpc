@@ -15,16 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_MEMCACHE_H
 #define BRPC_MEMCACHE_H
 
-#include <string>
 #include <google/protobuf/message.h>
+#include <string>
 
+#include "brpc/proto_base.pb.h"
 #include "butil/iobuf.h"
 #include "butil/strings/string_piece.h"
-#include "brpc/proto_base.pb.h"
 
 namespace brpc {
 
@@ -58,13 +57,13 @@ public:
     // provided value.
     bool Set(const butil::StringPiece& key, const butil::StringPiece& value,
              uint32_t flags, uint32_t exptime, uint64_t cas_value);
-    
+
     bool Add(const butil::StringPiece& key, const butil::StringPiece& value,
              uint32_t flags, uint32_t exptime, uint64_t cas_value);
 
     bool Replace(const butil::StringPiece& key, const butil::StringPiece& value,
                  uint32_t flags, uint32_t exptime, uint64_t cas_value);
-    
+
     bool Append(const butil::StringPiece& key, const butil::StringPiece& value,
                 uint32_t flags, uint32_t exptime, uint64_t cas_value);
 
@@ -78,7 +77,7 @@ public:
                    uint64_t initial_value, uint32_t exptime);
     bool Decrement(const butil::StringPiece& key, uint64_t delta,
                    uint64_t initial_value, uint32_t exptime);
-    
+
     bool Touch(const butil::StringPiece& key, uint32_t exptime);
 
     bool Version();
@@ -96,28 +95,29 @@ public:
     void MergeFrom(const MemcacheRequest& from);
     void Clear();
     bool IsInitialized() const;
-  
+
     int ByteSize() const;
     bool MergePartialFromCodedStream(
         ::google::protobuf::io::CodedInputStream* input);
     void SerializeWithCachedSizes(
         ::google::protobuf::io::CodedOutputStream* output) const;
-    ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+    ::google::protobuf::uint8* SerializeWithCachedSizesToArray(
+        ::google::protobuf::uint8* output) const;
     int GetCachedSize() const { return _cached_size_; }
-    
+
     static const ::google::protobuf::Descriptor* descriptor();
 
 protected:
     ::google::protobuf::Metadata GetMetadata() const override;
-    
+
 private:
     bool GetOrDelete(uint8_t command, const butil::StringPiece& key);
     bool Counter(uint8_t command, const butil::StringPiece& key, uint64_t delta,
                  uint64_t initial_value, uint32_t exptime);
-    
+
     bool Store(uint8_t command, const butil::StringPiece& key,
-               const butil::StringPiece& value,
-               uint32_t flags, uint32_t exptime, uint64_t cas_value);
+               const butil::StringPiece& value, uint32_t flags,
+               uint32_t exptime, uint64_t cas_value);
 
     void SharedCtor();
     void SharedDtor();
@@ -156,17 +156,17 @@ public:
     // Definition of the valid response status numbers.
     // See section 3.2 Response Status
     enum Status {
-        STATUS_SUCCESS = 0x00,
-        STATUS_KEY_ENOENT = 0x01,
-        STATUS_KEY_EEXISTS = 0x02,
-        STATUS_E2BIG = 0x03,
-        STATUS_EINVAL = 0x04,
-        STATUS_NOT_STORED = 0x05,
-        STATUS_DELTA_BADVAL = 0x06,
-        STATUS_AUTH_ERROR = 0x20,
-        STATUS_AUTH_CONTINUE = 0x21,
+        STATUS_SUCCESS         = 0x00,
+        STATUS_KEY_ENOENT      = 0x01,
+        STATUS_KEY_EEXISTS     = 0x02,
+        STATUS_E2BIG           = 0x03,
+        STATUS_EINVAL          = 0x04,
+        STATUS_NOT_STORED      = 0x05,
+        STATUS_DELTA_BADVAL    = 0x06,
+        STATUS_AUTH_ERROR      = 0x20,
+        STATUS_AUTH_CONTINUE   = 0x21,
         STATUS_UNKNOWN_COMMAND = 0x81,
-        STATUS_ENOMEM = 0x82
+        STATUS_ENOMEM          = 0x82
     };
 
     MemcacheResponse();
@@ -179,7 +179,7 @@ public:
     void Swap(MemcacheResponse* other);
 
     const std::string& LastError() const { return _err; }
-   
+
     bool PopGet(butil::IOBuf* value, uint32_t* flags, uint64_t* cas_value);
     bool PopGet(std::string* value, uint32_t* flags, uint64_t* cas_value);
     bool PopSet(uint64_t* cas_value);
@@ -196,9 +196,9 @@ public:
     butil::IOBuf& raw_buffer() { return _buf; }
     const butil::IOBuf& raw_buffer() const { return _buf; }
     static const char* status_str(Status);
-      
+
     // implements Message ----------------------------------------------
-  
+
     MemcacheResponse* New() const;
     void CopyFrom(const ::google::protobuf::Message& from);
     void MergeFrom(const ::google::protobuf::Message& from);
@@ -206,13 +206,14 @@ public:
     void MergeFrom(const MemcacheResponse& from);
     void Clear();
     bool IsInitialized() const;
-  
+
     int ByteSize() const;
     bool MergePartialFromCodedStream(
         ::google::protobuf::io::CodedInputStream* input);
     void SerializeWithCachedSizes(
         ::google::protobuf::io::CodedOutputStream* output) const;
-    ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+    ::google::protobuf::uint8* SerializeWithCachedSizesToArray(
+        ::google::protobuf::uint8* output) const;
     int GetCachedSize() const { return _cached_size_; }
 
     static const ::google::protobuf::Descriptor* descriptor();
@@ -233,7 +234,6 @@ private:
     mutable int _cached_size_;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_MEMCACHE_H

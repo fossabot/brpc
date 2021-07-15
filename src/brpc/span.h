@@ -15,52 +15,52 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 // NOTE: RPC users are not supposed to include this file.
 
 #ifndef BRPC_SPAN_H
 #define BRPC_SPAN_H
 
 #include <stdint.h>
-#include <string>
 #include <deque>
 #include <ostream>
-#include "butil/macros.h"
+#include <string>
+#include "brpc/options.pb.h"  // ProtocolType
+#include "brpc/span.pb.h"
+#include "bthread/task_meta.h"
 #include "butil/endpoint.h"
+#include "butil/macros.h"
 #include "butil/string_splitter.h"
 #include "bvar/collector.h"
-#include "bthread/task_meta.h"
-#include "brpc/options.pb.h"                 // ProtocolType
-#include "brpc/span.pb.h"
 
 namespace bthread {
 extern thread_local bthread::LocalStorage tls_bls;
 }
-
 
 namespace brpc {
 
 DECLARE_bool(enable_rpcz);
 
 // Collect information required by /rpcz and tracing system whose idea is
-// described in http://static.googleusercontent.com/media/research.google.com/en//pubs/archive/36356.pdf
+// described in
+// http://static.googleusercontent.com/media/research.google.com/en//pubs/archive/36356.pdf
 class Span : public bvar::Collected {
-friend class SpanDB;
+    friend class SpanDB;
     struct Forbidden {};
+
 public:
     // Call CreateServerSpan/CreateClientSpan instead.
     Span(Forbidden) {}
     ~Span() {}
 
     // Create a span to track a request inside server.
-    static Span* CreateServerSpan(
-        const std::string& full_method_name,
-        uint64_t trace_id, uint64_t span_id, uint64_t parent_span_id,
-        int64_t base_real_us);
+    static Span* CreateServerSpan(const std::string& full_method_name,
+                                  uint64_t trace_id, uint64_t span_id,
+                                  uint64_t parent_span_id,
+                                  int64_t base_real_us);
     // Create a span without name to track a request inside server.
-    static Span* CreateServerSpan(
-        uint64_t trace_id, uint64_t span_id, uint64_t parent_span_id,
-        int64_t base_real_us);
+    static Span* CreateServerSpan(uint64_t trace_id, uint64_t span_id,
+                                  uint64_t parent_span_id,
+                                  int64_t base_real_us);
 
     // Clear all annotations and reset name of the span.
     void ResetServerSpanName(const std::string& name);
@@ -72,9 +72,7 @@ public:
     static void Submit(Span* span, int64_t cpuwide_time_us);
 
     // Set tls parent.
-    void AsParent() {
-        bthread::tls_bls.rpcz_parent_span = this;
-    }
+    void AsParent() { bthread::tls_bls.rpcz_parent_span = this; }
 
     // Add log with time.
     void Annotate(const char* fmt, ...);
@@ -82,7 +80,7 @@ public:
     void Annotate(const std::string& info);
     // When length <= 0, use strlen instead.
     void AnnotateCStr(const char* cstr, size_t length);
-    
+
     // #child spans, Not O(1)
     size_t CountClientSpans() const;
 
@@ -98,18 +96,19 @@ public:
     void set_request_size(int size) { _request_size = size; }
     void set_response_size(int size) { _response_size = size; }
     void set_async(bool async) { _async = async; }
-    
+
     void set_base_real_us(int64_t tm) { _base_real_us = tm; }
-    void set_received_us(int64_t tm)
-    { _received_real_us = tm + _base_real_us; }
-    void set_start_parse_us(int64_t tm)
-    { _start_parse_real_us = tm + _base_real_us; }
-    void set_start_callback_us(int64_t tm)
-    { _start_callback_real_us = tm + _base_real_us; }
-    void set_start_send_us(int64_t tm)
-    { _start_send_real_us = tm + _base_real_us; }
-    void set_sent_us(int64_t tm)
-    { _sent_real_us = tm + _base_real_us; }
+    void set_received_us(int64_t tm) { _received_real_us = tm + _base_real_us; }
+    void set_start_parse_us(int64_t tm) {
+        _start_parse_real_us = tm + _base_real_us;
+    }
+    void set_start_callback_us(int64_t tm) {
+        _start_callback_real_us = tm + _base_real_us;
+    }
+    void set_start_send_us(int64_t tm) {
+        _start_send_real_us = tm + _base_real_us;
+    }
+    void set_sent_us(int64_t tm) { _sent_real_us = tm + _base_real_us; }
 
     Span* local_parent() const { return _local_parent; }
     static Span* tls_parent() {
@@ -136,7 +135,7 @@ public:
     bool async() const { return _async; }
     const std::string& full_method_name() const { return _full_method_name; }
     const std::string& info() const { return _info; }
-    
+
 private:
     DISALLOW_COPY_AND_ASSIGN(Span);
 
@@ -162,8 +161,8 @@ private:
     bool _async;
     ProtocolType _protocol;
     int _error_code;
-    int  _request_size;
-    int  _response_size;
+    int _request_size;
+    int _response_size;
     int64_t _base_real_us;
     int64_t _received_real_us;
     int64_t _start_parse_real_us;
@@ -171,7 +170,7 @@ private:
     int64_t _start_send_real_us;
     int64_t _sent_real_us;
     std::string _full_method_name;
-    // Format: 
+    // Format:
     //   time1_us \s annotation1 <SEP>
     //   time2_us \s annotation2 <SEP>
     //   ...
@@ -186,8 +185,9 @@ private:
 class SpanInfoExtractor {
 public:
     SpanInfoExtractor(const char* info);
-    bool PopAnnotation(int64_t before_this_time,
-                       int64_t* time, std::string* annotation);
+    bool PopAnnotation(int64_t before_this_time, int64_t* time,
+                       std::string* annotation);
+
 private:
     butil::StringSplitter _sp;
 };
@@ -197,14 +197,13 @@ private:
 bool CanAnnotateSpan();
 void AnnotateSpan(const char* fmt, ...);
 
-
 class SpanFilter {
 public:
     virtual bool Keep(const BriefSpan&) = 0;
 };
 
 class SpanDB;
-    
+
 // Find a span by its trace_id and span_id, serialize it into `span'.
 int FindSpan(uint64_t trace_id, uint64_t span_id, RpczSpan* span);
 
@@ -230,10 +229,9 @@ void ListSpans(SpanDB* db, int64_t before_this_time, size_t max_scan,
 inline bool IsTraceable(bool is_upstream_traced) {
     extern bvar::CollectorSpeedLimit g_span_sl;
     return is_upstream_traced ||
-        (FLAGS_enable_rpcz && bvar::is_collectable(&g_span_sl));
+           (FLAGS_enable_rpcz && bvar::is_collectable(&g_span_sl));
 }
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_SPAN_H
+#endif  // BRPC_SPAN_H

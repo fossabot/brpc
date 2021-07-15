@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_LOAD_BALANCER_WITH_NAMING_H
 #define BRPC_LOAD_BALANCER_WITH_NAMING_H
 
-#include "butil/intrusive_ptr.hpp"
+#include "brpc/details/naming_service_thread.h"  // NamingServiceWatcher
 #include "brpc/load_balancer.h"
-#include "brpc/details/naming_service_thread.h"         // NamingServiceWatcher
-
+#include "butil/intrusive_ptr.hpp"
 
 namespace brpc {
 
@@ -35,7 +33,7 @@ public:
     int Init(const char* ns_url, const char* lb_name,
              const NamingServiceFilter* filter,
              const GetNamingServiceThreadOptions* options);
-    
+
     void OnAddedServers(const std::vector<ServerId>& servers);
     void OnRemovedServers(const std::vector<ServerId>& servers);
 
@@ -45,7 +43,6 @@ private:
     butil::intrusive_ptr<NamingServiceThread> _nsthread_ptr;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_LOAD_BALANCER_WITH_NAMING_H
+#endif  // BRPC_LOAD_BALANCER_WITH_NAMING_H

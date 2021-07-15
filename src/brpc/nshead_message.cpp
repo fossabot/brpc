@@ -15,19 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <algorithm>
-#include <google/protobuf/reflection_ops.h>                 // ReflectionOps::Merge
-#include <google/protobuf/wire_format.h>
 #include "brpc/nshead_message.h"
+#include <google/protobuf/reflection_ops.h>  // ReflectionOps::Merge
+#include <google/protobuf/wire_format.h>
+#include <algorithm>
 #include "butil/logging.h"
 
 namespace brpc {
 
-NsheadMessage::NsheadMessage()
-    : ::google::protobuf::Message() {
-    SharedCtor();
-}
+NsheadMessage::NsheadMessage() : ::google::protobuf::Message() { SharedCtor(); }
 
 NsheadMessage::NsheadMessage(const NsheadMessage& from)
     : ::google::protobuf::Message() {
@@ -35,24 +31,17 @@ NsheadMessage::NsheadMessage(const NsheadMessage& from)
     MergeFrom(from);
 }
 
-void NsheadMessage::SharedCtor() {
-    memset(&head, 0, sizeof(head));
-}
+void NsheadMessage::SharedCtor() { memset(&head, 0, sizeof(head)); }
 
-NsheadMessage::~NsheadMessage() {
-    SharedDtor();
-}
+NsheadMessage::~NsheadMessage() { SharedDtor(); }
 
-void NsheadMessage::SharedDtor() {
-}
+void NsheadMessage::SharedDtor() {}
 
 const ::google::protobuf::Descriptor* NsheadMessage::descriptor() {
     return NsheadMessageBase::descriptor();
 }
 
-NsheadMessage* NsheadMessage::New() const {
-    return new NsheadMessage;
-}
+NsheadMessage* NsheadMessage::New() const { return new NsheadMessage; }
 
 void NsheadMessage::Clear() {
     memset(&head, 0, sizeof(head));
@@ -61,7 +50,8 @@ void NsheadMessage::Clear() {
 
 bool NsheadMessage::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
-#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+#define DO_(EXPRESSION) \
+    if (!(EXPRESSION)) return false
     ::google::protobuf::uint32 tag;
     while ((tag = input->ReadTag()) != 0) {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
@@ -74,17 +64,14 @@ bool NsheadMessage::MergePartialFromCodedStream(
 }
 
 void NsheadMessage::SerializeWithCachedSizes(
-    ::google::protobuf::io::CodedOutputStream*) const {
-}
+    ::google::protobuf::io::CodedOutputStream*) const {}
 
 ::google::protobuf::uint8* NsheadMessage::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
     return target;
 }
 
-int NsheadMessage::ByteSize() const {
-    return sizeof(nshead_t) + body.size();
-}
+int NsheadMessage::ByteSize() const { return sizeof(nshead_t) + body.size(); }
 
 void NsheadMessage::MergeFrom(const ::google::protobuf::Message& from) {
     GOOGLE_CHECK_NE(&from, this);
@@ -116,15 +103,13 @@ void NsheadMessage::CopyFrom(const NsheadMessage& from) {
     MergeFrom(from);
 }
 
-bool NsheadMessage::IsInitialized() const {
-    return true;
-}
+bool NsheadMessage::IsInitialized() const { return true; }
 
 void NsheadMessage::Swap(NsheadMessage* other) {
     if (other != this) {
         const nshead_t tmp = other->head;
-        other->head = head;
-        head = tmp;
+        other->head        = head;
+        head               = tmp;
         body.swap(other->body);
     }
 }
@@ -136,4 +121,4 @@ void NsheadMessage::Swap(NsheadMessage* other) {
     return metadata;
 }
 
-} // namespace brpc
+}  // namespace brpc

@@ -15,13 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_THRIFT_SERVICE_H
 #define BRPC_THRIFT_SERVICE_H
 
-#include "brpc/controller.h"                        // Controller
-#include "brpc/thrift_message.h"                    // ThriftFramedMessage
+#include "brpc/controller.h"  // Controller
 #include "brpc/describable.h"
+#include "brpc/thrift_message.h"  // ThriftFramedMessage
 
 namespace brpc {
 
@@ -32,7 +31,7 @@ class StatusService;
 namespace policy {
 class ThriftClosure;
 void ProcessThriftRequest(InputMessageBase* msg_base);
-}
+}  // namespace policy
 
 // Inherit this class to let brpc server understands thrift_binary requests.
 class ThriftService : public Describable {
@@ -47,27 +46,25 @@ public:
     //   response    The thrift_binary response that you should fill in.
     //   done        You must call done->Run() to end the processing.
     virtual void ProcessThriftFramedRequest(
-        Controller* controller,
-        ThriftFramedMessage* request,
-        ThriftFramedMessage* response,
-        ::google::protobuf::Closure* done) = 0;
+        Controller* controller, ThriftFramedMessage* request,
+        ThriftFramedMessage* response, ::google::protobuf::Closure* done) = 0;
 
     // Put descriptions into the stream.
-    void Describe(std::ostream &os, const DescribeOptions&) const;
+    void Describe(std::ostream& os, const DescribeOptions&) const;
 
 private:
-DISALLOW_COPY_AND_ASSIGN(ThriftService);
-friend class policy::ThriftClosure;
-friend void policy::ProcessThriftRequest(InputMessageBase* msg_base);
-friend class StatusService;
-friend class Server;
+    DISALLOW_COPY_AND_ASSIGN(ThriftService);
+    friend class policy::ThriftClosure;
+    friend void policy::ProcessThriftRequest(InputMessageBase* msg_base);
+    friend class StatusService;
+    friend class Server;
 
 private:
     void Expose(const butil::StringPiece& prefix);
-    
+
     MethodStatus* _status;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-#endif // BRPC_THRIFT_SERVICE_H
+#endif  // BRPC_THRIFT_SERVICE_H

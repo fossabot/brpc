@@ -6,8 +6,8 @@
 #define BUTIL_DEBUG_DUMP_WITHOUT_CRASHING_H_
 
 #include "butil/base_export.h"
-#include "butil/compiler_specific.h"
 #include "butil/build_config.h"
+#include "butil/compiler_specific.h"
 
 namespace butil {
 
@@ -18,7 +18,7 @@ BUTIL_EXPORT void DumpWithoutCrashing();
 
 // Sets a function that'll be invoked to dump the current process when
 // DumpWithoutCrashing() is called.
-BUTIL_EXPORT void SetDumpWithoutCrashingFunction(void (CDECL *function)());
+BUTIL_EXPORT void SetDumpWithoutCrashingFunction(void(CDECL *function)());
 
 }  // namespace debug
 

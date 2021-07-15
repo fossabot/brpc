@@ -18,10 +18,9 @@
 #ifndef BRPC_MONGO_SERVICE_ADAPTOR_H
 #define BRPC_MONGO_SERVICE_ADAPTOR_H
 
-#include "butil/iobuf.h"
 #include "brpc/input_message_base.h"
 #include "brpc/shared_object.h"
-
+#include "butil/iobuf.h"
 
 namespace brpc {
 
@@ -31,11 +30,11 @@ public:
     virtual ~MongoContext() {}
 };
 
-// a container of custom mongo context. created by ParseMongoRequest when the first msg comes over
-// a socket. it lives as long as the socket.
+// a container of custom mongo context. created by ParseMongoRequest when the
+// first msg comes over a socket. it lives as long as the socket.
 class MongoContextMessage : public InputMessageBase {
 public:
-    MongoContextMessage(MongoContext *context) : _context(context) {}
+    MongoContextMessage(MongoContext* context) : _context(context) {}
     // @InputMessageBase
     void DestroyImpl() { delete this; }
     MongoContext* context() { return _context.get(); }
@@ -46,16 +45,18 @@ private:
 
 class MongoServiceAdaptor {
 public:
-    // Make an error msg when the cntl fails. If cntl fails, we must send mongo client a msg not 
-    // only to indicate the error, but also to finish the round trip.
-    virtual void SerializeError(int response_to, butil::IOBuf* out_buf) const = 0;
+    // Make an error msg when the cntl fails. If cntl fails, we must send mongo
+    // client a msg not only to indicate the error, but also to finish the round
+    // trip.
+    virtual void SerializeError(int response_to,
+                                butil::IOBuf* out_buf) const = 0;
 
-    // Create a custom context which is attached to socket. This func is called only when the first
-    // msg from the socket comes. The context will be destroyed when the socket is closed.
+    // Create a custom context which is attached to socket. This func is called
+    // only when the first msg from the socket comes. The context will be
+    // destroyed when the socket is closed.
     virtual MongoContext* CreateSocketContext() const = 0;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif

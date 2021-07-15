@@ -15,11 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "butil/class_name.h"
 #include "brpc/nshead_service.h"
 #include "brpc/details/method_status.h"
-
+#include "butil/class_name.h"
 
 namespace brpc {
 
@@ -43,7 +41,7 @@ NsheadService::~NsheadService() {
     _status = NULL;
 }
 
-void NsheadService::Describe(std::ostream &os, const DescribeOptions&) const {
+void NsheadService::Describe(std::ostream& os, const DescribeOptions&) const {
     os << butil::class_name_str(*this);
 }
 
@@ -60,4 +58,4 @@ void NsheadService::Expose(const butil::StringPiece& prefix) {
     _status->Expose(s);
 }
 
-} // namespace brpc
+}  // namespace brpc

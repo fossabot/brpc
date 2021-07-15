@@ -19,16 +19,16 @@
 
 // Date: Wed Apr 11 14:35:56 CST 2018
 
-#include <fcntl.h>                      // open
-#include <stdio.h>                      // snprintf
-#include <sys/types.h>  
-#include <sys/uio.h>
-#include <unistd.h>                     // read, gitpid
-#include <sstream>                      // std::ostringstream
-#include "butil/fd_guard.h"             // butil::fd_guard
-#include "butil/logging.h"
-#include "butil/popen.h"                // read_command_output
 #include "butil/process_util.h"
+#include <fcntl.h>  // open
+#include <stdio.h>  // snprintf
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>          // read, gitpid
+#include <sstream>           // std::ostringstream
+#include "butil/fd_guard.h"  // butil::fd_guard
+#include "butil/logging.h"
+#include "butil/popen.h"  // read_command_output
 
 namespace butil {
 
@@ -54,10 +54,10 @@ ssize_t ReadCommandLine(char* buf, size_t len, bool with_args) {
         return -1;
     }
     const std::string& result = oss.str();
-    ssize_t nr = std::min(result.size(), len);
+    ssize_t nr                = std::min(result.size(), len);
     memcpy(buf, result.data(), nr);
 #else
-    #error Not Implemented
+#error Not Implemented
 #endif
 
     if (with_args) {
@@ -85,4 +85,4 @@ ssize_t ReadCommandLine(char* buf, size_t len, bool with_args) {
     }
 }
 
-} // namespace butil
+}  // namespace butil

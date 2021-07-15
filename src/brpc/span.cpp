@@ -15,30 +15,28 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <netinet/in.h>
+#include "brpc/span.h"
 #include <gflags/gflags.h>
-#include <leveldb/db.h>
 #include <leveldb/comparator.h>
+#include <leveldb/db.h>
+#include <netinet/in.h>
+#include "brpc/reloadable_flags.h"
+#include "brpc/shared_object.h"
 #include "bthread/bthread.h"
-#include "butil/scoped_lock.h"
-#include "butil/thread_local.h"
-#include "butil/string_printf.h"
-#include "butil/time.h"
-#include "butil/logging.h"
-#include "butil/object_pool.h"
 #include "butil/fast_rand.h"
 #include "butil/file_util.h"
-#include "brpc/shared_object.h"
-#include "brpc/reloadable_flags.h"
-#include "brpc/span.h"
+#include "butil/logging.h"
+#include "butil/object_pool.h"
+#include "butil/scoped_lock.h"
+#include "butil/string_printf.h"
+#include "butil/thread_local.h"
+#include "butil/time.h"
 
 #define BRPC_SPAN_INFO_SEP "\1"
 
-
 namespace brpc {
 
-const int64_t SPAN_DELETE_INTERVAL_US = 10000000L/*10s*/;
+const int64_t SPAN_DELETE_INTERVAL_US = 10000000L /*10s*/;
 
 DEFINE_string(rpcz_database_dir, "./rpc_data/rpcz",
               "For storing requests/contexts collected by rpcz.");
@@ -57,7 +55,8 @@ DEFINE_int32(rpcz_keep_span_seconds, 3600,
              "Keep spans for at most so many seconds");
 BRPC_VALIDATE_GFLAG(rpcz_keep_span_seconds, PositiveInteger);
 
-DEFINE_bool(rpcz_keep_span_db, false, "Don't remove DB of rpcz at program's exit");
+DEFINE_bool(rpcz_keep_span_db, false,
+            "Don't remove DB of rpcz at program's exit");
 
 struct IdGen {
     bool init;
@@ -66,8 +65,8 @@ struct IdGen {
     butil::FastRandSeed seed;
 };
 
-static __thread IdGen tls_trace_id_gen = { false, 0, 0, { { 0, 0 } } };
-static __thread IdGen tls_span_id_gen = { false, 0, 0, { { 0, 0 } } };
+static __thread IdGen tls_trace_id_gen = {false, 0, 0, {{0, 0}}};
+static __thread IdGen tls_span_id_gen  = {false, 0, 0, {{0, 0}}};
 
 inline uint64_t UpdateTLSRandom64(IdGen* g) {
     if (!g->init) {
@@ -75,7 +74,7 @@ inline uint64_t UpdateTLSRandom64(IdGen* g) {
         init_fast_rand_seed(&g->seed);
     }
     const uint64_t val = fast_rand(&g->seed);
-    g->current_random = val;
+    g->current_random  = val;
     return val;
 }
 
@@ -105,36 +104,36 @@ Span* Span::CreateClientSpan(const std::string& full_method_name,
     if (__builtin_expect(span == NULL, 0)) {
         return NULL;
     }
-    span->_log_id = 0;
-    span->_base_cid = INVALID_BTHREAD_ID;
-    span->_ending_cid = INVALID_BTHREAD_ID;
-    span->_type = SPAN_TYPE_CLIENT;
-    span->_async = false;
-    span->_protocol = PROTOCOL_UNKNOWN;
-    span->_error_code = 0;
-    span->_request_size = 0;
-    span->_response_size = 0;
-    span->_base_real_us = base_real_us;
-    span->_received_real_us = 0;
-    span->_start_parse_real_us = 0;
+    span->_log_id                 = 0;
+    span->_base_cid               = INVALID_BTHREAD_ID;
+    span->_ending_cid             = INVALID_BTHREAD_ID;
+    span->_type                   = SPAN_TYPE_CLIENT;
+    span->_async                  = false;
+    span->_protocol               = PROTOCOL_UNKNOWN;
+    span->_error_code             = 0;
+    span->_request_size           = 0;
+    span->_response_size          = 0;
+    span->_base_real_us           = base_real_us;
+    span->_received_real_us       = 0;
+    span->_start_parse_real_us    = 0;
     span->_start_callback_real_us = 0;
-    span->_start_send_real_us = 0;
-    span->_sent_real_us = 0;
-    span->_next_client = NULL;
-    span->_tls_next = NULL;
-    span->_full_method_name = full_method_name;
+    span->_start_send_real_us     = 0;
+    span->_sent_real_us           = 0;
+    span->_next_client            = NULL;
+    span->_tls_next               = NULL;
+    span->_full_method_name       = full_method_name;
     span->_info.clear();
     Span* parent = (Span*)bthread::tls_bls.rpcz_parent_span;
     if (parent) {
-        span->_trace_id = parent->trace_id();
+        span->_trace_id       = parent->trace_id();
         span->_parent_span_id = parent->span_id();
-        span->_local_parent = parent;
-        span->_next_client = parent->_next_client;
-        parent->_next_client = span;
+        span->_local_parent   = parent;
+        span->_next_client    = parent->_next_client;
+        parent->_next_client  = span;
     } else {
-        span->_trace_id = GenerateTraceId();
+        span->_trace_id       = GenerateTraceId();
         span->_parent_span_id = 0;
-        span->_local_parent = NULL;
+        span->_local_parent   = NULL;
     }
     span->_span_id = GenerateSpanId();
     return span;
@@ -146,51 +145,49 @@ inline const std::string& unknown_span_name() {
     return s_unknown_method_name;
 }
 
-Span* Span::CreateServerSpan(
-    const std::string& full_method_name,
-    uint64_t trace_id, uint64_t span_id, uint64_t parent_span_id,
-    int64_t base_real_us) {
+Span* Span::CreateServerSpan(const std::string& full_method_name,
+                             uint64_t trace_id, uint64_t span_id,
+                             uint64_t parent_span_id, int64_t base_real_us) {
     Span* span = butil::get_object<Span>(Forbidden());
     if (__builtin_expect(span == NULL, 0)) {
         return NULL;
     }
-    span->_trace_id = (trace_id ? trace_id : GenerateTraceId());
-    span->_span_id = (span_id ? span_id : GenerateSpanId());
-    span->_parent_span_id = parent_span_id;
-    span->_log_id = 0;
-    span->_base_cid = INVALID_BTHREAD_ID;
-    span->_ending_cid = INVALID_BTHREAD_ID;
-    span->_type = SPAN_TYPE_SERVER;
-    span->_async = false;
-    span->_protocol = PROTOCOL_UNKNOWN;
-    span->_error_code = 0;
-    span->_request_size = 0;
-    span->_response_size = 0;
-    span->_base_real_us = base_real_us;
-    span->_received_real_us = 0;
-    span->_start_parse_real_us = 0;
+    span->_trace_id               = (trace_id ? trace_id : GenerateTraceId());
+    span->_span_id                = (span_id ? span_id : GenerateSpanId());
+    span->_parent_span_id         = parent_span_id;
+    span->_log_id                 = 0;
+    span->_base_cid               = INVALID_BTHREAD_ID;
+    span->_ending_cid             = INVALID_BTHREAD_ID;
+    span->_type                   = SPAN_TYPE_SERVER;
+    span->_async                  = false;
+    span->_protocol               = PROTOCOL_UNKNOWN;
+    span->_error_code             = 0;
+    span->_request_size           = 0;
+    span->_response_size          = 0;
+    span->_base_real_us           = base_real_us;
+    span->_received_real_us       = 0;
+    span->_start_parse_real_us    = 0;
     span->_start_callback_real_us = 0;
-    span->_start_send_real_us = 0;
-    span->_sent_real_us = 0;
-    span->_next_client = NULL;
-    span->_tls_next = NULL;
-    span->_full_method_name = (!full_method_name.empty() ?
-                               full_method_name : unknown_span_name());
+    span->_start_send_real_us     = 0;
+    span->_sent_real_us           = 0;
+    span->_next_client            = NULL;
+    span->_tls_next               = NULL;
+    span->_full_method_name =
+        (!full_method_name.empty() ? full_method_name : unknown_span_name());
     span->_info.clear();
     span->_local_parent = NULL;
     return span;
 }
 
-Span* Span::CreateServerSpan(
-    uint64_t trace_id, uint64_t span_id, uint64_t parent_span_id,
-    int64_t base_real_us) {
+Span* Span::CreateServerSpan(uint64_t trace_id, uint64_t span_id,
+                             uint64_t parent_span_id, int64_t base_real_us) {
     return CreateServerSpan(unknown_span_name(), trace_id, span_id,
                             parent_span_id, base_real_us);
 }
 
 void Span::ResetServerSpanName(const std::string& full_method_name) {
-    _full_method_name = (!full_method_name.empty() ?
-                         full_method_name : unknown_span_name());
+    _full_method_name =
+        (!full_method_name.empty() ? full_method_name : unknown_span_name());
 }
 
 void Span::destroy() {
@@ -209,7 +206,7 @@ void Span::destroy() {
 void Span::Annotate(const char* fmt, ...) {
     const int64_t anno_time = butil::cpuwide_time_us() + _base_real_us;
     butil::string_appendf(&_info, BRPC_SPAN_INFO_SEP "%lld ",
-                         (long long)anno_time);
+                          (long long)anno_time);
     va_list ap;
     va_start(ap, fmt);
     butil::string_vappendf(&_info, fmt, ap);
@@ -219,21 +216,21 @@ void Span::Annotate(const char* fmt, ...) {
 void Span::Annotate(const char* fmt, va_list args) {
     const int64_t anno_time = butil::cpuwide_time_us() + _base_real_us;
     butil::string_appendf(&_info, BRPC_SPAN_INFO_SEP "%lld ",
-                         (long long)anno_time);
+                          (long long)anno_time);
     butil::string_vappendf(&_info, fmt, args);
 }
 
 void Span::Annotate(const std::string& info) {
     const int64_t anno_time = butil::cpuwide_time_us() + _base_real_us;
     butil::string_appendf(&_info, BRPC_SPAN_INFO_SEP "%lld ",
-                         (long long)anno_time);
+                          (long long)anno_time);
     _info.append(info);
 }
 
 void Span::AnnotateCStr(const char* info, size_t length) {
     const int64_t anno_time = butil::cpuwide_time_us() + _base_real_us;
     butil::string_appendf(&_info, BRPC_SPAN_INFO_SEP "%lld ",
-                         (long long)anno_time);
+                          (long long)anno_time);
     if (length <= 0) {
         _info.append(info);
     } else {
@@ -243,7 +240,8 @@ void Span::AnnotateCStr(const char* info, size_t length) {
 
 size_t Span::CountClientSpans() const {
     size_t n = 0;
-    for (Span* p = _next_client; p; p = p->_next_client, ++n);
+    for (Span* p = _next_client; p; p = p->_next_client, ++n)
+        ;
     return n;
 }
 
@@ -253,22 +251,22 @@ int64_t Span::GetStartRealTimeUs() const {
 
 int64_t Span::GetEndRealTimeUs() const {
     int64_t result = 0;
-    result = std::max(result, _received_real_us);
-    result = std::max(result, _start_parse_real_us);
-    result = std::max(result, _start_callback_real_us);
-    result = std::max(result, _start_send_real_us);
-    result = std::max(result, _sent_real_us);
+    result         = std::max(result, _received_real_us);
+    result         = std::max(result, _start_parse_real_us);
+    result         = std::max(result, _start_callback_real_us);
+    result         = std::max(result, _start_send_real_us);
+    result         = std::max(result, _sent_real_us);
     return result;
 }
 
 SpanInfoExtractor::SpanInfoExtractor(const char* info)
-    : _sp(info, *BRPC_SPAN_INFO_SEP) {
-}
+    : _sp(info, *BRPC_SPAN_INFO_SEP) {}
 
-bool SpanInfoExtractor::PopAnnotation(
-    int64_t before_this_time, int64_t* time, std::string* annotation) {
+bool SpanInfoExtractor::PopAnnotation(int64_t before_this_time, int64_t* time,
+                                      std::string* annotation) {
     for (; _sp != NULL; ++_sp) {
-        butil::StringSplitter sp_time(_sp.field(), _sp.field() + _sp.length(), ' ');
+        butil::StringSplitter sp_time(_sp.field(), _sp.field() + _sp.length(),
+                                      ' ');
         if (sp_time) {
             char* endptr;
             const int64_t anno_time = strtoll(sp_time.field(), &endptr, 10);
@@ -278,22 +276,19 @@ bool SpanInfoExtractor::PopAnnotation(
                 }
                 *time = anno_time;
                 ++sp_time;
-                annotation->assign(
-                    sp_time.field(),
-                    _sp.field() + _sp.length() - sp_time.field());
+                annotation->assign(sp_time.field(), _sp.field() + _sp.length() -
+                                                        sp_time.field());
                 ++_sp;
                 return true;
             }
         }
         LOG(ERROR) << "Unknown annotation: "
-                    << std::string(_sp.field(), _sp.length());
+                   << std::string(_sp.field(), _sp.length());
     }
     return false;
 }
 
-bool CanAnnotateSpan() {
-    return bthread::tls_bls.rpcz_parent_span;
-}
+bool CanAnnotateSpan() { return bthread::tls_bls.rpcz_parent_span; }
 
 void AnnotateSpan(const char* fmt, ...) {
     Span* span = (Span*)bthread::tls_bls.rpcz_parent_span;
@@ -310,7 +305,7 @@ public:
     std::string id_db_name;
     std::string time_db_name;
 
-    SpanDB() : id_db(NULL), time_db(NULL) { }
+    SpanDB() : id_db(NULL), time_db(NULL) {}
     static SpanDB* Open();
     leveldb::Status Index(const Span* span, std::string* value_buf);
     leveldb::Status RemoveSpansBefore(int64_t tm);
@@ -330,22 +325,22 @@ private:
         delete id_db;
         delete time_db;
         if (!FLAGS_rpcz_keep_span_db) {
-            std::string cmd = butil::string_printf("rm -rf %s %s",
-                                                  id_db_name.c_str(),
-                                                  time_db_name.c_str());
+            std::string cmd = butil::string_printf(
+                "rm -rf %s %s", id_db_name.c_str(), time_db_name.c_str());
             butil::ignore_result(system(cmd.c_str()));
         }
     }
 };
 
-static bool started_span_indexing = false;
+static bool started_span_indexing              = false;
 static pthread_once_t start_span_indexing_once = PTHREAD_ONCE_INIT;
-static int64_t g_last_time_key = 0;
-static int64_t g_last_delete_tm = 0;
+static int64_t g_last_time_key                 = 0;
+static int64_t g_last_delete_tm                = 0;
 
 // Following variables are monitored by builtin services, thus non-static.
 static pthread_mutex_t g_span_db_mutex = PTHREAD_MUTEX_INITIALIZER;
-static bool g_span_ending = false;  // don't open span again if this var is true.
+static bool g_span_ending =
+    false;  // don't open span again if this var is true.
 // Can't use intrusive_ptr which has ctor/dtor issues.
 static SpanDB* g_span_db = NULL;
 bool has_span_db() { return !!g_span_db; }
@@ -355,12 +350,13 @@ static bvar::DisplaySamplingRatio s_display_sampling_ratio(
 
 struct SpanEarlier {
     bool operator()(bvar::Collected* c1, bvar::Collected* c2) const {
-        return ((Span*)c1)->GetStartRealTimeUs() < ((Span*)c2)->GetStartRealTimeUs();
+        return ((Span*)c1)->GetStartRealTimeUs() <
+               ((Span*)c2)->GetStartRealTimeUs();
     }
 };
 class SpanPreprocessor : public bvar::CollectorPreprocessor {
 public:
-    void process(std::vector<bvar::Collected*> & list) {
+    void process(std::vector<bvar::Collected*>& list) {
         // Sort spans by their starting time so that the code on making
         // time monotonic in Span::Index works better.
         std::sort(list.begin(), list.end(), SpanEarlier());
@@ -368,19 +364,15 @@ public:
 };
 static SpanPreprocessor* g_span_prep = NULL;
 
-bvar::CollectorSpeedLimit* Span::speed_limit() {
-    return &g_span_sl;
-}
+bvar::CollectorSpeedLimit* Span::speed_limit() { return &g_span_sl; }
 
-bvar::CollectorPreprocessor* Span::preprocessor() {
-    return g_span_prep;
-}
+bvar::CollectorPreprocessor* Span::preprocessor() { return g_span_prep; }
 
 static void ResetSpanDB(SpanDB* db) {
     SpanDB* old_db = NULL;
     {
         BAIDU_SCOPED_LOCK(g_span_db_mutex);
-        old_db = g_span_db;
+        old_db    = g_span_db;
         g_span_db = db;
         if (g_span_db) {
             g_span_db->AddRefManually();
@@ -398,7 +390,7 @@ static void RemoveSpanDB() {
 
 static void StartSpanIndexing() {
     atexit(RemoveSpanDB);
-    g_span_prep = new SpanPreprocessor;
+    g_span_prep           = new SpanPreprocessor;
     started_span_indexing = true;
 }
 
@@ -465,13 +457,12 @@ SpanDB* SpanDB::Open() {
     time(&rawtime);
     struct tm lt_buf;
     struct tm* timeinfo = localtime_r(&rawtime, &lt_buf);
-    const size_t nw = strftime(prefix, sizeof(prefix),
-                               "/%Y%m%d.%H%M%S", timeinfo);
-    const int nw2 = snprintf(prefix + nw, sizeof(prefix) - nw, ".%d",
-                             getpid());
+    const size_t nw =
+        strftime(prefix, sizeof(prefix), "/%Y%m%d.%H%M%S", timeinfo);
+    const int nw2 = snprintf(prefix + nw, sizeof(prefix) - nw, ".%d", getpid());
     leveldb::Options options;
     options.create_if_missing = true;
-    options.error_if_exists = true;
+    options.error_if_exists   = true;
 
     local.id_db_name.append(FLAGS_rpcz_database_dir);
     local.id_db_name.append(prefix, nw + nw2);
@@ -503,8 +494,7 @@ SpanDB* SpanDB::Open() {
     if (NULL == db) {
         return NULL;
     }
-    LOG(INFO) << "Opened " << local.id_db_name << " and "
-               << local.time_db_name;
+    LOG(INFO) << "Opened " << local.id_db_name << " and " << local.time_db_name;
     Swap(local, *db);
     return db;
 }
@@ -548,8 +538,8 @@ leveldb::Status SpanDB::Index(const Span* span, std::string* value_buf) {
     // Since the time to this method is ALMOST in ascending order, we use a
     // very simple strategy: if the time is not greater than last-time, set
     // it to be last-time + 1us. This works when time goes back because the
-    // real time is at least 1000000 / FLAGS_rpcz_max_span_per_second times faster
-    // and it will finally catch up with our time key. (provided the flag
+    // real time is at least 1000000 / FLAGS_rpcz_max_span_per_second times
+    // faster and it will finally catch up with our time key. (provided the flag
     // is less than 1000000).
     int64_t time_key = start_time;
     if (time_key <= g_last_time_key) {
@@ -578,7 +568,8 @@ leveldb::Status SpanDB::Index(const Span* span, std::string* value_buf) {
     }
     size_t i = 0;
     for (const Span* p = span->_next_client; p; p = p->_next_client, ++i) {
-        Span2Proto(p, value_proto.mutable_client_spans(client_span_count - i - 1));
+        Span2Proto(p,
+                   value_proto.mutable_client_spans(client_span_count - i - 1));
     }
     if (!value_proto.SerializeToString(value_buf)) {
         return leveldb::Status::InvalidArgument(
@@ -596,7 +587,7 @@ leveldb::Status SpanDB::RemoveSpansBefore(int64_t tm) {
     }
     leveldb::Status rc;
     leveldb::WriteOptions options;
-    options.sync = false;
+    options.sync          = false;
     leveldb::Iterator* it = time_db->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         if (it->key().size() != 8) {
@@ -667,7 +658,7 @@ void Span::dump_and_destroy(size_t /*round*/) {
     // Remove old spans
     const int64_t now = butil::gettimeofday_us();
     if (now > g_last_delete_tm + SPAN_DELETE_INTERVAL_US) {
-        g_last_delete_tm = now;
+        g_last_delete_tm   = now;
         leveldb::Status st = db->RemoveSpansBefore(
             now - FLAGS_rpcz_keep_span_seconds * 1000000L);
         if (!st.ok()) {
@@ -750,7 +741,8 @@ void ListSpans(int64_t starting_realtime, size_t max_scan,
     BriefSpan brief;
     size_t nscan = 0;
     for (size_t i = 0; nscan < max_scan && it->Valid(); ++i, it->Prev()) {
-        const int64_t key_tm = ToLittleEndian((const uint32_t*)it->key().data());
+        const int64_t key_tm =
+            ToLittleEndian((const uint32_t*)it->key().data());
         // May have some bigger time at the beginning, because leveldb returns
         // keys >= starting_realtime.
         if (key_tm > starting_realtime) {
@@ -792,10 +784,11 @@ void DescribeSpanDB(std::ostream& os) {
         if (db->time_db->GetProperty(leveldb::Slice("leveldb.stats"), &val)) {
             os << "[ " << db->time_db_name << " ]\n" << val;
         }
-        if (db->time_db->GetProperty(leveldb::Slice("leveldb.sstables"), &val)) {
+        if (db->time_db->GetProperty(leveldb::Slice("leveldb.sstables"),
+                                     &val)) {
             os << '\n' << val;
         }
     }
 }
 
-} // namespace brpc
+}  // namespace brpc

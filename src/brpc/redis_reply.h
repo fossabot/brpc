@@ -15,27 +15,25 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_REDIS_REPLY_H
 #define BRPC_REDIS_REPLY_H
 
-#include "butil/iobuf.h"                  // butil::IOBuf
-#include "butil/strings/string_piece.h"   // butil::StringPiece
-#include "butil/arena.h"                  // butil::Arena
-#include "butil/logging.h"                // CHECK
-#include "parse_result.h"                 // ParseError
-
+#include "butil/arena.h"                 // butil::Arena
+#include "butil/iobuf.h"                 // butil::IOBuf
+#include "butil/logging.h"               // CHECK
+#include "butil/strings/string_piece.h"  // butil::StringPiece
+#include "parse_result.h"                // ParseError
 
 namespace brpc {
 
 // Different types of replies.
 enum RedisReplyType {
-    REDIS_REPLY_STRING = 1,  // Bulk String
-    REDIS_REPLY_ARRAY = 2,
+    REDIS_REPLY_STRING  = 1,  // Bulk String
+    REDIS_REPLY_ARRAY   = 2,
     REDIS_REPLY_INTEGER = 3,
-    REDIS_REPLY_NIL = 4,
-    REDIS_REPLY_STATUS = 5,  // Simple String
-    REDIS_REPLY_ERROR = 6
+    REDIS_REPLY_NIL     = 4,
+    REDIS_REPLY_STATUS  = 5,  // Simple String
+    REDIS_REPLY_ERROR   = 6
 };
 
 const char* RedisReplyTypeToString(RedisReplyType);
@@ -49,12 +47,12 @@ public:
 
     // Type of the reply.
     RedisReplyType type() const { return _type; }
-    
-    bool is_nil() const;     // True if the reply is a (redis) nil.
-    bool is_integer() const; // True if the reply is an integer.
-    bool is_error() const;   // True if the reply is an error.
-    bool is_string() const;  // True if the reply is a string.
-    bool is_array() const;   // True if the reply is an array.
+
+    bool is_nil() const;      // True if the reply is a (redis) nil.
+    bool is_integer() const;  // True if the reply is an integer.
+    bool is_error() const;    // True if the reply is an error.
+    bool is_string() const;   // True if the reply is a string.
+    bool is_array() const;    // True if the reply is an array.
 
     // Set the reply to the null string.
     void SetNullString();
@@ -96,7 +94,7 @@ public:
     // string containing \0 is not printed fully, use data() instead.
     const char* c_str() const;
     // Convert the reply to a StringPiece. If the reply is not a string,
-    // call stacks are logged and "" is returned. 
+    // call stacks are logged and "" is returned.
     // If you need a std::string, call .data().as_string() (which allocates mem)
     butil::StringPiece data() const;
 
@@ -104,15 +102,15 @@ public:
     // return the length of string if this reply is a string, otherwise 0 is
     // returned (call stacks are not logged).
     size_t size() const;
-    // Get the index-th sub reply. If this reply is not an array or index is out of
-    // range, a nil reply is returned (call stacks are not logged)
+    // Get the index-th sub reply. If this reply is not an array or index is out
+    // of range, a nil reply is returned (call stacks are not logged)
     const RedisReply& operator[](size_t index) const;
     RedisReply& operator[](size_t index);
 
     // Parse from `buf' which may be incomplete.
     // Returns PARSE_OK when an intact reply is parsed and cut off from `buf'.
-    // Returns PARSE_ERROR_NOT_ENOUGH_DATA if data in `buf' is not enough to parse,
-    // and `buf' is guaranteed to be UNCHANGED so that you can call this
+    // Returns PARSE_ERROR_NOT_ENOUGH_DATA if data in `buf' is not enough to
+    // parse, and `buf' is guaranteed to be UNCHANGED so that you can call this
     // function on a RedisReply object with the same buf again and again until
     // the function returns PARSE_OK. This property makes sure the parsing of
     // RedisReply in the worst case is O(N) where N is size of the on-wire
@@ -136,7 +134,8 @@ public:
     // Copy from another reply allocating on `_arena', which is a deep copy.
     void CopyFromDifferentArena(const RedisReply& other);
 
-    // Copy from another reply allocating on a same Arena, which is a shallow copy.
+    // Copy from another reply allocating on a same Arena, which is a shallow
+    // copy.
     void CopyFromSameArena(const RedisReply& other);
 
 private:
@@ -148,7 +147,7 @@ private:
 
     void FormatStringImpl(const char* fmt, va_list args, RedisReplyType type);
     void SetStringImpl(const butil::StringPiece& str, RedisReplyType type);
-    
+
     RedisReplyType _type;
     int _length;  // length of short_str/long_str, count of replies
     union {
@@ -156,10 +155,11 @@ private:
         char short_str[16];
         const char* long_str;
         struct {
-            int32_t last_index;  // >= 0 if previous parsing suspends on replies.
+            int32_t
+                last_index;  // >= 0 if previous parsing suspends on replies.
             RedisReply* replies;
         } array;
-        uint64_t padding[2]; // For swapping, must cover all bytes.
+        uint64_t padding[2];  // For swapping, must cover all bytes.
     } _data;
     butil::Arena* _arena;
 };
@@ -172,25 +172,25 @@ inline std::ostream& operator<<(std::ostream& os, const RedisReply& r) {
 }
 
 inline void RedisReply::Reset() {
-    _type = REDIS_REPLY_NIL;
-    _length = 0;
+    _type                  = REDIS_REPLY_NIL;
+    _length                = 0;
     _data.array.last_index = -1;
-    _data.array.replies = NULL;
+    _data.array.replies    = NULL;
     // _arena should not be reset because further memory allocation needs it.
 }
 
-inline RedisReply::RedisReply(butil::Arena* arena)
-    : _arena(arena) {
-    Reset();
-}
+inline RedisReply::RedisReply(butil::Arena* arena) : _arena(arena) { Reset(); }
 
 inline bool RedisReply::is_nil() const {
     return (_type == REDIS_REPLY_NIL || _length == npos);
 }
 inline bool RedisReply::is_error() const { return _type == REDIS_REPLY_ERROR; }
-inline bool RedisReply::is_integer() const { return _type == REDIS_REPLY_INTEGER; }
-inline bool RedisReply::is_string() const
-{ return _type == REDIS_REPLY_STRING || _type == REDIS_REPLY_STATUS; }
+inline bool RedisReply::is_integer() const {
+    return _type == REDIS_REPLY_INTEGER;
+}
+inline bool RedisReply::is_string() const {
+    return _type == REDIS_REPLY_STRING || _type == REDIS_REPLY_STATUS;
+}
 inline bool RedisReply::is_array() const { return _type == REDIS_REPLY_ARRAY; }
 
 inline int64_t RedisReply::integer() const {
@@ -206,7 +206,7 @@ inline void RedisReply::SetNullArray() {
     if (_type != REDIS_REPLY_NIL) {
         Reset();
     }
-    _type = REDIS_REPLY_ARRAY;
+    _type   = REDIS_REPLY_ARRAY;
     _length = npos;
 }
 
@@ -214,7 +214,7 @@ inline void RedisReply::SetNullString() {
     if (_type != REDIS_REPLY_NIL) {
         Reset();
     }
-    _type = REDIS_REPLY_STRING;
+    _type   = REDIS_REPLY_STRING;
     _length = npos;
 }
 
@@ -242,8 +242,8 @@ inline void RedisReply::SetInteger(int64_t value) {
     if (_type != REDIS_REPLY_NIL) {
         Reset();
     }
-    _type = REDIS_REPLY_INTEGER;
-    _length = 0;
+    _type         = REDIS_REPLY_INTEGER;
+    _length       = 0;
     _data.integer = value;
 }
 
@@ -259,7 +259,7 @@ inline void RedisReply::FormatString(const char* fmt, ...) {
 
 inline const char* RedisReply::c_str() const {
     if (is_string()) {
-        if (_length < (int)sizeof(_data.short_str)) { // SSO
+        if (_length < (int)sizeof(_data.short_str)) {  // SSO
             return _data.short_str;
         } else {
             return _data.long_str;
@@ -272,7 +272,7 @@ inline const char* RedisReply::c_str() const {
 
 inline butil::StringPiece RedisReply::data() const {
     if (is_string()) {
-        if (_length < (int)sizeof(_data.short_str)) { // SSO
+        if (_length < (int)sizeof(_data.short_str)) {  // SSO
             return butil::StringPiece(_data.short_str, _length);
         } else {
             return butil::StringPiece(_data.long_str, _length);
@@ -285,7 +285,7 @@ inline butil::StringPiece RedisReply::data() const {
 
 inline const char* RedisReply::error_message() const {
     if (is_error()) {
-        if (_length < (int)sizeof(_data.short_str)) { // SSO
+        if (_length < (int)sizeof(_data.short_str)) {  // SSO
             return _data.short_str;
         } else {
             return _data.long_str;
@@ -296,13 +296,11 @@ inline const char* RedisReply::error_message() const {
     return "";
 }
 
-inline size_t RedisReply::size() const {
-    return _length;
-}
+inline size_t RedisReply::size() const { return _length; }
 
 inline RedisReply& RedisReply::operator[](size_t index) {
     return const_cast<RedisReply&>(
-            const_cast<const RedisReply*>(this)->operator[](index));
+        const_cast<const RedisReply*>(this)->operator[](index));
 }
 
 inline const RedisReply& RedisReply::operator[](size_t index) const {
@@ -322,13 +320,13 @@ inline void RedisReply::Swap(RedisReply& other) {
 }
 
 inline void RedisReply::CopyFromSameArena(const RedisReply& other) {
-    _type = other._type;
-    _length = other._length;
+    _type            = other._type;
+    _length          = other._length;
     _data.padding[0] = other._data.padding[0];
     _data.padding[1] = other._data.padding[1];
-    _arena = other._arena;
+    _arena           = other._arena;
 }
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_REDIS_H

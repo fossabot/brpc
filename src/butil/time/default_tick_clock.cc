@@ -8,8 +8,6 @@ namespace butil {
 
 DefaultTickClock::~DefaultTickClock() {}
 
-TimeTicks DefaultTickClock::NowTicks() {
-  return TimeTicks::Now();
-}
+TimeTicks DefaultTickClock::NowTicks() { return TimeTicks::Now(); }
 
 }  // namespace butil

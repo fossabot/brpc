@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_MOST_COMMON_MESSAGE_H
 #define BRPC_POLICY_MOST_COMMON_MESSAGE_H
 
-#include "butil/object_pool.h"
 #include "brpc/input_messenger.h"
-
+#include "butil/object_pool.h"
 
 namespace brpc {
 namespace policy {
@@ -49,7 +47,6 @@ struct BAIDU_CACHELINE_ALIGNMENT MostCommonMessage : public InputMessageBase {
 };
 
 }  // namespace policy
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_POLICY_MOST_COMMON_MESSAGE_H

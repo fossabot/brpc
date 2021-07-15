@@ -25,18 +25,17 @@
 #ifndef BUTIL_BOUNDED_QUEUE_H
 #define BUTIL_BOUNDED_QUEUE_H
 
-#include "butil/macros.h"
 #include "butil/logging.h"
+#include "butil/macros.h"
 
 namespace butil {
 
 // [Create a on-stack small queue]
 //   char storage[64];
-//   butil::BoundedQueue<int> q(storage, sizeof(storage), butil::NOT_OWN_STORAGE);
-//   q.push(1);
-//   q.push(2);
+//   butil::BoundedQueue<int> q(storage, sizeof(storage),
+//   butil::NOT_OWN_STORAGE); q.push(1); q.push(2);
 //   ...
-   
+
 // [Initialize a class-member queue]
 //   class Foo {
 //     ...
@@ -66,7 +65,7 @@ public:
         , _items(mem) {
         DCHECK(_items);
     };
-    
+
     // Construct a queue with the given capacity.
     // The malloc() may fail silently, call initialized() to test validity
     // of the queue.
@@ -78,14 +77,13 @@ public:
         , _items(malloc(capacity * sizeof(T))) {
         DCHECK(_items);
     };
-    
+
     BoundedQueue()
         : _count(0)
         , _cap(0)
         , _start(0)
         , _ownership(NOT_OWN_STORAGE)
-        , _items(NULL) {
-    };
+        , _items(NULL){};
 
     ~BoundedQueue() {
         clear();
@@ -114,10 +112,10 @@ public:
             ++_count;
         } else {
             ((T*)_items)[_start] = item;
-            _start = _mod(_start + 1, _cap);
+            _start               = _mod(_start + 1, _cap);
         }
     }
-    
+
     // Push a default-constructed item into bottom side of this queue
     // Returns address of the item inside this queue
     T* push() {
@@ -137,8 +135,8 @@ public:
             return true;
         }
         return false;
-    }    
-    
+    }
+
     // Push a default-constructed item into top side of this queue
     // Returns address of the item inside this queue
     T* push_top() {
@@ -149,7 +147,7 @@ public:
         }
         return NULL;
     }
-    
+
     // Pop top-most item from this queue
     // Returns true on success, false if queue is empty
     bool pop() {
@@ -168,7 +166,7 @@ public:
         if (_count) {
             --_count;
             T* const p = (T*)_items + _start;
-            *item = *p;
+            *item      = *p;
             p->~T();
             _start = _mod(_start + 1, _cap);
             return true;
@@ -193,7 +191,7 @@ public:
         if (_count) {
             --_count;
             T* const p = (T*)_items + _mod(_start + _count, _cap);
-            *item = *p;
+            *item      = *p;
             p->~T();
             return true;
         }
@@ -210,12 +208,8 @@ public:
     }
 
     // Get address of top-most item, NULL if queue is empty
-    T* top() { 
-        return _count ? ((T*)_items + _start) : NULL; 
-    }
-    const T* top() const { 
-        return _count ? ((const T*)_items + _start) : NULL; 
-    }
+    T* top() { return _count ? ((T*)_items + _start) : NULL; }
+    const T* top() const { return _count ? ((const T*)_items + _start) : NULL; }
 
     // Randomly access item from top side.
     // top(0) == top(), top(size()-1) == bottom()
@@ -224,23 +218,24 @@ public:
         if (index < _count) {
             return (T*)_items + _mod(_start + index, _cap);
         }
-        return NULL;   // including _count == 0
+        return NULL;  // including _count == 0
     }
     const T* top(size_t index) const {
         if (index < _count) {
             return (const T*)_items + _mod(_start + index, _cap);
         }
-        return NULL;   // including _count == 0
+        return NULL;  // including _count == 0
     }
 
     // Get address of bottom-most item, NULL if queue is empty
-    T* bottom() { 
-        return _count ? ((T*)_items + _mod(_start + _count - 1, _cap)) : NULL; 
+    T* bottom() {
+        return _count ? ((T*)_items + _mod(_start + _count - 1, _cap)) : NULL;
     }
     const T* bottom() const {
-        return _count ? ((const T*)_items + _mod(_start + _count - 1, _cap)) : NULL; 
+        return _count ? ((const T*)_items + _mod(_start + _count - 1, _cap))
+                      : NULL;
     }
-    
+
     // Randomly access item from bottom side.
     // bottom(0) == bottom(), bottom(size()-1) == top()
     // Returns NULL if |index| is out of range.
@@ -284,7 +279,7 @@ public:
 private:
     // Since the space is possibly not owned, we disable copying.
     DISALLOW_COPY_AND_ASSIGN(BoundedQueue);
-    
+
     // This is faster than % in this queue because most |off| are smaller
     // than |cap|. This is probably not true in other place, be careful
     // before you use this trick.
@@ -294,7 +289,7 @@ private:
         }
         return off;
     }
-    
+
     uint32_t _count;
     uint32_t _cap;
     uint32_t _start;

@@ -15,15 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_WEIGHTED_ROUND_ROBIN_LOAD_BALANCER_H
 #define BRPC_POLICY_WEIGHTED_ROUND_ROBIN_LOAD_BALANCER_H
 
-#include <map>                              
-#include <vector>
+#include <map>
 #include <unordered_set>
-#include "butil/containers/doubly_buffered_data.h"
+#include <vector>
 #include "brpc/load_balancer.h"
+#include "butil/containers/doubly_buffered_data.h"
 
 namespace brpc {
 namespace policy {
@@ -43,7 +42,7 @@ public:
 
 private:
     struct Server {
-        Server(SocketId s_id = 0, uint32_t s_w = 0): id(s_id), weight(s_w) {}
+        Server(SocketId s_id = 0, uint32_t s_w = 0) : id(s_id), weight(s_w) {}
         SocketId id;
         uint32_t weight;
     };
@@ -59,32 +58,34 @@ private:
         uint64_t stride = 0;
         Server remain_server;
         // If server list changed, we need caculate a new stride.
-        bool IsNeededCaculateNewStride(const uint64_t curr_weight_sum, 
+        bool IsNeededCaculateNewStride(const uint64_t curr_weight_sum,
                                        const size_t curr_servers_num) {
-            if (curr_weight_sum != weight_sum 
-                || curr_servers_num != servers_num) {
-                weight_sum = curr_weight_sum;
+            if (curr_weight_sum != weight_sum ||
+                curr_servers_num != servers_num) {
+                weight_sum  = curr_weight_sum;
                 servers_num = curr_servers_num;
                 return true;
             }
             return false;
         }
+
     private:
         uint64_t weight_sum = 0;
-        size_t servers_num = 0;
+        size_t servers_num  = 0;
     };
     static bool Add(Servers& bg, const ServerId& id);
     static bool Remove(Servers& bg, const ServerId& id);
     static size_t BatchAdd(Servers& bg, const std::vector<ServerId>& servers);
-    static size_t BatchRemove(Servers& bg, const std::vector<ServerId>& servers);
-    static SocketId GetServerInNextStride(const std::vector<Server>& server_list,
-                                          const std::unordered_set<SocketId>& filter,
-                                          TLS& tls);
+    static size_t BatchRemove(Servers& bg,
+                              const std::vector<ServerId>& servers);
+    static SocketId GetServerInNextStride(
+        const std::vector<Server>& server_list,
+        const std::unordered_set<SocketId>& filter, TLS& tls);
 
     butil::DoublyBufferedData<Servers, TLS> _db_servers;
 };
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_POLICY_WEIGHTED_ROUND_ROBIN_LOAD_BALANCER_H

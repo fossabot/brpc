@@ -19,21 +19,21 @@
 
 // Date: Thu Aug  7 18:56:27 CST 2014
 
+#include <sys/poll.h>  // poll()
+#include <new>         // std::nothrow
 #include "butil/compat.h"
-#include <new>                                   // std::nothrow
-#include <sys/poll.h>                            // poll()
 #if defined(OS_MACOSX)
-#include <sys/types.h>                           // struct kevent
-#include <sys/event.h>                           // kevent(), kqueue()
+#include <sys/event.h>  // kevent(), kqueue()
+#include <sys/types.h>  // struct kevent
 #endif
+#include "bthread/bthread.h"     // bthread_start_urgent
+#include "bthread/butex.h"       // butex_*
+#include "bthread/task_group.h"  // TaskGroup
 #include "butil/atomicops.h"
-#include "butil/time.h"
-#include "butil/fd_utility.h"                     // make_non_blocking
+#include "butil/fd_utility.h"  // make_non_blocking
 #include "butil/logging.h"
-#include "butil/third_party/murmurhash3/murmurhash3.h"   // fmix32
-#include "bthread/butex.h"                       // butex_*
-#include "bthread/task_group.h"                  // TaskGroup
-#include "bthread/bthread.h"                             // bthread_start_urgent
+#include "butil/third_party/murmurhash3/murmurhash3.h"  // fmix32
+#include "butil/time.h"
 
 // Implement bthread functions on file descriptors
 
@@ -49,7 +49,8 @@ class LazyArray {
 
 public:
     LazyArray() {
-        memset(static_cast<void*>(_blocks), 0, sizeof(butil::atomic<Block*>) * NBLOCK);
+        memset(static_cast<void*>(_blocks), 0,
+               sizeof(butil::atomic<Block*>) * NBLOCK);
     }
 
     butil::atomic<T>* get_or_new(size_t index) {
@@ -83,7 +84,8 @@ public:
         const size_t block_index = index / BLOCK_SIZE;
         if (__builtin_expect(block_index < NBLOCK, 1)) {
             const size_t block_offset = index - block_index * BLOCK_SIZE;
-            Block* const b = _blocks[block_index].load(butil::memory_order_consume);
+            Block* const b =
+                _blocks[block_index].load(butil::memory_order_consume);
             if (__builtin_expect(b != NULL, 1)) {
                 return b->items + block_offset;
             }
@@ -104,17 +106,13 @@ butil::static_atomic<int> break_nums = BUTIL_STATIC_ATOMIC_INIT(0);
 #endif
 
 // Able to address 67108864 file descriptors, should be enough.
-LazyArray<EpollButex*, 262144/*NBLOCK*/, 256/*BLOCK_SIZE*/> fd_butexes;
+LazyArray<EpollButex*, 262144 /*NBLOCK*/, 256 /*BLOCK_SIZE*/> fd_butexes;
 
 static const int BTHREAD_DEFAULT_EPOLL_SIZE = 65536;
 
 class EpollThread {
 public:
-    EpollThread()
-        : _epfd(-1)
-        , _stop(false)
-        , _tid(0) {
-    }
+    EpollThread() : _epfd(-1), _stop(false), _tid(0) {}
 
     int start(int epoll_size) {
         if (started()) {
@@ -136,8 +134,8 @@ public:
             PLOG(FATAL) << "Fail to epoll_create/kqueue";
             return -1;
         }
-        if (bthread_start_background(
-                &_tid, NULL, EpollThread::run_this, this) != 0) {
+        if (bthread_start_background(&_tid, NULL, EpollThread::run_this,
+                                     this) != 0) {
             close(_epfd);
             _epfd = -1;
             LOG(FATAL) << "Fail to create epoll bthread";
@@ -158,7 +156,7 @@ public:
         // (making started() false) to avoid latter stop_and_join() to
         // enter again.
         const int saved_epfd = _epfd;
-        _epfd = -1;
+        _epfd                = -1;
 
         // epoll_wait cannot be woken up by closing _epfd. We wake up
         // epoll_wait by inserting a fd continuously triggering EPOLLOUT.
@@ -171,13 +169,13 @@ public:
             return -1;
         }
 #if defined(OS_LINUX)
-        epoll_event evt = { EPOLLOUT, { NULL } };
-        if (epoll_ctl(saved_epfd, EPOLL_CTL_ADD,
-                      closing_epoll_pipe[1], &evt) < 0) {
+        epoll_event evt = {EPOLLOUT, {NULL}};
+        if (epoll_ctl(saved_epfd, EPOLL_CTL_ADD, closing_epoll_pipe[1], &evt) <
+            0) {
 #elif defined(OS_MACOSX)
         struct kevent kqueue_event;
-        EV_SET(&kqueue_event, closing_epoll_pipe[1], EVFILT_WRITE, EV_ADD | EV_ENABLE,
-                0, 0, NULL);
+        EV_SET(&kqueue_event, closing_epoll_pipe[1], EVFILT_WRITE,
+               EV_ADD | EV_ENABLE, 0, 0, NULL);
         if (kevent(saved_epfd, &kqueue_event, 1, NULL, 0, NULL) < 0) {
 #endif
             PLOG(FATAL) << "Fail to add closing_epoll_pipe into epfd="
@@ -218,7 +216,7 @@ public:
                 butex = expected;
             }
         }
-        
+
         while (butex == CLOSING_GUARD) {  // bthread_close() is running.
             if (sched_yield() < 0) {
                 return -1;
@@ -231,31 +229,32 @@ public:
         const int expected_val = butex->load(butil::memory_order_relaxed);
 
 #if defined(OS_LINUX)
-# ifdef BAIDU_KERNEL_FIXED_EPOLLONESHOT_BUG
-        epoll_event evt = { events | EPOLLONESHOT, { butex } };
+#ifdef BAIDU_KERNEL_FIXED_EPOLLONESHOT_BUG
+        epoll_event evt = {events | EPOLLONESHOT, {butex}};
         if (epoll_ctl(_epfd, EPOLL_CTL_MOD, fd, &evt) < 0) {
             if (epoll_ctl(_epfd, EPOLL_CTL_ADD, fd, &evt) < 0 &&
-                    errno != EEXIST) {
-                PLOG(FATAL) << "Fail to add fd=" << fd << " into epfd=" << _epfd;
+                errno != EEXIST) {
+                PLOG(FATAL)
+                    << "Fail to add fd=" << fd << " into epfd=" << _epfd;
                 return -1;
             }
         }
-# else
+#else
         epoll_event evt;
-        evt.events = events;
+        evt.events  = events;
         evt.data.fd = fd;
-        if (epoll_ctl(_epfd, EPOLL_CTL_ADD, fd, &evt) < 0 &&
-            errno != EEXIST) {
+        if (epoll_ctl(_epfd, EPOLL_CTL_ADD, fd, &evt) < 0 && errno != EEXIST) {
             PLOG(FATAL) << "Fail to add fd=" << fd << " into epfd=" << _epfd;
             return -1;
         }
-# endif
+#endif
 #elif defined(OS_MACOSX)
         struct kevent kqueue_event;
-        EV_SET(&kqueue_event, fd, events, EV_ADD | EV_ENABLE | EV_ONESHOT,
-                0, 0, butex);
+        EV_SET(&kqueue_event, fd, events, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0,
+               butex);
         if (kevent(_epfd, &kqueue_event, 1, NULL, 0, NULL) < 0) {
-            PLOG(FATAL) << "Fail to add fd=" << fd << " into kqueuefd=" << _epfd;
+            PLOG(FATAL) << "Fail to add fd=" << fd
+                        << " into kqueuefd=" << _epfd;
             return -1;
         }
 #endif
@@ -277,8 +276,8 @@ public:
             // Did not call bthread_fd functions, close directly.
             return close(fd);
         }
-        EpollButex* butex = pbutex->exchange(
-            CLOSING_GUARD, butil::memory_order_relaxed);
+        EpollButex* butex =
+            pbutex->exchange(CLOSING_GUARD, butil::memory_order_relaxed);
         if (butex == CLOSING_GUARD) {
             // concurrent double close detected.
             errno = EBADF;
@@ -302,9 +301,7 @@ public:
         return rc;
     }
 
-    bool started() const {
-        return _epfd >= 0;
-    }
+    bool started() const { return _epfd >= 0; }
 
 private:
     static void* run_this(void* arg) {
@@ -312,7 +309,7 @@ private:
     }
 
     void* run() {
-        const int initial_epfd = _epfd;
+        const int initial_epfd  = _epfd;
         const size_t MAX_EVENTS = 32;
 #if defined(OS_LINUX)
         epoll_event* e = new (std::nothrow) epoll_event[MAX_EVENTS];
@@ -326,9 +323,10 @@ private:
         }
 
 #if defined(OS_LINUX)
-# ifndef BAIDU_KERNEL_FIXED_EPOLLONESHOT_BUG
-        DLOG(INFO) << "Use DEL+ADD instead of EPOLLONESHOT+MOD due to kernel bug. Performance will be much lower.";
-# endif
+#ifndef BAIDU_KERNEL_FIXED_EPOLLONESHOT_BUG
+        DLOG(INFO) << "Use DEL+ADD instead of EPOLLONESHOT+MOD due to kernel "
+                      "bug. Performance will be much lower.";
+#endif
 #endif
         while (!_stop) {
             const int epfd = _epfd;
@@ -345,11 +343,11 @@ private:
                 if (errno == EINTR) {
 #ifndef NDEBUG
                     break_nums.fetch_add(1, butil::memory_order_relaxed);
-                    int* p = &errno;
-                    const char* b = berror();
+                    int* p         = &errno;
+                    const char* b  = berror();
                     const char* b2 = berror(errno);
                     DLOG(FATAL) << "Fail to epoll epfd=" << epfd << ", "
-                                << errno << " " << p << " " <<  b << " " <<  b2;
+                                << errno << " " << p << " " << b << " " << b2;
 #endif
                     continue;
                 }
@@ -359,21 +357,22 @@ private:
             }
 
 #if defined(OS_LINUX)
-# ifndef BAIDU_KERNEL_FIXED_EPOLLONESHOT_BUG
+#ifndef BAIDU_KERNEL_FIXED_EPOLLONESHOT_BUG
             for (int i = 0; i < n; ++i) {
                 epoll_ctl(epfd, EPOLL_CTL_DEL, e[i].data.fd, NULL);
             }
-# endif
+#endif
 #endif
             for (int i = 0; i < n; ++i) {
 #if defined(OS_LINUX)
-# ifdef BAIDU_KERNEL_FIXED_EPOLLONESHOT_BUG
+#ifdef BAIDU_KERNEL_FIXED_EPOLLONESHOT_BUG
                 EpollButex* butex = static_cast<EpollButex*>(e[i].data.ptr);
-# else
-                butil::atomic<EpollButex*>* pbutex = fd_butexes.get(e[i].data.fd);
-                EpollButex* butex = pbutex ?
-                    pbutex->load(butil::memory_order_consume) : NULL;
-# endif
+#else
+                butil::atomic<EpollButex*>* pbutex =
+                    fd_butexes.get(e[i].data.fd);
+                EpollButex* butex =
+                    pbutex ? pbutex->load(butil::memory_order_consume) : NULL;
+#endif
 #elif defined(OS_MACOSX)
                 EpollButex* butex = static_cast<EpollButex*>(e[i].udata);
 #endif
@@ -384,9 +383,9 @@ private:
             }
         }
 
-        delete [] e;
-        DLOG(INFO) << "EpollThread=" << _tid << "(epfd="
-                   << initial_epfd << ") is about to stop";
+        delete[] e;
+        DLOG(INFO) << "EpollThread=" << _tid << "(epfd=" << initial_epfd
+                   << ") is about to stop";
         return NULL;
     }
 
@@ -405,12 +404,13 @@ static inline EpollThread& get_epoll_thread(int fd) {
         return et;
     }
 
-    EpollThread& et = epoll_thread[butil::fmix32(fd) % BTHREAD_EPOLL_THREAD_NUM];
+    EpollThread& et =
+        epoll_thread[butil::fmix32(fd) % BTHREAD_EPOLL_THREAD_NUM];
     et.start(BTHREAD_DEFAULT_EPOLL_SIZE);
     return et;
 }
 
-//TODO(zhujiashun): change name
+// TODO(zhujiashun): change name
 int stop_and_join_epoll_threads() {
     // Returns -1 if any epoll thread failed to stop.
     int rc = 0;
@@ -425,17 +425,16 @@ int stop_and_join_epoll_threads() {
 #if defined(OS_LINUX)
 short epoll_to_poll_events(uint32_t epoll_events) {
     // Most POLL* and EPOLL* are same values.
-    short poll_events = (epoll_events &
-                         (EPOLLIN | EPOLLPRI | EPOLLOUT |
-                          EPOLLRDNORM | EPOLLRDBAND |
-                          EPOLLWRNORM | EPOLLWRBAND |
-                          EPOLLMSG | EPOLLERR | EPOLLHUP));
+    short poll_events =
+        (epoll_events &
+         (EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLRDNORM | EPOLLRDBAND |
+          EPOLLWRNORM | EPOLLWRBAND | EPOLLMSG | EPOLLERR | EPOLLHUP));
     CHECK_EQ((uint32_t)poll_events, epoll_events);
     return poll_events;
 }
 #elif defined(OS_MACOSX)
 static short kqueue_to_poll_events(int kqueue_events) {
-    //TODO: add more values?
+    // TODO: add more values?
     short poll_events = 0;
     if (kqueue_events == EVFILT_READ) {
         poll_events |= POLLIN;
@@ -448,13 +447,12 @@ static short kqueue_to_poll_events(int kqueue_events) {
 #endif
 
 // For pthreads.
-int pthread_fd_wait(int fd, unsigned events,
-                    const timespec* abstime) {
+int pthread_fd_wait(int fd, unsigned events, const timespec* abstime) {
     int diff_ms = -1;
     if (abstime) {
         timespec now;
         clock_gettime(CLOCK_REALTIME, &now);
-        int64_t now_us = butil::timespec_to_microseconds(now);
+        int64_t now_us     = butil::timespec_to_microseconds(now);
         int64_t abstime_us = butil::timespec_to_microseconds(*abstime);
         if (abstime_us <= now_us) {
             errno = ETIMEDOUT;
@@ -471,7 +469,7 @@ int pthread_fd_wait(int fd, unsigned events,
         errno = EINVAL;
         return -1;
     }
-    pollfd ufds = { fd, poll_events, 0 };
+    pollfd ufds  = {fd, poll_events, 0};
     const int rc = poll(&ufds, 1, diff_ms);
     if (rc < 0) {
         return -1;
@@ -498,14 +496,12 @@ int bthread_fd_wait(int fd, unsigned events) {
     }
     bthread::TaskGroup* g = bthread::tls_task_group;
     if (NULL != g && !g->is_current_pthread_task()) {
-        return bthread::get_epoll_thread(fd).fd_wait(
-            fd, events, NULL);
+        return bthread::get_epoll_thread(fd).fd_wait(fd, events, NULL);
     }
     return bthread::pthread_fd_wait(fd, events, NULL);
 }
 
-int bthread_fd_timedwait(int fd, unsigned events,
-                         const timespec* abstime) {
+int bthread_fd_timedwait(int fd, unsigned events, const timespec* abstime) {
     if (NULL == abstime) {
         return bthread_fd_wait(fd, events);
     }
@@ -515,14 +511,12 @@ int bthread_fd_timedwait(int fd, unsigned events,
     }
     bthread::TaskGroup* g = bthread::tls_task_group;
     if (NULL != g && !g->is_current_pthread_task()) {
-        return bthread::get_epoll_thread(fd).fd_wait(
-            fd, events, abstime);
+        return bthread::get_epoll_thread(fd).fd_wait(fd, events, abstime);
     }
     return bthread::pthread_fd_wait(fd, events, abstime);
 }
 
-int bthread_connect(int sockfd, const sockaddr* serv_addr,
-                    socklen_t addrlen) {
+int bthread_connect(int sockfd, const sockaddr* serv_addr, socklen_t addrlen) {
     bthread::TaskGroup* g = bthread::tls_task_group;
     if (NULL == g || g->is_current_pthread_task()) {
         return ::connect(sockfd, serv_addr, addrlen);
@@ -555,8 +549,6 @@ int bthread_connect(int sockfd, const sockaddr* serv_addr,
 }
 
 // This does not wake pthreads calling bthread_fd_*wait.
-int bthread_close(int fd) {
-    return bthread::get_epoll_thread(fd).fd_close(fd);
-}
+int bthread_close(int fd) { return bthread::get_epoll_thread(fd).fd_close(fd); }
 
 }  // extern "C"

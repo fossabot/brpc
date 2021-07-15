@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_EXCLUDED_SERVERS_H
 #define BRPC_EXCLUDED_SERVERS_H
 
-#include "butil/scoped_lock.h"
+#include "brpc/socket_id.h"  // SocketId
 #include "butil/containers/bounded_queue.h"
-#include "brpc/socket_id.h"                       // SocketId
-
+#include "butil/scoped_lock.h"
 
 namespace brpc {
 
@@ -36,7 +34,8 @@ public:
     // Destroy the instance
     static void Destroy(ExcludedServers* ptr);
 
-    // Add a server. If the internal queue is full, pop one from the queue first.
+    // Add a server. If the internal queue is full, pop one from the queue
+    // first.
     void Add(SocketId id);
 
     // True if the server shall be excluded.
@@ -50,7 +49,7 @@ public:
 
 private:
     ExcludedServers(int cap)
-        : _l(_space, sizeof(SocketId)* cap, butil::NOT_OWN_STORAGE) {}
+        : _l(_space, sizeof(SocketId) * cap, butil::NOT_OWN_STORAGE) {}
     ~ExcludedServers() {}
     // Controller::_accessed may be shared by sub channels in schan, protect
     // all mutable methods with this mutex. In ordinary channels, this mutex
@@ -63,8 +62,8 @@ private:
 // ===================================================
 
 inline ExcludedServers* ExcludedServers::Create(int cap) {
-    void *space = malloc(
-        offsetof(ExcludedServers, _space) + sizeof(SocketId) * cap);
+    void* space =
+        malloc(offsetof(ExcludedServers, _space) + sizeof(SocketId) * cap);
     if (NULL == space) {
         return NULL;
     }
@@ -96,7 +95,6 @@ inline bool ExcludedServers::IsExcluded(SocketId id) const {
     return false;
 }
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_EXCLUDED_SERVERS_H

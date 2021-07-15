@@ -15,20 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <map>
-#include <gflags/gflags.h>
-#include "bthread/bthread.h"                         // bthread_id_xx
-#include "brpc/socket.h"                             // SocketUser
-#include "brpc/load_balancer.h"                      // LoadBalancer
-#include "brpc/details/controller_private_accessor.h"        // RPCSender
 #include "brpc/selective_channel.h"
+#include <gflags/gflags.h>
+#include <map>
+#include "brpc/details/controller_private_accessor.h"  // RPCSender
 #include "brpc/global.h"
-
+#include "brpc/load_balancer.h"  // LoadBalancer
+#include "brpc/socket.h"         // SocketUser
+#include "bthread/bthread.h"     // bthread_id_xx
 
 namespace brpc {
 
-DEFINE_int32(channel_check_interval, 1, 
+DEFINE_int32(channel_check_interval, 1,
              "seconds between consecutive health-checking of unaccessible"
              " sub channels inside SelectiveChannel");
 
@@ -57,8 +55,8 @@ public:
     }
 
     void AfterRevived(Socket* ptr) {
-        LOG(INFO) << "Revived " << *chan << " chan=0x" << (void*)chan
-                  << " Fake" << *ptr << " (Connectable)";
+        LOG(INFO) << "Revived " << *chan << " chan=0x" << (void*)chan << " Fake"
+                  << *ptr << " (Connectable)";
     }
 };
 
@@ -75,11 +73,11 @@ public:
         ChannelBase* channel() {
             return static_cast<SubChannel*>(fake_sock->user())->chan;
         }
-        
+
         SocketUniquePtr fake_sock;
         bool need_feedback;
     };
-    
+
     ChannelBalancer() {}
     ~ChannelBalancer();
     int Init(const char* lb_name);
@@ -101,7 +99,7 @@ class Sender;
 
 struct Resource {
     Resource() : response(NULL), sub_done(NULL) {}
-        
+
     google::protobuf::Message* response;
     SubDone* sub_done;
 };
@@ -112,8 +110,7 @@ public:
     explicit SubDone(Sender* owner)
         : _owner(owner)
         , _cid(INVALID_BTHREAD_ID)
-        , _peer_id(INVALID_SOCKET_ID) {
-    }
+        , _peer_id(INVALID_SOCKET_ID) {}
     ~SubDone() {}
     void Run();
 
@@ -124,12 +121,11 @@ public:
 };
 
 // The sender to intercept Controller::IssueRPC
-class Sender : public RPCSender,
-               public google::protobuf::Closure {
-friend class SubDone;
+class Sender : public RPCSender, public google::protobuf::Closure {
+    friend class SubDone;
+
 public:
-    Sender(Controller* cntl,
-           const google::protobuf::Message* request,
+    Sender(Controller* cntl, const google::protobuf::Message* request,
            google::protobuf::Message* response,
            google::protobuf::Closure* user_done);
     ~Sender() { Clear(); }
@@ -156,9 +152,9 @@ private:
 // ===============================================
 
 ChannelBalancer::~ChannelBalancer() {
-    for (ChannelToIdMap::iterator
-             it = _chan_map.begin(); it != _chan_map.end(); ++it) {
-        SocketUniquePtr ptr(it->second); // Dereference
+    for (ChannelToIdMap::iterator it = _chan_map.begin(); it != _chan_map.end();
+         ++it) {
+        SocketUniquePtr ptr(it->second);  // Dereference
         it->second->ReleaseAdditionalReference();
     }
     _chan_map.clear();
@@ -187,9 +183,9 @@ int ChannelBalancer::AddChannel(ChannelBase* sub_channel,
     sub_chan->chan = sub_channel;
     SocketId sock_id;
     SocketOptions options;
-    options.user = sub_chan;
+    options.user                    = sub_chan;
     options.health_check_interval_s = FLAGS_channel_check_interval;
-            
+
     if (Socket::Create(options, &sock_id) != 0) {
         delete sub_chan;
         LOG(ERROR) << "Fail to create fake socket for sub channel";
@@ -203,14 +199,15 @@ int ChannelBalancer::AddChannel(ChannelBase* sub_channel,
         ptr->SetFailed();
         return -1;
     }
-    _chan_map[sub_channel]= ptr.release();  // Add reference.
+    _chan_map[sub_channel] = ptr.release();  // Add reference.
     if (handle) {
         *handle = sock_id;
     }
     return 0;
 }
 
-void ChannelBalancer::RemoveAndDestroyChannel(SelectiveChannel::ChannelHandle handle) {
+void ChannelBalancer::RemoveAndDestroyChannel(
+    SelectiveChannel::ChannelHandle handle) {
     if (!RemoveServer(ServerId(handle))) {
         return;
     }
@@ -223,7 +220,7 @@ void ChannelBalancer::RemoveAndDestroyChannel(SelectiveChannel::ChannelHandle ha
             CHECK_EQ(1UL, _chan_map.erase(sub->chan));
         }
         {
-            SocketUniquePtr ptr2(ptr.get()); // Dereference.
+            SocketUniquePtr ptr2(ptr.get());  // Dereference.
         }
         if (rc == 0) {
             ptr->ReleaseAdditionalReference();
@@ -246,8 +243,7 @@ int ChannelBalancer::CheckHealth() {
     BAIDU_SCOPED_LOCK(_mutex);
     for (ChannelToIdMap::const_iterator it = _chan_map.begin();
          it != _chan_map.end(); ++it) {
-        if (!it->second->Failed() &&
-            it->first->CheckHealth() == 0) {
+        if (!it->second->Failed() && it->first->CheckHealth() == 0) {
             return 0;
         }
     }
@@ -272,8 +268,7 @@ void ChannelBalancer::Describe(std::ostream& os,
 
 // ===================================
 
-Sender::Sender(Controller* cntl,
-               const google::protobuf::Message* request,
+Sender::Sender(Controller* cntl, const google::protobuf::Message* request,
                google::protobuf::Message* response,
                google::protobuf::Closure* user_done)
     : _main_cntl(cntl)
@@ -283,27 +278,24 @@ Sender::Sender(Controller* cntl,
     , _nfree(0)
     , _nalloc(0)
     , _finished(false)
-    , _sub_done0(this) {
-}
+    , _sub_done0(this) {}
 
 int Sender::IssueRPC(int64_t start_realtime_us) {
     _main_cntl->_current_call.need_feedback = false;
-    LoadBalancer::SelectIn sel_in = { start_realtime_us,
-                                      true,
-                                      _main_cntl->has_request_code(),
-                                      _main_cntl->_request_code,
-                                      _main_cntl->_accessed };
+    LoadBalancer::SelectIn sel_in           = {
+        start_realtime_us, true, _main_cntl->has_request_code(),
+        _main_cntl->_request_code, _main_cntl->_accessed};
     ChannelBalancer::SelectOut sel_out;
     const int rc = static_cast<ChannelBalancer*>(_main_cntl->_lb.get())
-        ->SelectChannel(sel_in, &sel_out);
+                       ->SelectChannel(sel_in, &sel_out);
     if (rc != 0) {
         _main_cntl->SetFailed(rc, "Fail to select channel, %s", berror(rc));
         return -1;
     }
     DLOG(INFO) << "Selected channel=" << sel_out.channel() << ", size="
-                << (_main_cntl->_accessed ? _main_cntl->_accessed->size() : 0);
+               << (_main_cntl->_accessed ? _main_cntl->_accessed->size() : 0);
     _main_cntl->_current_call.need_feedback = sel_out.need_feedback;
-    _main_cntl->_current_call.peer_id = sel_out.fake_sock->id();
+    _main_cntl->_current_call.peer_id       = sel_out.fake_sock->id();
 
     Resource r = PopFree();
     if (r.sub_done == NULL) {
@@ -311,7 +303,7 @@ int Sender::IssueRPC(int64_t start_realtime_us) {
         _main_cntl->SetFailed("Impossible happens");
         return -1;
     }
-    r.sub_done->_cid = _main_cntl->current_id();
+    r.sub_done->_cid     = _main_cntl->current_id();
     r.sub_done->_peer_id = sel_out.fake_sock->id();
     Controller* sub_cntl = &r.sub_done->_cntl;
     // No need to count timeout. We already managed timeout in schan. If
@@ -327,29 +319,26 @@ int Sender::IssueRPC(int64_t start_realtime_us) {
     sub_cntl->set_request_code(_main_cntl->request_code());
     // Forward request attachment to the subcall
     sub_cntl->request_attachment().append(_main_cntl->request_attachment());
-    
-    sel_out.channel()->CallMethod(_main_cntl->_method,
-                                  &r.sub_done->_cntl,
-                                  _request,
-                                  r.response,
-                                  r.sub_done);
+
+    sel_out.channel()->CallMethod(_main_cntl->_method, &r.sub_done->_cntl,
+                                  _request, r.response, r.sub_done);
     return 0;
 }
 
 void SubDone::Run() {
     Controller* main_cntl = NULL;
-    const int rc = bthread_id_lock(_cid, (void**)&main_cntl);
+    const int rc          = bthread_id_lock(_cid, (void**)&main_cntl);
     if (rc != 0) {
         // _cid must be valid because schan does not dtor before cancelling
         // all sub calls.
-        LOG(ERROR) << "Fail to lock correlation_id="
-                   << _cid.value << ": " << berror(rc);
+        LOG(ERROR) << "Fail to lock correlation_id=" << _cid.value << ": "
+                   << berror(rc);
         return;
     }
     // NOTE: Copying gettable-but-settable fields which are generally set
     // during the RPC to reflect details.
     main_cntl->_remote_side = _cntl._remote_side;
-    // connection_type may be changed during CallMethod. 
+    // connection_type may be changed during CallMethod.
     main_cntl->set_connection_type(_cntl.connection_type());
     Resource r;
     r.response = _cntl._response;
@@ -358,7 +347,7 @@ void SubDone::Run() {
         return;
     }
     const int saved_error = main_cntl->ErrorCode();
-    
+
     if (_cntl.Failed()) {
         if (_cntl.ErrorCode() == ENODATA || _cntl.ErrorCode() == EHOSTDOWN) {
             // LB could not find a server.
@@ -368,11 +357,11 @@ void SubDone::Run() {
         main_cntl->_error_code = _cntl._error_code;
     } else {
         if (_cntl._response != main_cntl->_response) {
-            main_cntl->_response->GetReflection()->Swap(
-                main_cntl->_response, _cntl._response);
+            main_cntl->_response->GetReflection()->Swap(main_cntl->_response,
+                                                        _cntl._response);
         }
     }
-    const Controller::CompletionInfo info = { _cid, true };
+    const Controller::CompletionInfo info = {_cid, true};
     main_cntl->OnVersionedRPCReturned(info, false, saved_error);
 }
 
@@ -380,7 +369,8 @@ void Sender::Run() {
     _finished = true;
     if (_nfree != _nalloc) {
         const int saved_nalloc = _nalloc;
-        int error = (_main_cntl->ErrorCode() == ERPCTIMEDOUT ? ERPCTIMEDOUT : ECANCELED);
+        int error = (_main_cntl->ErrorCode() == ERPCTIMEDOUT ? ERPCTIMEDOUT
+                                                             : ECANCELED);
         CallId ids[_nalloc];
         for (int i = 0; i < _nalloc; ++i) {
             ids[i] = _alloc_resources[i].sub_done->_cntl.call_id();
@@ -402,8 +392,8 @@ void Sender::Clear() {
     delete _alloc_resources[1].response;
     delete _alloc_resources[1].sub_done;
     _alloc_resources[1] = Resource();
-    const CallId cid = _main_cntl->call_id();
-    _main_cntl = NULL;
+    const CallId cid    = _main_cntl->call_id();
+    _main_cntl          = NULL;
     if (_user_done) {
         _user_done->Run();
     }
@@ -414,14 +404,14 @@ inline Resource Sender::PopFree() {
     if (_nfree == 0) {
         if (_nalloc == 0) {
             Resource r;
-            r.response = _response;
-            r.sub_done = &_sub_done0;
+            r.response                  = _response;
+            r.sub_done                  = &_sub_done0;
             _alloc_resources[_nalloc++] = r;
             return r;
         } else if (_nalloc == 1) {
             Resource r;
-            r.response = _response->New();
-            r.sub_done = new SubDone(this);
+            r.response                  = _response->New();
+            r.sub_done                  = new SubDone(this);
             _alloc_resources[_nalloc++] = r;
             return r;
         } else {
@@ -431,9 +421,9 @@ inline Resource Sender::PopFree() {
     } else {
         Resource r = _free_resources[--_nfree];
         r.response->Clear();
-        Controller& sub_cntl = r.sub_done->_cntl;
+        Controller& sub_cntl            = r.sub_done->_cntl;
         ExcludedServers* saved_accessed = sub_cntl._accessed;
-        sub_cntl._accessed = NULL;
+        sub_cntl._accessed              = NULL;
         sub_cntl.Reset();
         sub_cntl._accessed = saved_accessed;
         return r;
@@ -471,14 +461,13 @@ inline const Controller* Sender::SubController(int index) const {
 
 }  // namespace schan
 
-const Controller* GetSubControllerOfSelectiveChannel(
-    const RPCSender* sender, int index) {
+const Controller* GetSubControllerOfSelectiveChannel(const RPCSender* sender,
+                                                     int index) {
     return static_cast<const schan::Sender*>(sender)->SubController(index);
 }
 
 static void PassSerializeRequest(butil::IOBuf*, Controller*,
-                                 const google::protobuf::Message*) {
-}
+                                 const google::protobuf::Message*) {}
 
 SelectiveChannel::SelectiveChannel() {}
 
@@ -506,17 +495,15 @@ int SelectiveChannel::Init(const char* lb_name, const ChannelOptions* options) {
     if (options) {
         _chan._options = *options;
         // Modify some fields to be consistent with behavior of schan.
-        _chan._options.connection_type = CONNECTION_TYPE_UNKNOWN;
+        _chan._options.connection_type        = CONNECTION_TYPE_UNKNOWN;
         _chan._options.succeed_without_server = true;
-        _chan._options.auth = NULL;
+        _chan._options.auth                   = NULL;
     }
     _chan._options.protocol = PROTOCOL_UNKNOWN;
     return 0;
 }
 
-bool SelectiveChannel::initialized() const {
-    return _chan._lb != NULL;
-}
+bool SelectiveChannel::initialized() const { return _chan._lb != NULL; }
 
 int SelectiveChannel::AddChannel(ChannelBase* sub_channel,
                                  ChannelHandle* handle) {
@@ -543,15 +530,14 @@ void SelectiveChannel::CallMethod(
     const google::protobuf::MethodDescriptor* method,
     google::protobuf::RpcController* controller_base,
     const google::protobuf::Message* request,
-    google::protobuf::Message* response,
-    google::protobuf::Closure* user_done) {
+    google::protobuf::Message* response, google::protobuf::Closure* user_done) {
     Controller* cntl = static_cast<Controller*>(controller_base);
     if (!initialized()) {
         cntl->SetFailed(EINVAL, "SelectiveChannel=%p is not initialized yet",
                         this);
     }
     schan::Sender* sndr = new schan::Sender(cntl, request, response, user_done);
-    cntl->_sender = sndr;
+    cntl->_sender       = sndr;
     cntl->add_flag(Controller::FLAGS_DESTROY_CID_IN_DONE);
     const CallId cid = cntl->call_id();
     _chan.CallMethod(method, cntl, request, response, sndr);
@@ -570,8 +556,8 @@ int SelectiveChannel::CheckHealth() {
     return -1;
 }
 
-void SelectiveChannel::Describe(
-    std::ostream& os, const DescribeOptions& options) const {
+void SelectiveChannel::Describe(std::ostream& os,
+                                const DescribeOptions& options) const {
     os << "SelectiveChannel[";
     if (_chan._lb != NULL) {
         _chan._lb->Describe(os, options);
@@ -581,4 +567,4 @@ void SelectiveChannel::Describe(
     os << ']';
 }
 
-} // namespace brpc
+}  // namespace brpc

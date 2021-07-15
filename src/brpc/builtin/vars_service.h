@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_VARS_SERVICE_H
 #define BRPC_VARS_SERVICE_H
 
-#include "brpc/builtin_service.pb.h"
 #include "brpc/builtin/tabbed.h"
-
+#include "brpc/builtin_service.pb.h"
 
 namespace brpc {
 
@@ -35,7 +33,6 @@ public:
     void GetTabInfo(TabInfoList* info_list) const;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_VARS_SERVICE_H
+#endif  // BRPC_VARS_SERVICE_H

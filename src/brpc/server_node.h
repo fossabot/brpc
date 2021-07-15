@@ -26,7 +26,7 @@ namespace brpc {
 // Representing a server inside a NamingService.
 struct ServerNode {
     ServerNode() {}
-    
+
     explicit ServerNode(const butil::EndPoint& pt) : addr(pt) {}
 
     ServerNode(butil::ip_t ip, int port, const std::string& tag2)
@@ -41,14 +41,17 @@ struct ServerNode {
     std::string tag;
 };
 
-inline bool operator<(const ServerNode& n1, const ServerNode& n2)
-{ return n1.addr != n2.addr ? (n1.addr < n2.addr) : (n1.tag < n2.tag); }
+inline bool operator<(const ServerNode& n1, const ServerNode& n2) {
+    return n1.addr != n2.addr ? (n1.addr < n2.addr) : (n1.tag < n2.tag);
+}
 
-inline bool operator==(const ServerNode& n1, const ServerNode& n2)
-{ return n1.addr == n2.addr && n1.tag == n2.tag; }
+inline bool operator==(const ServerNode& n1, const ServerNode& n2) {
+    return n1.addr == n2.addr && n1.tag == n2.tag;
+}
 
-inline bool operator!=(const ServerNode& n1, const ServerNode& n2)
-{ return !(n1 == n2); }
+inline bool operator!=(const ServerNode& n1, const ServerNode& n2) {
+    return !(n1 == n2);
+}
 
 inline std::ostream& operator<<(std::ostream& os, const ServerNode& n) {
     os << n.addr;
@@ -58,6 +61,6 @@ inline std::ostream& operator<<(std::ostream& os, const ServerNode& n) {
     return os;
 }
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_SERVER_NODE_H

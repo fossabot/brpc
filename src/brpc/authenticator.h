@@ -15,15 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_AUTHENTICATOR_H
 #define BRPC_AUTHENTICATOR_H
 
 #include <ostream>
-#include "butil/endpoint.h"                    // butil::EndPoint
-#include "butil/macros.h"                      // BAIDU_CONCAT
-#include "brpc/extension.h"              // Extension<T>
-
+#include "brpc/extension.h"  // Extension<T>
+#include "butil/endpoint.h"  // butil::EndPoint
+#include "butil/macros.h"    // BAIDU_CONCAT
 
 namespace brpc {
 
@@ -34,7 +32,7 @@ public:
 
     const std::string& user() const { return _user; }
     void set_user(const std::string& user) { _user = user; }
-    
+
     const std::string& group() const { return _group; }
     void set_group(const std::string& group) { _group = group; }
 
@@ -52,7 +50,7 @@ private:
     std::string _user;
     std::string _group;
     std::string _roles;
-    std::string _starter;    
+    std::string _starter;
 };
 
 class Authenticator {
@@ -73,7 +71,6 @@ public:
     virtual int VerifyCredential(const std::string& auth_str,
                                  const butil::EndPoint& client_addr,
                                  AuthContext* out_ctx) const = 0;
-
 };
 
 inline std::ostream& operator<<(std::ostream& os, const AuthContext& ctx) {
@@ -83,9 +80,6 @@ inline std::ostream& operator<<(std::ostream& os, const AuthContext& ctx) {
               << ", starter=" << ctx.starter() << "]";
 }
 
+}  // namespace brpc
 
-} // namespace brpc
-
-
-
-#endif // BRPC_AUTHENTICATOR_H
+#endif  // BRPC_AUTHENTICATOR_H

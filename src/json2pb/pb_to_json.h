@@ -20,15 +20,15 @@
 #ifndef BRPC_JSON2PB_PB_TO_JSON_H
 #define BRPC_JSON2PB_PB_TO_JSON_H
 
-#include <string>
+#include <google/protobuf/io/zero_copy_stream.h>  // ZeroCopyOutputStream
 #include <google/protobuf/message.h>
-#include <google/protobuf/io/zero_copy_stream.h> // ZeroCopyOutputStream
+#include <string>
 
 namespace json2pb {
 
 enum EnumOption {
-    OUTPUT_ENUM_BY_NAME = 0,          // Output enum by its name
-    OUTPUT_ENUM_BY_NUMBER = 1,        // Output enum by its value
+    OUTPUT_ENUM_BY_NAME   = 0,  // Output enum by its name
+    OUTPUT_ENUM_BY_NUMBER = 1,  // Output enum by its value
 };
 
 struct Pb2JsonOptions {
@@ -44,8 +44,8 @@ struct Pb2JsonOptions {
     // Default: false
     bool pretty_json;
 
-    // Convert "repeated { required string key = 1; required string value = 2; }"
-    // to a map object of json and vice versa when this option is turned on.
+    // Convert "repeated { required string key = 1; required string value = 2;
+    // }" to a map object of json and vice versa when this option is turned on.
     // Default: true
     bool enable_protobuf_map;
 
@@ -58,11 +58,12 @@ struct Pb2JsonOptions {
     // to a empty array of json when this option is turned on.
     // Default: false
     bool jsonify_empty_array;
-    
+
     // Whether to always print primitive fields. By default proto3 primitive
-    // fields with default values will be omitted in JSON output. For example, an
-    // int32 field set to 0 will be omitted. Set this flag to true will override
-    // the default behavior and print primitive fields regardless of their values.
+    // fields with default values will be omitted in JSON output. For example,
+    // an int32 field set to 0 will be omitted. Set this flag to true will
+    // override the default behavior and print primitive fields regardless of
+    // their values.
     bool always_print_primitive_fields;
 };
 
@@ -70,22 +71,20 @@ struct Pb2JsonOptions {
 // Returns true on success. `error' (if not NULL) will be set with error
 // message on failure.
 bool ProtoMessageToJson(const google::protobuf::Message& message,
-                        std::string* json,
-                        const Pb2JsonOptions& options,
+                        std::string* json, const Pb2JsonOptions& options,
                         std::string* error = NULL);
 // send output to ZeroCopyOutputStream instead of std::string.
 bool ProtoMessageToJson(const google::protobuf::Message& message,
-                        google::protobuf::io::ZeroCopyOutputStream *json,
+                        google::protobuf::io::ZeroCopyOutputStream* json,
                         const Pb2JsonOptions& options,
                         std::string* error = NULL);
 
 // Using default Pb2JsonOptions.
 bool ProtoMessageToJson(const google::protobuf::Message& message,
-                        std::string* json,
-                        std::string* error = NULL);
+                        std::string* json, std::string* error = NULL);
 bool ProtoMessageToJson(const google::protobuf::Message& message,
                         google::protobuf::io::ZeroCopyOutputStream* json,
                         std::string* error = NULL);
-} // namespace json2pb
+}  // namespace json2pb
 
-#endif // BRPC_JSON2PB_PB_TO_JSON_H
+#endif  // BRPC_JSON2PB_PB_TO_JSON_H

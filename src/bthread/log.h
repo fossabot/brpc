@@ -28,4 +28,4 @@
 
 #define BT_VLOG VLOG(100)
 
-#endif // BTHREAD_LOG_H
+#endif  // BTHREAD_LOG_H

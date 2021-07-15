@@ -15,18 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <vector>                           // std::vector
-#include <google/protobuf/descriptor.h>     // ServiceDescriptor
-#include "brpc/controller.h"           // Controller
-#include "brpc/server.h"               // Server
-#include "brpc/closure_guard.h"        // ClosureGuard
 #include "brpc/builtin/list_service.h"
-
+#include <google/protobuf/descriptor.h>  // ServiceDescriptor
+#include <vector>                        // std::vector
+#include "brpc/closure_guard.h"          // ClosureGuard
+#include "brpc/controller.h"             // Controller
+#include "brpc/server.h"                 // Server
 
 namespace brpc {
 
-void ListService::default_method(::google::protobuf::RpcController*, 
+void ListService::default_method(::google::protobuf::RpcController*,
                                  const ::brpc::ListRequest*,
                                  ::brpc::ListResponse* response,
                                  ::google::protobuf::Closure* done) {
@@ -34,9 +32,9 @@ void ListService::default_method(::google::protobuf::RpcController*,
     std::vector<google::protobuf::Service*> services;
     _server->ListServices(&services);
     for (size_t i = 0; i < services.size(); ++i) {
-        google::protobuf::ServiceDescriptorProto *svc = response->add_service();
+        google::protobuf::ServiceDescriptorProto* svc = response->add_service();
         services[i]->GetDescriptor()->CopyTo(svc);
     }
 }
 
-} // namespace brpc
+}  // namespace brpc

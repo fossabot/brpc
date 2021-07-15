@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#ifndef  BRPC_THREADS_SERVICE_H
-#define  BRPC_THREADS_SERVICE_H
+#ifndef BRPC_THREADS_SERVICE_H
+#define BRPC_THREADS_SERVICE_H
 
 #include <ostream>
 #include "brpc/builtin_service.pb.h"
-
 
 namespace brpc {
 
@@ -33,7 +31,6 @@ public:
                         ::google::protobuf::Closure* done);
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif  //BRPC_THREADS_SERVICE_H
+#endif  // BRPC_THREADS_SERVICE_H

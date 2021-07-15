@@ -11,22 +11,22 @@ namespace butil {
 namespace internal {
 
 bool PlatformThreadLocalStorage::AllocTLS(TLSKey* key) {
-  return !pthread_key_create(key,
-      butil::internal::PlatformThreadLocalStorage::OnThreadExit);
+    return !pthread_key_create(
+        key, butil::internal::PlatformThreadLocalStorage::OnThreadExit);
 }
 
 void PlatformThreadLocalStorage::FreeTLS(TLSKey key) {
-  int ret = pthread_key_delete(key);
-  DCHECK_EQ(ret, 0);
+    int ret = pthread_key_delete(key);
+    DCHECK_EQ(ret, 0);
 }
 
 void* PlatformThreadLocalStorage::GetTLSValue(TLSKey key) {
-  return pthread_getspecific(key);
+    return pthread_getspecific(key);
 }
 
 void PlatformThreadLocalStorage::SetTLSValue(TLSKey key, void* value) {
-  int ret = pthread_setspecific(key, value);
-  DCHECK_EQ(ret, 0);
+    int ret = pthread_setspecific(key, value);
+    DCHECK_EQ(ret, 0);
 }
 
 }  // namespace internal

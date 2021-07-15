@@ -52,8 +52,9 @@ public:
         return _isolated_times.load(butil::memory_order_relaxed);
     }
 
-    // The duration that should be isolated when the socket fails in milliseconds.
-    // The higher the frequency of socket errors, the longer the duration.
+    // The duration that should be isolated when the socket fails in
+    // milliseconds. The higher the frequency of socket errors, the longer the
+    // duration.
     int isolation_duration_ms() const {
         return _isolation_duration_ms.load(butil::memory_order_relaxed);
     }
@@ -63,7 +64,7 @@ private:
 
     class EmaErrorRecorder {
     public:
-        EmaErrorRecorder(int windows_size,  int max_error_percent);
+        EmaErrorRecorder(int windows_size, int max_error_percent);
         bool OnCallEnd(int error_code, int64_t latency);
         void Reset();
 
@@ -91,4 +92,4 @@ private:
 
 }  // namespace brpc
 
-#endif // BRPC_CIRCUIT_BREAKER_H_
+#endif  // BRPC_CIRCUIT_BREAKER_H_

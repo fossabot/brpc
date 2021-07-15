@@ -16,18 +16,18 @@ namespace butil {
 template <typename Float>
 inline bool IsFinite(const Float& number) {
 #if defined(OS_POSIX)
-  return std::isfinite(number) != 0;
+    return std::isfinite(number) != 0;
 #elif defined(OS_WIN)
-  return _finite(number) != 0;
+    return _finite(number) != 0;
 #endif
 }
 
 template <typename Float>
 inline bool IsNaN(const Float& number) {
 #if defined(OS_POSIX)
-  return std::isnan(number) != 0;
+    return std::isnan(number) != 0;
 #elif defined(OS_WIN)
-  return _isnan(number) != 0;
+    return _isnan(number) != 0;
 #endif
 }
 

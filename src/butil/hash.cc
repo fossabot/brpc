@@ -12,7 +12,7 @@ extern "C" uint32_t SuperFastHash(const char* data, int len);
 namespace butil {
 
 uint32_t SuperFastHash(const char* data, int len) {
-  return ::SuperFastHash(data, len);
+    return ::SuperFastHash(data, len);
 }
 
 }  // namespace butil

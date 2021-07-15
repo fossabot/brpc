@@ -17,15 +17,15 @@
 
 #ifdef BAIDU_INTERNAL
 
-#include <webfoot_naming.h>                             //webfoot::*
-#include <naming.pb.h>                                  //BnsInput BnsOutput
-#include "butil/logging.h"                               // CHECK
 #include "brpc/policy/baidu_naming_service.h"
+#include <naming.pb.h>       //BnsInput BnsOutput
+#include <webfoot_naming.h>  //webfoot::*
+#include "butil/logging.h"   // CHECK
 
 namespace brpc {
 namespace policy {
 
-int BaiduNamingService::GetServers(const char *service_name,
+int BaiduNamingService::GetServers(const char* service_name,
                                    std::vector<ServerNode>* servers) {
     servers->clear();
     BnsInput input;
@@ -34,15 +34,15 @@ int BaiduNamingService::GetServers(const char *service_name,
     const int rc = webfoot::get_instance_by_service(input, &output);
     if (rc != webfoot::WEBFOOT_RET_SUCCESS) {
         if (rc != webfoot::WEBFOOT_SERVICE_BEYOND_THRSHOLD) {
-            LOG(WARNING) << "Fail to get servers of `" << service_name
-                         << "', " << webfoot::error_to_string(rc);
+            LOG(WARNING) << "Fail to get servers of `" << service_name << "', "
+                         << webfoot::error_to_string(rc);
             return -1;
         } else {
             // NOTE: output is valid for this error, just print a warning.
             LOG(WARNING) << webfoot::error_to_string(rc);
         }
-    } 
-    const int instance_number = output.instance_size(); 
+    }
+    const int instance_number = output.instance_size();
     if (instance_number == 0) {
         LOG(WARNING) << "No server attached to `" << service_name << "'";
         return 0;
@@ -61,8 +61,8 @@ int BaiduNamingService::GetServers(const char *service_name,
     return 0;
 }
 
-void BaiduNamingService::Describe(
-    std::ostream& os, const DescribeOptions&) const {
+void BaiduNamingService::Describe(std::ostream& os,
+                                  const DescribeOptions&) const {
     os << "bns";
     return;
 }
@@ -71,10 +71,8 @@ NamingService* BaiduNamingService::New() const {
     return new BaiduNamingService;
 }
 
-void BaiduNamingService::Destroy() {
-    delete this;
-}
+void BaiduNamingService::Destroy() { delete this; }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 #endif  // BAIDU_INTERNAL

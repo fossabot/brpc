@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <stdio.h>                               // vsnprintf
-#include <string.h>                              // strlen
 #include "butil/string_printf.h"
+#include <stdio.h>   // vsnprintf
+#include <string.h>  // strlen
 
 namespace butil {
 
@@ -43,13 +43,13 @@ inline int string_printf_impl(std::string& output, const char* format,
     // resize and try again.
 
     const int write_point = output.size();
-    int remaining = output.capacity() - write_point;
+    int remaining         = output.capacity() - write_point;
     output.resize(output.capacity());
 
     va_list copied_args;
     va_copy(copied_args, args);
-    int bytes_used = vsnprintf(&output[write_point], remaining, format,
-                               copied_args);
+    int bytes_used =
+        vsnprintf(&output[write_point], remaining, format, copied_args);
     va_end(copied_args);
     if (bytes_used < 0) {
         return -1;
@@ -58,7 +58,7 @@ inline int string_printf_impl(std::string& output, const char* format,
         output.resize(write_point + bytes_used);
     } else {
         output.resize(write_point + bytes_used + 1);
-        remaining = bytes_used + 1;
+        remaining  = bytes_used + 1;
         bytes_used = vsnprintf(&output[write_point], remaining, format, args);
         if (bytes_used + 1 != remaining) {
             return -1;
@@ -97,7 +97,7 @@ int string_appendf(std::string* output, const char* format, ...) {
     va_list ap;
     va_start(ap, format);
     const size_t old_size = output->size();
-    const int rc = string_printf_impl(*output, format, ap);
+    const int rc          = string_printf_impl(*output, format, ap);
     if (rc != 0) {
         output->resize(old_size);
     }
@@ -107,7 +107,7 @@ int string_appendf(std::string* output, const char* format, ...) {
 
 int string_vappendf(std::string* output, const char* format, va_list args) {
     const size_t old_size = output->size();
-    const int rc = string_printf_impl(*output, format, args);
+    const int rc          = string_printf_impl(*output, format, args);
     if (rc != 0) {
         output->resize(old_size);
     }

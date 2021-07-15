@@ -23,8 +23,8 @@
 
 #if defined(OS_LINUX)
 // clone is a linux specific syscall
-#include <sched.h>
 #include <errno.h>
+#include <sched.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -61,21 +61,21 @@ int read_command_output_through_clone(std::ostream& os, const char* cmd) {
         return -1;
     }
     int saved_errno = 0;
-    int wstatus = 0;
+    int wstatus     = 0;
     pid_t cpid;
-    int rc = 0;
-    ChildArgs args = { cmd, pipe_fd[0], pipe_fd[1] };
+    int rc         = 0;
+    ChildArgs args = {cmd, pipe_fd[0], pipe_fd[1]};
     char buffer[1024];
 
-    char* child_stack = NULL;
+    char* child_stack     = NULL;
     char* child_stack_mem = (char*)malloc(CHILD_STACK_SIZE);
     if (!child_stack_mem) {
         LOG(ERROR) << "Fail to alloc stack for the child process";
         rc = -1;
         goto END;
     }
-    child_stack = child_stack_mem + CHILD_STACK_SIZE;  
-                               // ^ Assume stack grows downward
+    child_stack = child_stack_mem + CHILD_STACK_SIZE;
+    // ^ Assume stack grows downward
     cpid = clone(launch_child_process, child_stack,
                  __WCLONE | CLONE_VM | SIGCHLD | CLONE_UNTRACED, &args);
     if (cpid < 0) {
@@ -129,7 +129,7 @@ int read_command_output_through_clone(std::ostream& os, const char* cmd) {
            << WTERMSIG(wstatus);
     }
 
-    rc = -1;
+    rc    = -1;
     errno = ECHILD;
 
 END:
@@ -151,7 +151,7 @@ DEFINE_bool(run_command_through_clone, false,
             "(Linux specific) Run command with clone syscall to "
             "avoid the costly page table duplication");
 
-#endif // OS_LINUX
+#endif  // OS_LINUX
 
 #include <stdio.h>
 
@@ -186,8 +186,7 @@ int read_command_output_through_popen(std::ostream& os, const char* cmd) {
         return WEXITSTATUS(wstatus);
     }
     if (WIFSIGNALED(wstatus)) {
-        os << "Child process was killed by signal "
-           << WTERMSIG(wstatus);
+        os << "Child process was killed by signal " << WTERMSIG(wstatus);
     }
     errno = ECHILD;
     return -1;
@@ -198,8 +197,8 @@ int read_command_output(std::ostream& os, const char* cmd) {
     return read_command_output_through_popen(os, cmd);
 #else
     return FLAGS_run_command_through_clone
-        ? read_command_output_through_clone(os, cmd)
-        : read_command_output_through_popen(os, cmd);
+               ? read_command_output_through_clone(os, cmd)
+               : read_command_output_through_popen(os, cmd);
 #endif
 }
 

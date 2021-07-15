@@ -3,4 +3,4 @@
 // found in the LICENSE file.
 
 #define WARNING 1;
-#define RAW_LOG(severity, ...);  // Do nothing.
+#define RAW_LOG(severity, ...) ;  // Do nothing.

@@ -15,18 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_NAMING_SERVICE_THREAD_H
 #define BRPC_NAMING_SERVICE_THREAD_H
 
 #include <string>
-#include "butil/intrusive_ptr.hpp"               // butil::intrusive_ptr
-#include "bthread/bthread.h"                    // bthread_t
-#include "brpc/server_id.h"                     // ServerId
-#include "brpc/shared_object.h"                 // SharedObject
-#include "brpc/naming_service.h"                // NamingService
-#include "brpc/naming_service_filter.h"         // NamingServiceFilter
+#include "brpc/naming_service.h"         // NamingService
+#include "brpc/naming_service_filter.h"  // NamingServiceFilter
+#include "brpc/server_id.h"              // ServerId
+#include "brpc/shared_object.h"          // SharedObject
 #include "brpc/socket_map.h"
+#include "bthread/bthread.h"        // bthread_t
+#include "butil/intrusive_ptr.hpp"  // butil::intrusive_ptr
 
 namespace brpc {
 
@@ -37,15 +36,14 @@ namespace brpc {
 class NamingServiceWatcher {
 public:
     virtual ~NamingServiceWatcher() {}
-    virtual void OnAddedServers(const std::vector<ServerId>& servers) = 0;
+    virtual void OnAddedServers(const std::vector<ServerId>& servers)   = 0;
     virtual void OnRemovedServers(const std::vector<ServerId>& servers) = 0;
 };
 
 struct GetNamingServiceThreadOptions {
     GetNamingServiceThreadOptions()
-        : succeed_without_server(false)
-        , log_succeed_without_server(true) {}
-    
+        : succeed_without_server(false), log_succeed_without_server(true) {}
+
     bool succeed_without_server;
     bool log_succeed_without_server;
     ChannelSignature channel_signature;
@@ -86,12 +84,11 @@ class NamingServiceThread : public SharedObject, public Describable {
         std::vector<ServerNodeWithId> _removed_sockets;
     };
 
-public:    
+public:
     NamingServiceThread();
     ~NamingServiceThread();
 
-    int Start(NamingService* ns,
-              const std::string& protocol,
+    int Start(NamingService* ns, const std::string& protocol,
               const std::string& service_name,
               const GetNamingServiceThreadOptions* options);
     int WaitForFirstBatchOfServers();
@@ -107,8 +104,8 @@ private:
     static void* RunThis(void*);
 
     static void ServerNodeWithId2ServerId(
-        const std::vector<ServerNodeWithId>& src,
-        std::vector<ServerId>* dst, const NamingServiceFilter* filter);
+        const std::vector<ServerNodeWithId>& src, std::vector<ServerId>* dst,
+        const NamingServiceFilter* filter);
 
     butil::Mutex _mutex;
     bthread_t _tid;
@@ -134,7 +131,6 @@ int GetNamingServiceThread(butil::intrusive_ptr<NamingServiceThread>* ns_thread,
                            const char* url,
                            const GetNamingServiceThreadOptions* options);
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_NAMING_SERVICE_THREAD_H

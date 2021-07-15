@@ -17,11 +17,11 @@
 
 // Date: Mon. Nov 7 14:47:36 CST 2011
 
-#include <fcntl.h>                   // fcntl()
-#include <netinet/in.h>              // IPPROTO_TCP
+#include <fcntl.h>        // fcntl()
+#include <netinet/in.h>   // IPPROTO_TCP
+#include <netinet/tcp.h>  // TCP_NODELAY
+#include <sys/socket.h>   // setsockopt
 #include <sys/types.h>
-#include <sys/socket.h>              // setsockopt
-#include <netinet/tcp.h>             // TCP_NODELAY
 
 namespace butil {
 
@@ -47,13 +47,12 @@ int make_blocking(int fd) {
     return 0;
 }
 
-int make_close_on_exec(int fd) {
-    return fcntl(fd, F_SETFD, FD_CLOEXEC);
-}
+int make_close_on_exec(int fd) { return fcntl(fd, F_SETFD, FD_CLOEXEC); }
 
 int make_no_delay(int socket) {
     int flag = 1;
-    return setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag));
+    return setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, (char*)&flag,
+                      sizeof(flag));
 }
 
 }  // namespace butil

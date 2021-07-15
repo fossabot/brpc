@@ -15,31 +15,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <time.h>                           // strftime
-#include <pthread.h>
-#include <map>
-#include <limits>
-#include <sys/stat.h>
-#include <fcntl.h>                          // O_RDONLY
-#include "butil/string_printf.h"             // string_printf
-#include "butil/string_splitter.h"           // StringSplitter
-#include "butil/file_util.h"                 // butil::FilePath
-#include "butil/files/scoped_file.h"         // ScopedFILE
-#include "butil/time.h"
-#include "butil/popen.h"                    // butil::read_command_output
-#include "butil/process_util.h"             // butil::ReadCommandLine
-#include "brpc/log.h"
-#include "brpc/controller.h"                // Controller
-#include "brpc/closure_guard.h"             // ClosureGuard
 #include "brpc/builtin/pprof_service.h"
+#include <fcntl.h>  // O_RDONLY
+#include <pthread.h>
+#include <sys/stat.h>
+#include <time.h>  // strftime
+#include <limits>
+#include <map>
 #include "brpc/builtin/common.h"
+#include "brpc/closure_guard.h"  // ClosureGuard
+#include "brpc/controller.h"     // Controller
 #include "brpc/details/tcmalloc_extension.h"
-#include "bthread/bthread.h"                // bthread_usleep
+#include "brpc/log.h"
+#include "bthread/bthread.h"  // bthread_usleep
 #include "butil/fd_guard.h"
+#include "butil/file_util.h"          // butil::FilePath
+#include "butil/files/scoped_file.h"  // ScopedFILE
+#include "butil/popen.h"              // butil::read_command_output
+#include "butil/process_util.h"       // butil::ReadCommandLine
+#include "butil/string_printf.h"      // string_printf
+#include "butil/string_splitter.h"    // StringSplitter
+#include "butil/time.h"
 
 extern "C" {
 #if defined(OS_LINUX)
-extern char *program_invocation_name;
+extern char* program_invocation_name;
 #endif
 int __attribute__((weak)) ProfilerStart(const char* fname);
 void __attribute__((weak)) ProfilerStop();
@@ -48,17 +48,15 @@ void __attribute__((weak)) ProfilerStop();
 namespace bthread {
 bool ContentionProfilerStart(const char* filename);
 void ContentionProfilerStop();
-}
-
+}  // namespace bthread
 
 namespace brpc {
 
 static int ReadSeconds(Controller* cntl) {
-    int seconds = 0;
-    const std::string* param =
-        cntl->http_request().uri().GetQuery("seconds");
+    int seconds              = 0;
+    const std::string* param = cntl->http_request().uri().GetQuery("seconds");
     if (param != NULL) {
-        char* endptr = NULL;
+        char* endptr   = NULL;
         const long sec = strtol(param->c_str(), &endptr, 10);
         if (endptr == param->c_str() + param->length()) {
             seconds = sec;
@@ -72,18 +70,18 @@ static int ReadSeconds(Controller* cntl) {
 
 int MakeProfName(ProfilingType type, char* buf, size_t buf_len) {
     // Add pprof_ prefix to separate from /hotspots
-    int nr = snprintf(buf, buf_len, "%s/pprof_%s/", FLAGS_rpc_profiling_dir.c_str(),
-                      GetProgramChecksum());
+    int nr = snprintf(buf, buf_len, "%s/pprof_%s/",
+                      FLAGS_rpc_profiling_dir.c_str(), GetProgramChecksum());
     if (nr < 0) {
         return -1;
     }
     buf += nr;
     buf_len -= nr;
-    
+
     time_t rawtime;
     time(&rawtime);
     struct tm* timeinfo = localtime(&rawtime);
-    const size_t nw = strftime(buf, buf_len, "%Y%m%d.%H%M%S", timeinfo);
+    const size_t nw     = strftime(buf, buf_len, "%Y%m%d.%H%M%S", timeinfo);
     buf += nw;
     buf_len -= nw;
 
@@ -92,24 +90,25 @@ int MakeProfName(ProfilingType type, char* buf, size_t buf_len) {
     return 0;
 }
 
-void PProfService::profile(
-    ::google::protobuf::RpcController* controller_base,
-    const ::brpc::ProfileRequest* /*request*/,
-    ::brpc::ProfileResponse* /*response*/,
-    ::google::protobuf::Closure* done) {
+void PProfService::profile(::google::protobuf::RpcController* controller_base,
+                           const ::brpc::ProfileRequest* /*request*/,
+                           ::brpc::ProfileResponse* /*response*/,
+                           ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
     Controller* cntl = static_cast<Controller*>(controller_base);
     cntl->http_response().set_content_type("text/plain");
     if ((void*)ProfilerStart == NULL || (void*)ProfilerStop == NULL) {
-        cntl->SetFailed(ENOMETHOD, "%s, to enable cpu profiler, check out "
+        cntl->SetFailed(ENOMETHOD,
+                        "%s, to enable cpu profiler, check out "
                         "docs/cn/cpu_profiler.md",
                         berror(ENOMETHOD));
         return;
-    }    
+    }
     int sleep_sec = ReadSeconds(cntl);
     if (sleep_sec <= 0) {
         if (!cntl->Failed()) {
-            cntl->SetFailed(EINVAL, "You have to specify ?seconds=N. If you're "
+            cntl->SetFailed(EINVAL,
+                            "You have to specify ?seconds=N. If you're "
                             "using pprof, add --seconds=N");
         }
         return;
@@ -133,7 +132,8 @@ void PProfService::profile(
     butil::File::Error error;
     const butil::FilePath dir = butil::FilePath(prof_name).DirName();
     if (!butil::CreateDirectoryAndGetError(dir, &error)) {
-        cntl->SetFailed(EPERM, "Fail to create directory=`%s'",dir.value().c_str());
+        cntl->SetFailed(EPERM, "Fail to create directory=`%s'",
+                        dir.value().c_str());
         return;
     }
     if (!ProfilerStart(prof_name)) {
@@ -158,15 +158,15 @@ void PProfService::profile(
 void PProfService::contention(
     ::google::protobuf::RpcController* controller_base,
     const ::brpc::ProfileRequest* /*request*/,
-    ::brpc::ProfileResponse* /*response*/,
-    ::google::protobuf::Closure* done) {
+    ::brpc::ProfileResponse* /*response*/, ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
     Controller* cntl = static_cast<Controller*>(controller_base);
     cntl->http_response().set_content_type("text/plain");
     int sleep_sec = ReadSeconds(cntl);
     if (sleep_sec <= 0) {
         if (!cntl->Failed()) {
-            cntl->SetFailed(EINVAL, "You have to specify ?seconds=N. If you're "
+            cntl->SetFailed(EINVAL,
+                            "You have to specify ?seconds=N. If you're "
                             "using pprof, add --seconds=N");
         }
         return;
@@ -206,20 +206,20 @@ void PProfService::contention(
     cntl->response_attachment().swap(portal);
 }
 
-void PProfService::heap(
-    ::google::protobuf::RpcController* controller_base,
-    const ::brpc::ProfileRequest* /*request*/,
-    ::brpc::ProfileResponse* /*response*/,
-    ::google::protobuf::Closure* done) {
+void PProfService::heap(::google::protobuf::RpcController* controller_base,
+                        const ::brpc::ProfileRequest* /*request*/,
+                        ::brpc::ProfileResponse* /*response*/,
+                        ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller* cntl = static_cast<Controller*>(controller_base);
+    Controller* cntl            = static_cast<Controller*>(controller_base);
     MallocExtension* malloc_ext = MallocExtension::instance();
     if (malloc_ext == NULL || !has_TCMALLOC_SAMPLE_PARAMETER()) {
         const char* extra_desc = "";
         if (malloc_ext != NULL) {
             extra_desc = " (no TCMALLOC_SAMPLE_PARAMETER in env)";
         }
-        cntl->SetFailed(ENOMETHOD, "Heap profiler is not enabled%s,"
+        cntl->SetFailed(ENOMETHOD,
+                        "Heap profiler is not enabled%s,"
                         "check out http://wiki.baidu.com/display/RPC",
                         extra_desc);
         return;
@@ -237,19 +237,19 @@ void PProfService::heap(
     std::string obj;
     malloc_ext->GetHeapSample(&obj);
     cntl->http_response().set_content_type("text/plain");
-    cntl->response_attachment().append(obj);    
+    cntl->response_attachment().append(obj);
 }
 
-void PProfService::growth(
-    ::google::protobuf::RpcController* controller_base,
-    const ::brpc::ProfileRequest* /*request*/,
-    ::brpc::ProfileResponse* /*response*/,
-    ::google::protobuf::Closure* done) {
+void PProfService::growth(::google::protobuf::RpcController* controller_base,
+                          const ::brpc::ProfileRequest* /*request*/,
+                          ::brpc::ProfileResponse* /*response*/,
+                          ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller* cntl = static_cast<Controller*>(controller_base);
+    Controller* cntl            = static_cast<Controller*>(controller_base);
     MallocExtension* malloc_ext = MallocExtension::instance();
     if (malloc_ext == NULL) {
-        cntl->SetFailed(ENOMETHOD, "%s, to enable growth profiler, check out "
+        cntl->SetFailed(ENOMETHOD,
+                        "%s, to enable growth profiler, check out "
                         "docs/cn/heap_profiler.md",
                         berror(ENOMETHOD));
         return;
@@ -267,7 +267,7 @@ void PProfService::growth(
     std::string obj;
     malloc_ext->GetHeapGrowthStacks(&obj);
     cntl->http_response().set_content_type("text/plain");
-    cntl->response_attachment().append(obj);    
+    cntl->response_attachment().append(obj);
 }
 
 typedef std::map<uintptr_t, std::string> SymbolMap;
@@ -289,9 +289,8 @@ static bool HasExt(const std::string& name, const std::string& ext) {
             name[index + ext.size()] == '.');
 }
 
-static int ExtractSymbolsFromBinary(
-    std::map<uintptr_t, std::string>& addr_map,
-    const LibInfo& lib_info) {
+static int ExtractSymbolsFromBinary(std::map<uintptr_t, std::string>& addr_map,
+                                    const LibInfo& lib_info) {
     butil::Timer tm;
     tm.start();
     std::string cmd = "nm -C -p ";
@@ -308,7 +307,7 @@ static int ExtractSymbolsFromBinary(
         if (sp == NULL) {
             continue;
         }
-        char* endptr = NULL;
+        char* endptr   = NULL;
         uintptr_t addr = strtoull(sp.field(), &endptr, 16);
         if (*endptr != ' ') {
             continue;
@@ -326,8 +325,8 @@ static int ExtractSymbolsFromBinary(
         if (sp.length() != 1UL) {
             continue;
         }
-        //const char c = *sp.field();
-        
+        // const char c = *sp.field();
+
         ++sp;
         if (sp == NULL) {
             continue;
@@ -341,10 +340,10 @@ static int ExtractSymbolsFromBinary(
             addr_map[addr] = std::string();
             continue;
         }
-        
+
         const char* name_end = sp.field();
-        bool stop = false;
-        char last_char = '\0';
+        bool stop            = false;
+        char last_char       = '\0';
         while (1) {
             switch (*name_end) {
             case 0:
@@ -374,7 +373,7 @@ static int ExtractSymbolsFromBinary(
         // If address conflicts, choose a shorter name (not necessarily to be
         // T type in nm). This works fine because aliases often have more
         // prefixes.
-        const size_t name_len = name_end - name_begin;
+        const size_t name_len  = name_end - name_begin;
         SymbolMap::iterator it = addr_map.find(addr);
         if (it != addr_map.end()) {
             if (name_len < it->second.size()) {
@@ -399,9 +398,9 @@ static void LoadSymbols() {
     if (fp == NULL) {
         return;
     }
-    char* line = NULL;
+    char* line      = NULL;
     size_t line_len = 0;
-    ssize_t nr = 0;
+    ssize_t nr      = 0;
     while ((nr = getline(&line, &line_len, fp.get())) != -1) {
         butil::StringSplitter sp(line, line + nr, ' ');
         if (sp == NULL) {
@@ -429,8 +428,8 @@ static void LoadSymbols() {
         size_t offset = strtoull(sp.field(), &endptr, 16);
         if (*endptr != ' ') {
             continue;
-        }        
-        //skip $4~$5
+        }
+        // skip $4~$5
         for (int i = 0; i < 3; ++i) {
             ++sp;
         }
@@ -438,7 +437,7 @@ static void LoadSymbols() {
             continue;
         }
         size_t n = sp.length();
-        if (sp.field()[n-1] == '\n') {
+        if (sp.field()[n - 1] == '\n') {
             --n;
         }
         std::string path(sp.field(), n);
@@ -448,17 +447,17 @@ static void LoadSymbols() {
         }
         LibInfo info;
         info.start_addr = start_addr;
-        info.end_addr = end_addr;
-        info.offset = offset;
-        info.path = path;
+        info.end_addr   = end_addr;
+        info.offset     = offset;
+        info.path       = path;
         ExtractSymbolsFromBinary(symbol_map, info);
     }
     free(line);
 
     LibInfo info;
     info.start_addr = 0;
-    info.end_addr = std::numeric_limits<uintptr_t>::max();
-    info.offset = 0;
+    info.end_addr   = std::numeric_limits<uintptr_t>::max();
+    info.offset     = 0;
 #if defined(OS_LINUX)
     info.path = program_invocation_name;
 #elif defined(OS_MACOSX)
@@ -470,8 +469,7 @@ static void LoadSymbols() {
     tm2.start();
     size_t num_removed = 0;
     bool last_is_empty = false;
-    for (SymbolMap::iterator
-             it = symbol_map.begin(); it != symbol_map.end();) {
+    for (SymbolMap::iterator it = symbol_map.begin(); it != symbol_map.end();) {
         if (it->second.empty()) {
             if (last_is_empty) {
                 symbol_map.erase(it++);
@@ -486,7 +484,7 @@ static void LoadSymbols() {
     }
     tm2.stop();
     RPC_VLOG_IF(num_removed) << "Removed " << num_removed << " entries in "
-        << tm2.m_elapsed() << "ms";
+                             << tm2.m_elapsed() << "ms";
 
     tm.stop();
     RPC_VLOG << "Loaded all symbols in " << tm.m_elapsed() << "ms";
@@ -517,11 +515,10 @@ static void FindSymbols(butil::IOBuf* out, std::vector<uintptr_t>& addr_list) {
     }
 }
 
-void PProfService::symbol(
-    ::google::protobuf::RpcController* controller_base,
-    const ::brpc::ProfileRequest* /*request*/,
-    ::brpc::ProfileResponse* /*response*/,
-    ::google::protobuf::Closure* done) {
+void PProfService::symbol(::google::protobuf::RpcController* controller_base,
+                          const ::brpc::ProfileRequest* /*request*/,
+                          ::brpc::ProfileResponse* /*response*/,
+                          ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
     Controller* cntl = static_cast<Controller*>(controller_base);
     cntl->http_response().set_content_type("text/plain");
@@ -544,7 +541,7 @@ void PProfService::symbol(
         std::vector<uintptr_t> addr_list;
         addr_list.reserve(32);
         butil::StringSplitter sp(addr_cstr, '+');
-        for ( ; sp != NULL; ++sp) {
+        for (; sp != NULL; ++sp) {
             char* endptr;
             uintptr_t addr = strtoull(sp.field(), &endptr, 16);
             addr_list.push_back(addr);
@@ -569,4 +566,4 @@ void PProfService::cmdline(::google::protobuf::RpcController* controller_base,
     cntl->response_attachment().append(buf, nr);
 }
 
-} // namespace brpc
+}  // namespace brpc

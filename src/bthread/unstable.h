@@ -24,8 +24,8 @@
 
 #include <pthread.h>
 #include <sys/socket.h>
-#include "bthread/types.h"
 #include "bthread/errno.h"
+#include "bthread/types.h"
 
 // NOTICE:
 //   As the filename implies, this file lists UNSTABLE bthread functions
@@ -94,7 +94,8 @@ extern void bthread_stop_world();
 // return the data back to the creator in destructor. Without this arg, we
 // have to do an extra heap allocation to contain data and its creator.
 extern int bthread_key_create2(bthread_key_t* key,
-                               void (*destructor)(void* data, const void* dtor_arg),
+                               void (*destructor)(void* data,
+                                                  const void* dtor_arg),
                                const void* dtor_arg);
 
 // CAUTION: functions marked with [RPC INTERNAL] are NOT supposed to be called
@@ -121,9 +122,10 @@ extern int bthread_keytable_pool_getstat(bthread_keytable_pool_t* pool,
 // [RPC INTERNAL]
 // Reserve at most `nfree' keytables with `key' pointing to data created by
 // ctor(args).
-extern void bthread_keytable_pool_reserve(
-    bthread_keytable_pool_t* pool, size_t nfree,
-    bthread_key_t key, void* ctor(const void* args), const void* args);
+extern void bthread_keytable_pool_reserve(bthread_keytable_pool_t* pool,
+                                          size_t nfree, bthread_key_t key,
+                                          void* ctor(const void* args),
+                                          const void* args);
 
 __END_DECLS
 

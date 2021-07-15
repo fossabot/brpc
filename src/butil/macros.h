@@ -30,17 +30,16 @@
 #endif
 
 // Put this in the private: declarations for a class to be uncopyable.
-#define DISALLOW_COPY(TypeName)                         \
-    BUTIL_DELETE_FUNCTION(TypeName(const TypeName&))
+#define DISALLOW_COPY(TypeName) BUTIL_DELETE_FUNCTION(TypeName(const TypeName&))
 
 // Put this in the private: declarations for a class to be unassignable.
-#define DISALLOW_ASSIGN(TypeName)                               \
+#define DISALLOW_ASSIGN(TypeName) \
     BUTIL_DELETE_FUNCTION(void operator=(const TypeName&))
 
 // A macro to disallow the copy constructor and operator= functions
 // This should be used in the private: declarations for a class
-#define DISALLOW_COPY_AND_ASSIGN(TypeName)                      \
-    BUTIL_DELETE_FUNCTION(TypeName(const TypeName&));            \
+#define DISALLOW_COPY_AND_ASSIGN(TypeName)            \
+    BUTIL_DELETE_FUNCTION(TypeName(const TypeName&)); \
     BUTIL_DELETE_FUNCTION(void operator=(const TypeName&))
 
 // An older, deprecated, politically incorrect name for the above.
@@ -57,13 +56,13 @@
 // that wants to prevent anyone from instantiating it. This is
 // especially useful for classes containing only static methods.
 #define DISALLOW_IMPLICIT_CONSTRUCTORS(TypeName) \
-    BUTIL_DELETE_FUNCTION(TypeName());            \
+    BUTIL_DELETE_FUNCTION(TypeName());           \
     DISALLOW_COPY_AND_ASSIGN(TypeName)
 
 // Concatenate numbers in c/c++ macros.
 #ifndef BAIDU_CONCAT
-# define BAIDU_CONCAT(a, b) BAIDU_CONCAT_HELPER(a, b)
-# define BAIDU_CONCAT_HELPER(a, b) a##b
+#define BAIDU_CONCAT(a, b) BAIDU_CONCAT_HELPER(a, b)
+#define BAIDU_CONCAT_HELPER(a, b) a##b
 #endif
 
 #undef arraysize
@@ -80,7 +79,7 @@
 
 // This template function declaration is used in defining arraysize.
 // Note that the function doesn't need an implementation, as we only
-// use its type.    
+// use its type.
 namespace butil {
 template <typename T, size_t N>
 char (&ArraySizeHelper(T (&array)[N]))[N];
@@ -139,7 +138,7 @@ char (&ArraySizeHelper(const T (&array)[N]))[N];
 // where a pointer is 4 bytes, this means all pointers to a type whose
 // size is 3 or greater than 4 will be (righteously) rejected.
 #undef ARRAYSIZE_UNSAFE
-#define ARRAYSIZE_UNSAFE(a) \
+#define ARRAYSIZE_UNSAFE(a)       \
     ((sizeof(a) / sizeof(*(a))) / \
      static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
 
@@ -161,11 +160,11 @@ char (&ArraySizeHelper(const T (&array)[N]))[N];
 // but the proposal was submitted too late.  It will probably make
 // its way into the language in the future.
 namespace butil {
-template<typename To, typename From>
-inline To implicit_cast(From const &f) {
-  return f;
+template <typename To, typename From>
+inline To implicit_cast(From const& f) {
+    return f;
 }
-}
+}  // namespace butil
 
 #if defined(BUTIL_CXX11_ENABLED)
 
@@ -184,12 +183,12 @@ inline To implicit_cast(From const &f) {
 //
 // when an asssertion like "BAIDU_CASSERT(false, you_should_not_be_here)"
 // breaks, a compilation error is printed:
-//   
+//
 //   foo.cpp:401: error: enumerator value for `you_should_not_be_here___19' not
 //   integer constant
 //
 // You can call BAIDU_CASSERT at global scope, inside a class or a function
-// 
+//
 //   BAIDU_CASSERT(false, you_should_not_be_here);
 //   int main () { ... }
 //
@@ -203,19 +202,27 @@ inline To implicit_cast(From const &f) {
 //   }
 //
 namespace butil {
-template <bool> struct CAssert { static const int x = 1; };
-template <> struct CAssert<false> { static const char * x; };
-}
+template <bool>
+struct CAssert {
+    static const int x = 1;
+};
+template <>
+struct CAssert<false> {
+    static const char *x;
+};
+}  // namespace butil
 
-#define BAIDU_CASSERT(expr, msg)                                \
-    enum { BAIDU_CONCAT(BAIDU_CONCAT(LINE_, __LINE__), __##msg) \
-           = ::butil::CAssert<!!(expr)>::x };
+#define BAIDU_CASSERT(expr, msg)                               \
+    enum {                                                     \
+        BAIDU_CONCAT(BAIDU_CONCAT(LINE_, __LINE__), __##msg) = \
+            ::butil::CAssert<!!(expr)>::x                      \
+    };
 
 #endif  // BUTIL_CXX11_ENABLED
 
 // The impl. of chrome does not work for offsetof(Object, private_filed)
 #undef COMPILE_ASSERT
-#define COMPILE_ASSERT(expr, msg)  BAIDU_CASSERT(expr, msg)
+#define COMPILE_ASSERT(expr, msg) BAIDU_CASSERT(expr, msg)
 
 // bit_cast<Dest,Source> is a template function that implements the
 // equivalent of "*reinterpret_cast<Dest*>(&source)".  We need this in
@@ -273,11 +280,11 @@ template <> struct CAssert<false> { static const char * x; };
 namespace butil {
 template <class Dest, class Source>
 inline Dest bit_cast(const Source& source) {
-  COMPILE_ASSERT(sizeof(Dest) == sizeof(Source), VerifySizesAreEqual);
+    COMPILE_ASSERT(sizeof(Dest) == sizeof(Source), VerifySizesAreEqual);
 
-  Dest dest;
-  memcpy(&dest, &source, sizeof(dest));
-  return dest;
+    Dest dest;
+    memcpy(&dest, &source, sizeof(dest));
+    return dest;
 }
 }  // namespace butil
 
@@ -290,10 +297,9 @@ inline Dest bit_cast(const Source& source) {
 //     ignore_result(my_var.release());
 //
 namespace butil {
-template<typename T>
-inline void ignore_result(const T&) {
-}
-} // namespace butil
+template <typename T>
+inline void ignore_result(const T&) {}
+}  // namespace butil
 
 // The following enum should be used only as a constructor argument to indicate
 // that the variable has static storage class, and that the constructor should
@@ -316,36 +322,38 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 // thread-safe initialization, use butil/lazy_instance.h instead.
 #undef CR_DEFINE_STATIC_LOCAL
 #define CR_DEFINE_STATIC_LOCAL(type, name, arguments) \
-  static type& name = *new type arguments
+    static type& name = *new type arguments
 
 }  // namespace butil
 
 // Convert symbol to string
 #ifndef BAIDU_SYMBOLSTR
-# define BAIDU_SYMBOLSTR(a) BAIDU_SYMBOLSTR_HELPER(a)
-# define BAIDU_SYMBOLSTR_HELPER(a) #a
+#define BAIDU_SYMBOLSTR(a) BAIDU_SYMBOLSTR_HELPER(a)
+#define BAIDU_SYMBOLSTR_HELPER(a) #a
 #endif
 
 #ifndef BAIDU_TYPEOF
-# if defined(BUTIL_CXX11_ENABLED)
-#  define BAIDU_TYPEOF decltype
-# else
-#  ifdef _MSC_VER
-#   include <boost/typeof/typeof.hpp>
-#   define BAIDU_TYPEOF BOOST_TYPEOF
-#  else
-#   define BAIDU_TYPEOF typeof
-#  endif
-# endif // BUTIL_CXX11_ENABLED
+#if defined(BUTIL_CXX11_ENABLED)
+#define BAIDU_TYPEOF decltype
+#else
+#ifdef _MSC_VER
+#include <boost/typeof/typeof.hpp>
+#define BAIDU_TYPEOF BOOST_TYPEOF
+#else
+#define BAIDU_TYPEOF typeof
+#endif
+#endif  // BUTIL_CXX11_ENABLED
 #endif  // BAIDU_TYPEOF
 
 // ptr:     the pointer to the member.
 // type:    the type of the container struct this is embedded in.
 // member:  the name of the member within the struct.
 #ifndef container_of
-# define container_of(ptr, type, member) ({                             \
-            const BAIDU_TYPEOF( ((type *)0)->member ) *__mptr = (ptr);  \
-            (type *)( (char *)__mptr - offsetof(type,member) );})
+#define container_of(ptr, type, member)                         \
+    ({                                                          \
+        const BAIDU_TYPEOF(((type*)0)->member)* __mptr = (ptr); \
+        (type*)((char*)__mptr - offsetof(type, member));        \
+    })
 #endif
 
 // DEFINE_SMALL_ARRAY(MyType, my_array, size, 64);
@@ -357,63 +365,75 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 #if defined(__cplusplus)
 namespace butil {
 namespace internal {
-template <typename T> struct ArrayDeleter {
+template <typename T>
+struct ArrayDeleter {
     ArrayDeleter() : arr(0) {}
     ~ArrayDeleter() { delete[] arr; }
     T* arr;
 };
-}}
+}  // namespace internal
+}  // namespace butil
 
 // Many versions of clang does not support variable-length array with non-pod
 // types, have to implement the macro differently.
 #if !defined(__clang__)
-# define DEFINE_SMALL_ARRAY(Tp, name, size, maxsize)                    \
-    Tp* name = 0;                                                       \
-    const unsigned name##_size = (size);                                \
-    const unsigned name##_stack_array_size = (name##_size <= (maxsize) ? name##_size : 0); \
-    Tp name##_stack_array[name##_stack_array_size];                     \
+#define DEFINE_SMALL_ARRAY(Tp, name, size, maxsize)                      \
+    Tp* name                   = 0;                                      \
+    const unsigned name##_size = (size);                                 \
+    const unsigned name##_stack_array_size =                             \
+        (name##_size <= (maxsize) ? name##_size : 0);                    \
+    Tp name##_stack_array[name##_stack_array_size];                      \
     ::butil::internal::ArrayDeleter<Tp> name##_array_deleter;            \
-    if (name##_stack_array_size) {                                      \
-        name = name##_stack_array;                                      \
-    } else {                                                            \
-        name = new (::std::nothrow) Tp[name##_size];                    \
-        name##_array_deleter.arr = name;                                \
+    if (name##_stack_array_size) {                                       \
+        name = name##_stack_array;                                       \
+    } else {                                                             \
+        name                     = new (::std::nothrow) Tp[name##_size]; \
+        name##_array_deleter.arr = name;                                 \
     }
 #else
 // This implementation works for GCC as well, however it needs extra 16 bytes
 // for ArrayCtorDtor.
 namespace butil {
 namespace internal {
-template <typename T> struct ArrayCtorDtor {
+template <typename T>
+struct ArrayCtorDtor {
     ArrayCtorDtor(void* arr, unsigned size) : _arr((T*)arr), _size(size) {
-        for (unsigned i = 0; i < size; ++i) { new (_arr + i) T; }
+        for (unsigned i = 0; i < size; ++i) {
+            new (_arr + i) T;
+        }
     }
     ~ArrayCtorDtor() {
-        for (unsigned i = 0; i < _size; ++i) { _arr[i].~T(); }
+        for (unsigned i = 0; i < _size; ++i) {
+            _arr[i].~T();
+        }
     }
+
 private:
     T* _arr;
     unsigned _size;
 };
-}}
-# define DEFINE_SMALL_ARRAY(Tp, name, size, maxsize)                    \
-    Tp* name = 0;                                                       \
-    const unsigned name##_size = (size);                                \
-    const unsigned name##_stack_array_size = (name##_size <= (maxsize) ? name##_size : 0); \
-    char name##_stack_array[sizeof(Tp) * name##_stack_array_size];      \
+}  // namespace internal
+}  // namespace butil
+#define DEFINE_SMALL_ARRAY(Tp, name, size, maxsize)                      \
+    Tp* name                   = 0;                                      \
+    const unsigned name##_size = (size);                                 \
+    const unsigned name##_stack_array_size =                             \
+        (name##_size <= (maxsize) ? name##_size : 0);                    \
+    char name##_stack_array[sizeof(Tp) * name##_stack_array_size];       \
     ::butil::internal::ArrayDeleter<char> name##_array_deleter;          \
-    if (name##_stack_array_size) {                                      \
-        name = (Tp*)name##_stack_array;                                 \
-    } else {                                                            \
-        name = (Tp*)new (::std::nothrow) char[sizeof(Tp) * name##_size];\
-        name##_array_deleter.arr = (char*)name;                         \
-    }                                                                   \
-    const ::butil::internal::ArrayCtorDtor<Tp> name##_array_ctor_dtor(name, name##_size);
-#endif // !defined(__clang__)
-#endif // defined(__cplusplus)
+    if (name##_stack_array_size) {                                       \
+        name = (Tp*)name##_stack_array;                                  \
+    } else {                                                             \
+        name = (Tp*)new (::std::nothrow) char[sizeof(Tp) * name##_size]; \
+        name##_array_deleter.arr = (char*)name;                          \
+    }                                                                    \
+    const ::butil::internal::ArrayCtorDtor<Tp> name##_array_ctor_dtor(   \
+        name, name##_size);
+#endif  // !defined(__clang__)
+#endif  // defined(__cplusplus)
 
 // Put following code somewhere global to run it before main():
-// 
+//
 //   BAIDU_GLOBAL_INIT()
 //   {
 //       ... your code ...
@@ -423,22 +443,22 @@ private:
 //   * Write any code and access global variables.
 //   * Use ASSERT_*.
 //   * Have multiple BAIDU_GLOBAL_INIT() in one scope.
-// 
+//
 // Since the code run in global scope, quit with exit() or similar functions.
 
 #if defined(__cplusplus)
-# define BAIDU_GLOBAL_INIT                                      \
-namespace {  /*anonymous namespace */                           \
-    struct BAIDU_CONCAT(BaiduGlobalInit, __LINE__) {            \
-        BAIDU_CONCAT(BaiduGlobalInit, __LINE__)() { init(); }   \
-        void init();                                            \
-    } BAIDU_CONCAT(baidu_global_init_dummy_, __LINE__);         \
-}  /* anonymous namespace */                                    \
-    void BAIDU_CONCAT(BaiduGlobalInit, __LINE__)::init              
+#define BAIDU_GLOBAL_INIT                                     \
+    namespace { /*anonymous namespace */                      \
+    struct BAIDU_CONCAT(BaiduGlobalInit, __LINE__) {          \
+        BAIDU_CONCAT(BaiduGlobalInit, __LINE__)() { init(); } \
+        void init();                                          \
+    } BAIDU_CONCAT(baidu_global_init_dummy_, __LINE__);       \
+    } /* anonymous namespace */                               \
+    void BAIDU_CONCAT(BaiduGlobalInit, __LINE__)::init
 #else
-# define BAIDU_GLOBAL_INIT                      \
-    static void __attribute__((constructor))    \
-    BAIDU_CONCAT(baidu_global_init_, __LINE__)
+#define BAIDU_GLOBAL_INIT                    \
+    static void __attribute__((constructor)) \
+        BAIDU_CONCAT(baidu_global_init_, __LINE__)
 
 #endif  // __cplusplus
 

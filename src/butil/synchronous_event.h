@@ -20,9 +20,9 @@
 #ifndef BUTIL_SYNCHRONOUS_EVENT_H
 #define BUTIL_SYNCHRONOUS_EVENT_H
 
-#include <vector>                             // std::vector
-#include <algorithm>                          // std::find
-#include <errno.h>                            // errno
+#include <errno.h>    // errno
+#include <algorithm>  // std::find
+#include <vector>     // std::vector
 #include "butil/logging.h"
 
 // Synchronous event notification.
@@ -51,8 +51,9 @@ namespace butil {
 
 namespace detail {
 // NOTE: This is internal class. Inherit SynchronousEvent<..>::Observer instead.
-template <typename _A1, typename _A2, typename _A3> class EventObserver;
-}
+template <typename _A1, typename _A2, typename _A3>
+class EventObserver;
+}  // namespace detail
 
 // All methods are *NOT* thread-safe.
 // You can copy a SynchronousEvent.
@@ -61,12 +62,12 @@ class SynchronousEvent {
 public:
     typedef detail::EventObserver<_A1, _A2, _A3> Observer;
     typedef std::vector<Observer*> ObserverSet;
-    
+
     SynchronousEvent() : _n(0) {}
 
     // Add an observer, callable inside on_event() and added observers
     // will be called with the same event in the same run.
-    // Returns 0 when successful, -1 when the obsever is NULL or already added. 
+    // Returns 0 when successful, -1 when the obsever is NULL or already added.
     int subscribe(Observer* ob) {
         if (NULL == ob) {
             LOG(ERROR) << "Observer is NULL";
@@ -82,14 +83,15 @@ public:
 
     // Remove an observer, callable inside on_event().
     // Users are responsible for removing observers before destroying them.
-    // Returns 0 when successful, -1 when the observer is NULL or already removed.
+    // Returns 0 when successful, -1 when the observer is NULL or already
+    // removed.
     int unsubscribe(Observer* ob) {
         if (NULL == ob) {
             LOG(ERROR) << "Observer is NULL";
             return -1;
         }
-        typename ObserverSet::iterator
-            it = std::find(_obs.begin(), _obs.end(), ob);
+        typename ObserverSet::iterator it =
+            std::find(_obs.begin(), _obs.end(), ob);
         if (it == _obs.end()) {
             return -1;
         }
@@ -100,8 +102,8 @@ public:
 
     // Remove all observers, callable inside on_event()
     void clear() {
-        for (typename ObserverSet::iterator
-                 it = _obs.begin(); it != _obs.end(); ++it) {
+        for (typename ObserverSet::iterator it = _obs.begin(); it != _obs.end();
+             ++it) {
             *it = NULL;
         }
         _n = 0;
@@ -126,7 +128,8 @@ public:
     }
 
     // Notify observers with 1 parameter, errno will not be changed
-    template <typename _B1> void notify(const _B1& b1) {
+    template <typename _B1>
+    void notify(const _B1& b1) {
         const int saved_errno = errno;
         for (size_t i = 0; i < _obs.size(); ++i) {
             if (_obs[i]) {
@@ -162,22 +165,22 @@ public:
         _shrink();
         errno = saved_errno;
     }
-        
+
 private:
     void _shrink() {
         if (_n == _obs.size()) {
             return;
         }
-        for (typename ObserverSet::iterator
-                 it1 = _obs.begin(),
-                 it2 = _obs.begin(); it2 != _obs.end(); ++it2) {
+        for (typename ObserverSet::iterator it1 = _obs.begin(),
+                                            it2 = _obs.begin();
+             it2 != _obs.end(); ++it2) {
             if (*it2) {
                 *it1++ = *it2;
             }
         }
         _obs.resize(_n);
     }
-    
+
     size_t _n;
     ObserverSet _obs;
 };
@@ -187,40 +190,54 @@ namespace detail {
 // Add const reference for types which is larger than sizeof(void*). This
 // is reasonable in most cases and making signature of SynchronousEvent<...>
 // cleaner.
-template <typename T> struct _AddConstRef { typedef const T& type; };
-template <typename T> struct _AddConstRef<T&> { typedef T& type; };
+template <typename T>
+struct _AddConstRef {
+    typedef const T& type;
+};
+template <typename T>
+struct _AddConstRef<T&> {
+    typedef T& type;
+};
 
 // We have to re-invent some wheels to avoid dependence on <boost/mpl/if.hpp>
 template <bool cond, typename T1, typename T2>
-struct if_c { typedef T1 type; };
+struct if_c {
+    typedef T1 type;
+};
 
 template <typename T1, typename T2>
-struct if_c<false, T1, T2> { typedef T2 type; };
+struct if_c<false, T1, T2> {
+    typedef T2 type;
+};
 
 template <typename T>
-struct AddConstRef : public if_c<(sizeof(T)<=sizeof(void*)),
-    T, typename _AddConstRef<T>::type> {};
+struct AddConstRef : public if_c<(sizeof(T) <= sizeof(void*)), T,
+                                 typename _AddConstRef<T>::type> {};
 
-template <> class EventObserver<void, void, void> {
+template <>
+class EventObserver<void, void, void> {
 public:
     virtual ~EventObserver() {}
     virtual void on_event() = 0;
 };
 
-template <typename _A1> class EventObserver<_A1, void, void> {
+template <typename _A1>
+class EventObserver<_A1, void, void> {
 public:
     virtual ~EventObserver() {}
     virtual void on_event(typename AddConstRef<_A1>::type) = 0;
 };
 
-template <typename _A1, typename _A2> class EventObserver<_A1, _A2, void> {
+template <typename _A1, typename _A2>
+class EventObserver<_A1, _A2, void> {
 public:
     virtual ~EventObserver() {}
     virtual void on_event(typename AddConstRef<_A1>::type,
                           typename AddConstRef<_A2>::type) = 0;
 };
 
-template <typename _A1, typename _A2, typename _A3> class EventObserver {
+template <typename _A1, typename _A2, typename _A3>
+class EventObserver {
 public:
     virtual ~EventObserver() {}
     virtual void on_event(typename AddConstRef<_A1>::type,

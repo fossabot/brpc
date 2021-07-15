@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_INPUT_MESSAGE_BASE_H
 #define BRPC_INPUT_MESSAGE_BASE_H
 
-#include "brpc/socket_id.h"           // SocketId
-#include "brpc/destroyable.h"         // DestroyingPtr
-
+#include "brpc/destroyable.h"  // DestroyingPtr
+#include "brpc/socket_id.h"    // SocketId
 
 namespace brpc {
 
@@ -30,11 +28,11 @@ class InputMessageBase : public Destroyable {
 protected:
     // Implement this method to customize deletion of this message.
     virtual void DestroyImpl() = 0;
-    
+
 public:
     // Called to release the memory of this message instead of "delete"
     void Destroy();
-    
+
     // Own the socket where this message is from.
     Socket* ReleaseSocket();
 
@@ -52,9 +50,9 @@ protected:
     virtual ~InputMessageBase();
 
 private:
-friend class InputMessenger;
-friend void* ProcessInputMessage(void*);
-friend class Stream;
+    friend class InputMessenger;
+    friend void* ProcessInputMessage(void*);
+    friend class Stream;
     int64_t _received_us;
     int64_t _base_real_us;
     SocketUniquePtr _socket;
@@ -62,7 +60,6 @@ friend class Stream;
     const void* _arg;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_INPUT_MESSAGE_BASE_H

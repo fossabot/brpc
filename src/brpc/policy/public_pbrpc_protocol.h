@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_PUBLIC_PBRPC_PROTOCOL_H
 #define BRPC_POLICY_PUBLIC_PBRPC_PROTOCOL_H
 
 #include "brpc/nshead_pb_service_adaptor.h"
-#include "brpc/policy/nshead_protocol.h"             
-
+#include "brpc/policy/nshead_protocol.h"
 
 namespace brpc {
 namespace policy {
@@ -33,32 +31,29 @@ void SerializePublicPbrpcRequest(butil::IOBuf* buf, Controller* cntl,
                                  const google::protobuf::Message* request);
 
 // Pack `request' to `method' into `buf'.
-void PackPublicPbrpcRequest(butil::IOBuf* buf,
-                            SocketMessage**,
+void PackPublicPbrpcRequest(butil::IOBuf* buf, SocketMessage**,
                             uint64_t correlation_id,
                             const google::protobuf::MethodDescriptor* method,
-                            Controller* controller,
-                            const butil::IOBuf& request,
+                            Controller* controller, const butil::IOBuf& request,
                             const Authenticator* auth);
 
 class PublicPbrpcServiceAdaptor : public NsheadPbServiceAdaptor {
 public:
-    void ParseNsheadMeta(
-        const Server& svr, const NsheadMessage& request, Controller*,
-        NsheadMeta* out_meta) const;
+    void ParseNsheadMeta(const Server& svr, const NsheadMessage& request,
+                         Controller*, NsheadMeta* out_meta) const;
 
-    void ParseRequestFromIOBuf(
-        const NsheadMeta& meta, const NsheadMessage& raw_req,
-        Controller* controller, google::protobuf::Message* pb_req) const;
+    void ParseRequestFromIOBuf(const NsheadMeta& meta,
+                               const NsheadMessage& raw_req,
+                               Controller* controller,
+                               google::protobuf::Message* pb_req) const;
 
-    void SerializeResponseToIOBuf(
-        const NsheadMeta& meta, Controller* controller,
-        const google::protobuf::Message* pb_res,
-        NsheadMessage* raw_res) const;
+    void SerializeResponseToIOBuf(const NsheadMeta& meta,
+                                  Controller* controller,
+                                  const google::protobuf::Message* pb_res,
+                                  NsheadMessage* raw_res) const;
 };
 
 }  // namespace policy
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_POLICY_PUBLIC_PBRPC_PROTOCOL_H

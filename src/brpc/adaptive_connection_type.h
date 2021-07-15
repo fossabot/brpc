@@ -15,15 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_ADAPTIVE_CONNECTION_TYPE_H
 #define BRPC_ADAPTIVE_CONNECTION_TYPE_H
 
 // To brpc developers: This is a header included by user, don't depend
 // on internal structures, use opaque pointers instead.
 
-#include "butil/strings/string_piece.h"
 #include "brpc/options.pb.h"
+#include "butil/strings/string_piece.h"
 
 namespace brpc {
 
@@ -32,8 +31,9 @@ namespace brpc {
 // Returns: CONNECTION_TYPE_UNKNOWN on error.
 ConnectionType StringToConnectionType(const butil::StringPiece& type,
                                       bool print_log_on_unknown);
-inline ConnectionType StringToConnectionType(const butil::StringPiece& type)
-{ return StringToConnectionType(type, true); }
+inline ConnectionType StringToConnectionType(const butil::StringPiece& type) {
+    return StringToConnectionType(type, true);
+}
 
 // Convert a ConnectionType to a c-style string.
 const char* ConnectionTypeToString(ConnectionType);
@@ -46,7 +46,7 @@ public:
     ~AdaptiveConnectionType() {}
 
     void operator=(ConnectionType type) {
-        _type = type;
+        _type  = type;
         _error = false;
     }
     void operator=(const butil::StringPiece& name);
@@ -64,7 +64,6 @@ private:
     bool _error;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_ADAPTIVE_CONNECTION_TYPE_H

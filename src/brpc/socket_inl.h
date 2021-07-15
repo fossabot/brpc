@@ -20,17 +20,16 @@
 #ifndef BRPC_SOCKET_INL_H
 #define BRPC_SOCKET_INL_H
 
-
 namespace brpc {
 
 // Utility functions to combine and extract SocketId.
-BUTIL_FORCE_INLINE SocketId
-MakeSocketId(uint32_t version, butil::ResourceId<Socket> slot) {
+BUTIL_FORCE_INLINE SocketId MakeSocketId(uint32_t version,
+                                         butil::ResourceId<Socket> slot) {
     return SocketId((((uint64_t)version) << 32) | slot.value);
 }
 
 BUTIL_FORCE_INLINE butil::ResourceId<Socket> SlotOfSocketId(SocketId sid) {
-    butil::ResourceId<Socket> id = { (sid & 0xFFFFFFFFul) };
+    butil::ResourceId<Socket> id = {(sid & 0xFFFFFFFFul)};
     return id;
 }
 
@@ -49,7 +48,7 @@ BUTIL_FORCE_INLINE int32_t NRefOfVRef(uint64_t vref) {
 
 BUTIL_FORCE_INLINE uint64_t MakeVRef(uint32_t version, int32_t nref) {
     // 1: Intended conversion to uint32_t, nref=-1 is 00000000FFFFFFFF
-    return (((uint64_t)version) << 32) | (uint32_t/*1*/)nref;
+    return (((uint64_t)version) << 32) | (uint32_t /*1*/)nref;
 }
 
 inline SocketOptions::SocketOptions()
@@ -60,19 +59,18 @@ inline SocketOptions::SocketOptions()
     , keytable_pool(NULL)
     , conn(NULL)
     , app_connect(NULL)
-    , initial_parsing_context(NULL)
-{}
+    , initial_parsing_context(NULL) {}
 
 inline int Socket::Dereference() {
     const SocketId id = _this_id;
-    const uint64_t vref = _versioned_ref.fetch_sub(
-        1, butil::memory_order_release);
+    const uint64_t vref =
+        _versioned_ref.fetch_sub(1, butil::memory_order_release);
     const int32_t nref = NRefOfVRef(vref);
     if (nref > 1) {
         return 0;
     }
     if (__builtin_expect(nref == 1, 1)) {
-        const uint32_t ver = VersionOfVRef(vref);
+        const uint32_t ver    = VersionOfVRef(vref);
         const uint32_t id_ver = VersionOfSocketId(id);
         // Besides first successful SetFailed() adds 1 to version, one of
         // those dereferencing nref from 1->0 adds another 1 to version.
@@ -106,8 +104,7 @@ inline int Socket::Dereference() {
             uint64_t expected_vref = vref - 1;
             if (_versioned_ref.compare_exchange_strong(
                     expected_vref, MakeVRef(id_ver + 2, 0),
-                    butil::memory_order_acquire,
-                    butil::memory_order_relaxed)) {
+                    butil::memory_order_acquire, butil::memory_order_relaxed)) {
                 OnRecycle();
                 return_resource(SlotOfSocketId(id));
                 return 1;
@@ -123,20 +120,20 @@ inline int Socket::Dereference() {
 
 inline int Socket::Address(SocketId id, SocketUniquePtr* ptr) {
     const butil::ResourceId<Socket> slot = SlotOfSocketId(id);
-    Socket* const m = address_resource(slot);
+    Socket* const m                      = address_resource(slot);
     if (__builtin_expect(m != NULL, 1)) {
         // acquire fence makes sure this thread sees latest changes before
         // Dereference() or Revive().
-        const uint64_t vref1 = m->_versioned_ref.fetch_add(
-            1, butil::memory_order_acquire);
+        const uint64_t vref1 =
+            m->_versioned_ref.fetch_add(1, butil::memory_order_acquire);
         const uint32_t ver1 = VersionOfVRef(vref1);
         if (ver1 == VersionOfSocketId(id)) {
             ptr->reset(m);
             return 0;
         }
 
-        const uint64_t vref2 = m->_versioned_ref.fetch_sub(
-            1, butil::memory_order_release);
+        const uint64_t vref2 =
+            m->_versioned_ref.fetch_sub(1, butil::memory_order_release);
         const int32_t nref = NRefOfVRef(vref2);
         if (nref > 1) {
             return -1;
@@ -153,8 +150,8 @@ inline int Socket::Address(SocketId id, SocketUniquePtr* ptr) {
                         return_resource(SlotOfSocketId(id));
                     }
                 } else {
-                    CHECK(false) << "ref-version=" << ver1
-                                 << " unref-version=" << ver2;
+                    CHECK(false)
+                        << "ref-version=" << ver1 << " unref-version=" << ver2;
                 }
             } else {
                 CHECK_EQ(ver1, ver2);
@@ -174,10 +171,10 @@ inline void Socket::ReAddress(SocketUniquePtr* ptr) {
 
 inline int Socket::AddressFailedAsWell(SocketId id, SocketUniquePtr* ptr) {
     const butil::ResourceId<Socket> slot = SlotOfSocketId(id);
-    Socket* const m = address_resource(slot);
+    Socket* const m                      = address_resource(slot);
     if (__builtin_expect(m != NULL, 1)) {
-        const uint64_t vref1 = m->_versioned_ref.fetch_add(
-            1, butil::memory_order_acquire);
+        const uint64_t vref1 =
+            m->_versioned_ref.fetch_add(1, butil::memory_order_acquire);
         const uint32_t ver1 = VersionOfVRef(vref1);
         if (ver1 == VersionOfSocketId(id)) {
             ptr->reset(m);
@@ -188,8 +185,8 @@ inline int Socket::AddressFailedAsWell(SocketId id, SocketUniquePtr* ptr) {
             return 1;
         }
 
-        const uint64_t vref2 = m->_versioned_ref.fetch_sub(
-            1, butil::memory_order_release);
+        const uint64_t vref2 =
+            m->_versioned_ref.fetch_sub(1, butil::memory_order_release);
         const int32_t nref = NRefOfVRef(vref2);
         if (nref > 1) {
             return -1;
@@ -206,8 +203,8 @@ inline int Socket::AddressFailedAsWell(SocketId id, SocketUniquePtr* ptr) {
                         return_resource(slot);
                     }
                 } else {
-                    CHECK(false) << "ref-version=" << ver1
-                                 << " unref-version=" << ver2;
+                    CHECK(false)
+                        << "ref-version=" << ver1 << " unref-version=" << ver2;
                 }
             } else {
                 // Addressed a free slot.
@@ -216,19 +213,18 @@ inline int Socket::AddressFailedAsWell(SocketId id, SocketUniquePtr* ptr) {
             CHECK(false) << "Over dereferenced SocketId=" << id;
         }
     }
-    return -1;    
+    return -1;
 }
 
 inline bool Socket::Failed() const {
-    return VersionOfVRef(_versioned_ref.load(butil::memory_order_relaxed))
-        != VersionOfSocketId(_this_id);
+    return VersionOfVRef(_versioned_ref.load(butil::memory_order_relaxed)) !=
+           VersionOfSocketId(_this_id);
 }
 
 inline bool Socket::MoreReadEvents(int* progress) {
     // Fail to CAS means that new events arrived.
     return !_nevent.compare_exchange_strong(
-        *progress, 0, butil::memory_order_release,
-            butil::memory_order_acquire);
+        *progress, 0, butil::memory_order_release, butil::memory_order_acquire);
 }
 
 inline void Socket::SetLogOff() {
@@ -246,19 +242,19 @@ inline void Socket::SetLogOff() {
 
 inline bool Socket::IsAvailable() const {
     return !_logoff_flag.load(butil::memory_order_relaxed) &&
-        (_ninflight_app_health_check.load(butil::memory_order_relaxed) == 0);
+           (_ninflight_app_health_check.load(butil::memory_order_relaxed) == 0);
 }
 
 static const uint32_t EOF_FLAG = (1 << 31);
 
 inline void Socket::PostponeEOF() {
-    if (CreatedByConnect()) { // not needed at server-side
+    if (CreatedByConnect()) {  // not needed at server-side
         _ninprocess.fetch_add(1, butil::memory_order_relaxed);
     }
 }
 
 inline void Socket::CheckEOF() {
-    if (CreatedByConnect()) { // not needed at server-side
+    if (CreatedByConnect()) {  // not needed at server-side
         CheckEOFInternal();
     }
 }
@@ -281,8 +277,8 @@ inline void Socket::SetEOF() {
 }
 
 inline void Socket::reset_parsing_context(Destroyable* new_context) {
-    Destroyable* old_ctx = _parsing_context.exchange(
-        new_context, butil::memory_order_acq_rel);
+    Destroyable* old_ctx =
+        _parsing_context.exchange(new_context, butil::memory_order_acq_rel);
     if (old_ctx) {
         old_ctx->Destroy();
     }
@@ -295,9 +291,9 @@ inline Destroyable* Socket::release_parsing_context() {
 template <typename T>
 bool Socket::initialize_parsing_context(T** ctx) {
     Destroyable* expected = NULL;
-    if (_parsing_context.compare_exchange_strong(
-            expected, *ctx, butil::memory_order_acq_rel,
-            butil::memory_order_acquire)) {
+    if (_parsing_context.compare_exchange_strong(expected, *ctx,
+                                                 butil::memory_order_acq_rel,
+                                                 butil::memory_order_acquire)) {
         return true;
     } else {
         (*ctx)->Destroy();
@@ -342,13 +338,12 @@ inline Socket::SharedPart* Socket::GetSharedPart() const {
 
 inline Socket::SharedPart* Socket::GetOrNewSharedPart() {
     SharedPart* shared_part = GetSharedPart();
-    if (shared_part != NULL) { // most cases
+    if (shared_part != NULL) {  // most cases
         return shared_part;
     }
     return GetOrNewSharedPartSlower();
 }
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_SOCKET_INL_H

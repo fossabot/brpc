@@ -17,13 +17,13 @@
 
 // Date: Wed Jul 29 23:25:43 CST 2015
 
-#ifndef  BVAR_WINDOW_H
-#define  BVAR_WINDOW_H
+#ifndef BVAR_WINDOW_H
+#define BVAR_WINDOW_H
 
-#include <limits>                                 // std::numeric_limits
-#include <math.h>                                 // round
 #include <gflags/gflags_declare.h>
-#include "butil/logging.h"                         // LOG
+#include <math.h>           // round
+#include <limits>           // std::numeric_limits
+#include "butil/logging.h"  // LOG
 #include "bvar/detail/sampler.h"
 #include "bvar/detail/series.h"
 #include "bvar/variable.h"
@@ -32,10 +32,7 @@ namespace bvar {
 
 DECLARE_int32(bvar_dump_interval);
 
-enum SeriesFrequency {
-    SERIES_IN_WINDOW = 0,
-    SERIES_IN_SECOND = 1
-};
+enum SeriesFrequency { SERIES_IN_WINDOW = 0, SERIES_IN_SECOND = 1 };
 
 namespace detail {
 // Just for constructor reusing of Window<>
@@ -52,6 +49,7 @@ public:
             void operator()(value_type& v1, const value_type& v2) const {
                 _var->op()(v1, v2);
             }
+
         private:
             R* _var;
         };
@@ -64,18 +62,19 @@ public:
                 // "smoother" plot may hide peaks.
                 _series.append(_owner->get_value(1));
             } else {
-                // Get the value inside the full window. "get_value(1)" is 
+                // Get the value inside the full window. "get_value(1)" is
                 // incorrect when users intend to see aggregated values of
                 // the full window in the plot.
                 _series.append(_owner->get_value());
             }
         }
         void describe(std::ostream& os) { _series.describe(os, NULL); }
+
     private:
         WindowBase* _owner;
         detail::Series<value_type, Op> _series;
     };
-    
+
     WindowBase(R* var, time_t window_size)
         : _var(var)
         , _window_size(window_size > 0 ? window_size : FLAGS_bvar_dump_interval)
@@ -83,7 +82,7 @@ public:
         , _series_sampler(NULL) {
         CHECK_EQ(0, _sampler->set_window_size(_window_size));
     }
-    
+
     ~WindowBase() {
         hide();
         if (_series_sampler) {
@@ -92,7 +91,8 @@ public:
         }
     }
 
-    bool get_span(time_t window_size, detail::Sample<value_type>* result) const {
+    bool get_span(time_t window_size,
+                  detail::Sample<value_type>* result) const {
         return _sampler->get_value(window_size, result);
     }
 
@@ -109,7 +109,7 @@ public:
     }
 
     value_type get_value() const { return get_value(_window_size); }
-    
+
     void describe(std::ostream& os, bool quote_string) const override {
         if (butil::is_same<value_type, std::string>::value && quote_string) {
             os << '"' << get_value() << '"';
@@ -117,14 +117,15 @@ public:
             os << get_value();
         }
     }
-    
+
 #ifdef BAIDU_INTERNAL
     void get_value(boost::any* value) const override { *value = get_value(); }
 #endif
 
     time_t window_size() const { return _window_size; }
 
-    int describe_series(std::ostream& os, const SeriesOptions& options) const override {
+    int describe_series(std::ostream& os,
+                        const SeriesOptions& options) const override {
         if (_series_sampler == NULL) {
             return 1;
         }
@@ -134,7 +135,7 @@ public:
         return 0;
     }
 
-    void get_samples(std::vector<value_type> *samples) const {
+    void get_samples(std::vector<value_type>* samples) const {
         samples->clear();
         samples->reserve(_window_size);
         return _sampler->get_samples(samples, _window_size);
@@ -145,9 +146,7 @@ protected:
                     const butil::StringPiece& name,
                     DisplayFilter display_filter) override {
         const int rc = Variable::expose_impl(prefix, name, display_filter);
-        if (rc == 0 &&
-            _series_sampler == NULL &&
-            FLAGS_save_series) {
+        if (rc == 0 && _series_sampler == NULL && FLAGS_save_series) {
             _series_sampler = new SeriesSampler(this, _var);
             _series_sampler->schedule();
         }
@@ -175,6 +174,7 @@ class Window : public detail::WindowBase<R, series_freq> {
     typedef detail::WindowBase<R, series_freq> Base;
     typedef typename R::value_type value_type;
     typedef typename R::sampler_type sampler_type;
+
 public:
     // Different from PerSecond, we require window_size here because get_value
     // of Window is largely affected by window_size while PerSecond is not.
@@ -183,8 +183,8 @@ public:
         : Base(var, window_size) {
         this->expose(name);
     }
-    Window(const butil::StringPiece& prefix,
-           const butil::StringPiece& name, R* var, time_t window_size)
+    Window(const butil::StringPiece& prefix, const butil::StringPiece& name,
+           R* var, time_t window_size)
         : Base(var, window_size) {
         this->expose_as(prefix, name);
     }
@@ -198,6 +198,7 @@ class PerSecond : public detail::WindowBase<R, SERIES_IN_SECOND> {
     typedef detail::WindowBase<R, SERIES_IN_SECOND> Base;
     typedef typename R::value_type value_type;
     typedef typename R::sampler_type sampler_type;
+
 public:
     // If window_size is non-positive or absent, use FLAGS_bvar_dump_interval.
     PerSecond(R* var) : Base(var, -1) {}
@@ -209,13 +210,13 @@ public:
         : Base(var, window_size) {
         this->expose(name);
     }
-    PerSecond(const butil::StringPiece& prefix,
-              const butil::StringPiece& name, R* var)
+    PerSecond(const butil::StringPiece& prefix, const butil::StringPiece& name,
+              R* var)
         : Base(var, -1) {
         this->expose_as(prefix, name);
     }
-    PerSecond(const butil::StringPiece& prefix,
-              const butil::StringPiece& name, R* var, time_t window_size)
+    PerSecond(const butil::StringPiece& prefix, const butil::StringPiece& name,
+              R* var, time_t window_size)
         : Base(var, window_size) {
         this->expose_as(prefix, name);
     }
@@ -233,11 +234,12 @@ public:
         if (butil::is_floating_point<value_type>::value) {
             return static_cast<value_type>(s.data * 1000000.0 / s.time_us);
         } else {
-            return static_cast<value_type>(round(s.data * 1000000.0 / s.time_us));
+            return static_cast<value_type>(
+                round(s.data * 1000000.0 / s.time_us));
         }
     }
 };
 
 }  // namespace bvar
 
-#endif  //BVAR_WINDOW_H
+#endif  // BVAR_WINDOW_H

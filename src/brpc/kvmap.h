@@ -21,7 +21,7 @@
 #include "butil/containers/flat_map.h"
 
 namespace brpc {
-    
+
 // Remember Key/Values in string
 class KVMap {
 public:
@@ -31,7 +31,7 @@ public:
     KVMap() {}
 
     // Exchange internal fields with another KVMap.
-    void Swap(KVMap &rhs) { _entries.swap(rhs._entries); }
+    void Swap(KVMap& rhs) { _entries.swap(rhs._entries); }
 
     // Reset internal fields as if they're just default-constructed.
     void Clear() { _entries.clear(); }
@@ -39,14 +39,22 @@ public:
     // Get value of a key(case-sensitive)
     // Return pointer to the value, NULL on not found.
     const std::string* Get(const char* key) const { return _entries.seek(key); }
-    const std::string* Get(const std::string& key) const { return _entries.seek(key); }
+    const std::string* Get(const std::string& key) const {
+        return _entries.seek(key);
+    }
 
     // Set value of a key
-    void Set(const std::string& key, const std::string& value) { GetOrAdd(key) = value; }
-    void Set(const std::string& key, const char* value) { GetOrAdd(key) = value; }
+    void Set(const std::string& key, const std::string& value) {
+        GetOrAdd(key) = value;
+    }
+    void Set(const std::string& key, const char* value) {
+        GetOrAdd(key) = value;
+    }
     // Convert other types to string as well
     template <typename T>
-    void Set(const std::string& key, const T& value) { GetOrAdd(key) = std::to_string(value); }
+    void Set(const std::string& key, const T& value) {
+        GetOrAdd(key) = std::to_string(value);
+    }
 
     // Remove a key
     void Remove(const char* key) { _entries.erase(key); }
@@ -55,7 +63,7 @@ public:
     // Get iterators to iterate key/value
     Iterator Begin() const { return _entries.begin(); }
     Iterator End() const { return _entries.end(); }
-    
+
     // number of key/values
     size_t Count() const { return _entries.size(); }
 
@@ -70,6 +78,6 @@ private:
     Map _entries;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-#endif // BRPC_KVMAP_H
+#endif  // BRPC_KVMAP_H

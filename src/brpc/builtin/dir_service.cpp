@@ -15,31 +15,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
+#include <dirent.h>  // opendir
+#include <fcntl.h>   // O_RDONLY
 #include <ostream>
-#include <dirent.h>                    // opendir
-#include <fcntl.h>                     // O_RDONLY
 #include "butil/fd_guard.h"
 #include "butil/fd_utility.h"
 
-#include "brpc/closure_guard.h"        // ClosureGuard
-#include "brpc/controller.h"           // Controller
 #include "brpc/builtin/common.h"
 #include "brpc/builtin/dir_service.h"
-
+#include "brpc/closure_guard.h"  // ClosureGuard
+#include "brpc/controller.h"     // Controller
 
 namespace brpc {
 
 void DirService::default_method(::google::protobuf::RpcController* cntl_base,
-                                const ::brpc::DirRequest*,
-                                ::brpc::DirResponse*,
+                                const ::brpc::DirRequest*, ::brpc::DirResponse*,
                                 ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
+    Controller* cntl = static_cast<Controller*>(cntl_base);
     std::string open_path;
-    
-    const std::string& path_str =
-        cntl->http_request().unresolved_path();
+
+    const std::string& path_str = cntl->http_request().unresolved_path();
     if (!path_str.empty()) {
         open_path.reserve(path_str.size() + 2);
         open_path.push_back('/');
@@ -60,8 +56,8 @@ void DirService::default_method(::google::protobuf::RpcController* cntl_base,
         butil::IOPortal read_portal;
         size_t total_read = 0;
         do {
-            const ssize_t nr = read_portal.append_from_file_descriptor(
-                fd, MAX_READ);
+            const ssize_t nr =
+                read_portal.append_from_file_descriptor(fd, MAX_READ);
             if (nr < 0) {
                 cntl->SetFailed(errno, "Cannot read `%s'", open_path.c_str());
                 return;
@@ -75,30 +71,32 @@ void DirService::default_method(::google::protobuf::RpcController* cntl_base,
         resp.swap(read_portal);
         if (total_read >= MAX_READ) {
             std::ostringstream oss;
-            oss << " <" << lseek(fd, 0, SEEK_END) - total_read << " more bytes>";
+            oss << " <" << lseek(fd, 0, SEEK_END) - total_read
+                << " more bytes>";
             resp.append(oss.str());
         }
         cntl->http_response().set_content_type("text/plain");
     } else {
         const bool use_html = UseHTML(cntl->http_request());
-        const butil::EndPoint* const html_addr = (use_html ? Path::LOCAL : NULL);
-        cntl->http_response().set_content_type(
-            use_html ? "text/html" : "text/plain");
+        const butil::EndPoint* const html_addr =
+            (use_html ? Path::LOCAL : NULL);
+        cntl->http_response().set_content_type(use_html ? "text/html"
+                                                        : "text/plain");
 
         std::vector<std::string> files;
         files.reserve(32);
-        // readdir_r is marked as deprecated since glibc 2.24. 
+        // readdir_r is marked as deprecated since glibc 2.24.
 #if defined(__GLIBC__) && \
-        (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 24))
-        for (struct dirent* p = NULL; (p = readdir(dir)) != NULL; ) {
+    (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 24))
+        for (struct dirent* p = NULL; (p = readdir(dir)) != NULL;) {
 #else
         struct dirent entbuf;
-        for (struct dirent* p = NULL; readdir_r(dir, &entbuf, &p) == 0 && p; ) {
+        for (struct dirent* p = NULL; readdir_r(dir, &entbuf, &p) == 0 && p;) {
 #endif
             files.push_back(p->d_name);
         }
         CHECK_EQ(0, closedir(dir));
-        
+
         std::sort(files.begin(), files.end());
         butil::IOBufBuilder os;
         if (use_html) {
@@ -125,5 +123,4 @@ void DirService::default_method(::google::protobuf::RpcController* cntl_base,
     }
 }
 
-
-} // namespace brpc
+}  // namespace brpc

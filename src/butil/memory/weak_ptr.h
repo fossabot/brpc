@@ -63,65 +63,65 @@
 #ifndef BUTIL_MEMORY_WEAK_PTR_H_
 #define BUTIL_MEMORY_WEAK_PTR_H_
 
-#include "butil/basictypes.h"
 #include "butil/base_export.h"
+#include "butil/basictypes.h"
 #include "butil/logging.h"
 #include "butil/memory/ref_counted.h"
 #include "butil/type_traits.h"
 
 namespace butil {
 
-template <typename T> class SupportsWeakPtr;
-template <typename T> class WeakPtr;
+template <typename T>
+class SupportsWeakPtr;
+template <typename T>
+class WeakPtr;
 
 namespace internal {
 // These classes are part of the WeakPtr implementation.
 // DO NOT USE THESE CLASSES DIRECTLY YOURSELF.
 
 class BUTIL_EXPORT WeakReference {
- public:
-  // Although Flag is bound to a specific thread, it may be deleted from another
-  // via butil::WeakPtr::~WeakPtr().
-  class BUTIL_EXPORT Flag : public RefCountedThreadSafe<Flag> {
-   public:
-    Flag();
+public:
+    // Although Flag is bound to a specific thread, it may be deleted from
+    // another via butil::WeakPtr::~WeakPtr().
+    class BUTIL_EXPORT Flag : public RefCountedThreadSafe<Flag> {
+    public:
+        Flag();
 
-    void Invalidate();
-    bool IsValid() const;
+        void Invalidate();
+        bool IsValid() const;
 
-   private:
-    friend class butil::RefCountedThreadSafe<Flag>;
+    private:
+        friend class butil::RefCountedThreadSafe<Flag>;
 
-    ~Flag();
+        ~Flag();
 
-    bool is_valid_;
-  };
+        bool is_valid_;
+    };
 
-  WeakReference();
-  explicit WeakReference(const Flag* flag);
-  ~WeakReference();
+    WeakReference();
+    explicit WeakReference(const Flag* flag);
+    ~WeakReference();
 
-  bool is_valid() const;
+    bool is_valid() const;
 
- private:
-  scoped_refptr<const Flag> flag_;
+private:
+    scoped_refptr<const Flag> flag_;
 };
 
 class BUTIL_EXPORT WeakReferenceOwner {
- public:
-  WeakReferenceOwner();
-  ~WeakReferenceOwner();
+public:
+    WeakReferenceOwner();
+    ~WeakReferenceOwner();
 
-  WeakReference GetRef() const;
+    WeakReference GetRef() const;
 
-  bool HasRefs() const {
-    return flag_.get() && !flag_->HasOneRef();
-  }
+    bool HasRefs() const { return flag_.get() && !flag_->HasOneRef(); }
 
-  void Invalidate();
+    void Invalidate();
 
- private:
-  mutable scoped_refptr<WeakReference::Flag> flag_;
+private:
+    mutable scoped_refptr<WeakReference::Flag> flag_;
 };
 
 // This class simplifies the implementation of WeakPtr's type conversion
@@ -129,49 +129,50 @@ class BUTIL_EXPORT WeakReferenceOwner {
 // WeakPtr<T> cannot access the private members of WeakPtr<U>, so this
 // base class gives us a way to access ref_ in a protected fashion.
 class BUTIL_EXPORT WeakPtrBase {
- public:
-  WeakPtrBase();
-  ~WeakPtrBase();
+public:
+    WeakPtrBase();
+    ~WeakPtrBase();
 
- protected:
-  explicit WeakPtrBase(const WeakReference& ref);
+protected:
+    explicit WeakPtrBase(const WeakReference& ref);
 
-  WeakReference ref_;
+    WeakReference ref_;
 };
 
 // This class provides a common implementation of common functions that would
 // otherwise get instantiated separately for each distinct instantiation of
 // SupportsWeakPtr<>.
 class SupportsWeakPtrBase {
- public:
-  // A safe static downcast of a WeakPtr<Base> to WeakPtr<Derived>. This
-  // conversion will only compile if there is exists a Base which inherits
-  // from SupportsWeakPtr<Base>. See butil::AsWeakPtr() below for a helper
-  // function that makes calling this easier.
-  template<typename Derived>
-  static WeakPtr<Derived> StaticAsWeakPtr(Derived* t) {
-    typedef
-        is_convertible<Derived, internal::SupportsWeakPtrBase&> convertible;
-    COMPILE_ASSERT(convertible::value,
-                   AsWeakPtr_argument_inherits_from_SupportsWeakPtr);
-    return AsWeakPtrImpl<Derived>(t, *t);
-  }
+public:
+    // A safe static downcast of a WeakPtr<Base> to WeakPtr<Derived>. This
+    // conversion will only compile if there is exists a Base which inherits
+    // from SupportsWeakPtr<Base>. See butil::AsWeakPtr() below for a helper
+    // function that makes calling this easier.
+    template <typename Derived>
+    static WeakPtr<Derived> StaticAsWeakPtr(Derived* t) {
+        typedef is_convertible<Derived, internal::SupportsWeakPtrBase&>
+            convertible;
+        COMPILE_ASSERT(convertible::value,
+                       AsWeakPtr_argument_inherits_from_SupportsWeakPtr);
+        return AsWeakPtrImpl<Derived>(t, *t);
+    }
 
- private:
-  // This template function uses type inference to find a Base of Derived
-  // which is an instance of SupportsWeakPtr<Base>. We can then safely
-  // static_cast the Base* to a Derived*.
-  template <typename Derived, typename Base>
-  static WeakPtr<Derived> AsWeakPtrImpl(
-      Derived* t, const SupportsWeakPtr<Base>&) {
-    WeakPtr<Base> ptr = t->Base::AsWeakPtr();
-    return WeakPtr<Derived>(ptr.ref_, static_cast<Derived*>(ptr.ptr_));
-  }
+private:
+    // This template function uses type inference to find a Base of Derived
+    // which is an instance of SupportsWeakPtr<Base>. We can then safely
+    // static_cast the Base* to a Derived*.
+    template <typename Derived, typename Base>
+    static WeakPtr<Derived> AsWeakPtrImpl(Derived* t,
+                                          const SupportsWeakPtr<Base>&) {
+        WeakPtr<Base> ptr = t->Base::AsWeakPtr();
+        return WeakPtr<Derived>(ptr.ref_, static_cast<Derived*>(ptr.ptr_));
+    }
 };
 
 }  // namespace internal
 
-template <typename T> class WeakPtrFactory;
+template <typename T>
+class WeakPtrFactory;
 
 // The WeakPtr class holds a weak reference to |T*|.
 //
@@ -188,64 +189,63 @@ template <typename T> class WeakPtrFactory;
 //
 template <typename T>
 class WeakPtr : public internal::WeakPtrBase {
- public:
-  WeakPtr() : ptr_(NULL) {
-  }
+public:
+    WeakPtr() : ptr_(NULL) {}
 
-  // Allow conversion from U to T provided U "is a" T. Note that this
-  // is separate from the (implicit) copy constructor.
-  template <typename U>
-  WeakPtr(const WeakPtr<U>& other) : WeakPtrBase(other), ptr_(other.ptr_) {
-  }
+    // Allow conversion from U to T provided U "is a" T. Note that this
+    // is separate from the (implicit) copy constructor.
+    template <typename U>
+    WeakPtr(const WeakPtr<U>& other) : WeakPtrBase(other), ptr_(other.ptr_) {}
 
-  T* get() const { return ref_.is_valid() ? ptr_ : NULL; }
+    T* get() const { return ref_.is_valid() ? ptr_ : NULL; }
 
-  T& operator*() const {
-    DCHECK(get() != NULL);
-    return *get();
-  }
-  T* operator->() const {
-    DCHECK(get() != NULL);
-    return get();
-  }
+    T& operator*() const {
+        DCHECK(get() != NULL);
+        return *get();
+    }
+    T* operator->() const {
+        DCHECK(get() != NULL);
+        return get();
+    }
 
-  // Allow WeakPtr<element_type> to be used in boolean expressions, but not
-  // implicitly convertible to a real bool (which is dangerous).
-  //
-  // Note that this trick is only safe when the == and != operators
-  // are declared explicitly, as otherwise "weak_ptr1 == weak_ptr2"
-  // will compile but do the wrong thing (i.e., convert to Testable
-  // and then do the comparison).
- private:
-  typedef T* WeakPtr::*Testable;
+    // Allow WeakPtr<element_type> to be used in boolean expressions, but not
+    // implicitly convertible to a real bool (which is dangerous).
+    //
+    // Note that this trick is only safe when the == and != operators
+    // are declared explicitly, as otherwise "weak_ptr1 == weak_ptr2"
+    // will compile but do the wrong thing (i.e., convert to Testable
+    // and then do the comparison).
+private:
+    typedef T* WeakPtr::*Testable;
 
- public:
-  operator Testable() const { return get() ? &WeakPtr::ptr_ : NULL; }
+public:
+    operator Testable() const { return get() ? &WeakPtr::ptr_ : NULL; }
 
-  void reset() {
-    ref_ = internal::WeakReference();
-    ptr_ = NULL;
-  }
+    void reset() {
+        ref_ = internal::WeakReference();
+        ptr_ = NULL;
+    }
 
- private:
-  // Explicitly declare comparison operators as required by the bool
-  // trick, but keep them private.
-  template <class U> bool operator==(WeakPtr<U> const&) const;
-  template <class U> bool operator!=(WeakPtr<U> const&) const;
+private:
+    // Explicitly declare comparison operators as required by the bool
+    // trick, but keep them private.
+    template <class U>
+    bool operator==(WeakPtr<U> const&) const;
+    template <class U>
+    bool operator!=(WeakPtr<U> const&) const;
 
-  friend class internal::SupportsWeakPtrBase;
-  template <typename U> friend class WeakPtr;
-  friend class SupportsWeakPtr<T>;
-  friend class WeakPtrFactory<T>;
+    friend class internal::SupportsWeakPtrBase;
+    template <typename U>
+    friend class WeakPtr;
+    friend class SupportsWeakPtr<T>;
+    friend class WeakPtrFactory<T>;
 
-  WeakPtr(const internal::WeakReference& ref, T* ptr)
-      : WeakPtrBase(ref),
-        ptr_(ptr) {
-  }
+    WeakPtr(const internal::WeakReference& ref, T* ptr)
+        : WeakPtrBase(ref), ptr_(ptr) {}
 
-  // This pointer is only valid when ref_.is_valid() is true.  Otherwise, its
-  // value is undefined (as opposed to NULL).
-  T* ptr_;
+    // This pointer is only valid when ref_.is_valid() is true.  Otherwise, its
+    // value is undefined (as opposed to NULL).
+    T* ptr_;
 };
 
 // A class may be composed of a WeakPtrFactory and thereby
@@ -255,35 +255,32 @@ class WeakPtr : public internal::WeakPtrBase {
 // WeakPtrFactory<bool> that is used to pass around a weak reference to a bool.
 template <class T>
 class WeakPtrFactory {
- public:
-  explicit WeakPtrFactory(T* ptr) : ptr_(ptr) {
-  }
+public:
+    explicit WeakPtrFactory(T* ptr) : ptr_(ptr) {}
 
-  ~WeakPtrFactory() {
-    ptr_ = NULL;
-  }
+    ~WeakPtrFactory() { ptr_ = NULL; }
 
-  WeakPtr<T> GetWeakPtr() {
-    DCHECK(ptr_);
-    return WeakPtr<T>(weak_reference_owner_.GetRef(), ptr_);
-  }
+    WeakPtr<T> GetWeakPtr() {
+        DCHECK(ptr_);
+        return WeakPtr<T>(weak_reference_owner_.GetRef(), ptr_);
+    }
 
-  // Call this method to invalidate all existing weak pointers.
-  void InvalidateWeakPtrs() {
-    DCHECK(ptr_);
-    weak_reference_owner_.Invalidate();
-  }
+    // Call this method to invalidate all existing weak pointers.
+    void InvalidateWeakPtrs() {
+        DCHECK(ptr_);
+        weak_reference_owner_.Invalidate();
+    }
 
-  // Call this method to determine if any weak pointers exist.
-  bool HasWeakPtrs() const {
-    DCHECK(ptr_);
-    return weak_reference_owner_.HasRefs();
-  }
+    // Call this method to determine if any weak pointers exist.
+    bool HasWeakPtrs() const {
+        DCHECK(ptr_);
+        return weak_reference_owner_.HasRefs();
+    }
 
- private:
-  internal::WeakReferenceOwner weak_reference_owner_;
-  T* ptr_;
-  DISALLOW_IMPLICIT_CONSTRUCTORS(WeakPtrFactory);
+private:
+    internal::WeakReferenceOwner weak_reference_owner_;
+    T* ptr_;
+    DISALLOW_IMPLICIT_CONSTRUCTORS(WeakPtrFactory);
 };
 
 // A class may extend from SupportsWeakPtr to let others take weak pointers to
@@ -293,19 +290,20 @@ class WeakPtrFactory {
 // destroyed, its use can lead to subtle use-after-destroy issues.
 template <class T>
 class SupportsWeakPtr : public internal::SupportsWeakPtrBase {
- public:
-  SupportsWeakPtr() {}
+public:
+    SupportsWeakPtr() {}
 
-  WeakPtr<T> AsWeakPtr() {
-    return WeakPtr<T>(weak_reference_owner_.GetRef(), static_cast<T*>(this));
-  }
+    WeakPtr<T> AsWeakPtr() {
+        return WeakPtr<T>(weak_reference_owner_.GetRef(),
+                          static_cast<T*>(this));
+    }
 
- protected:
-  ~SupportsWeakPtr() {}
+protected:
+    ~SupportsWeakPtr() {}
 
- private:
-  internal::WeakReferenceOwner weak_reference_owner_;
-  DISALLOW_COPY_AND_ASSIGN(SupportsWeakPtr);
+private:
+    internal::WeakReferenceOwner weak_reference_owner_;
+    DISALLOW_COPY_AND_ASSIGN(SupportsWeakPtr);
 };
 
 // Helper function that uses type deduction to safely return a WeakPtr<Derived>
@@ -328,7 +326,7 @@ class SupportsWeakPtr : public internal::SupportsWeakPtrBase {
 
 template <typename Derived>
 WeakPtr<Derived> AsWeakPtr(Derived* t) {
-  return internal::SupportsWeakPtrBase::StaticAsWeakPtr<Derived>(t);
+    return internal::SupportsWeakPtrBase::StaticAsWeakPtr<Derived>(t);
 }
 
 }  // namespace butil

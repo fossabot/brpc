@@ -19,17 +19,17 @@ namespace {
 // it if we are later put in a sandbox. This class wraps the file descriptor so
 // we can use LazyInstance to handle opening it on the first access.
 class URandomFd {
- public:
-  URandomFd() : fd_(open("/dev/urandom", O_RDONLY)) {
-    DCHECK_GE(fd_, 0) << "Cannot open /dev/urandom: " << errno;
-  }
+public:
+    URandomFd() : fd_(open("/dev/urandom", O_RDONLY)) {
+        DCHECK_GE(fd_, 0) << "Cannot open /dev/urandom: " << errno;
+    }
 
-  ~URandomFd() { close(fd_); }
+    ~URandomFd() { close(fd_); }
 
-  int fd() const { return fd_; }
+    int fd() const { return fd_; }
 
- private:
-  const int fd_;
+private:
+    const int fd_;
 };
 
 butil::LazyInstance<URandomFd>::Leaky g_urandom_fd = LAZY_INSTANCE_INITIALIZER;
@@ -40,20 +40,18 @@ namespace butil {
 
 // NOTE: This function must be cryptographically secure. http://crbug.com/140076
 uint64_t RandUint64() {
-  uint64_t number;
-  RandBytes(&number, sizeof(number));
-  return number;
+    uint64_t number;
+    RandBytes(&number, sizeof(number));
+    return number;
 }
 
 void RandBytes(void* output, size_t output_length) {
-  const int urandom_fd = g_urandom_fd.Pointer()->fd();
-  const bool success =
-      ReadFromFD(urandom_fd, static_cast<char*>(output), output_length);
-  CHECK(success);
+    const int urandom_fd = g_urandom_fd.Pointer()->fd();
+    const bool success =
+        ReadFromFD(urandom_fd, static_cast<char*>(output), output_length);
+    CHECK(success);
 }
 
-int GetUrandomFD(void) {
-  return g_urandom_fd.Pointer()->fd();
-}
+int GetUrandomFD(void) { return g_urandom_fd.Pointer()->fd(); }
 
 }  // namespace butil

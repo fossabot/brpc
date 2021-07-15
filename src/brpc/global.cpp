@@ -15,39 +15,38 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef USE_MESALINK
-#include <openssl/ssl.h>
 #include <openssl/conf.h>
+#include <openssl/ssl.h>
 #else
 #include <mesalink/openssl/ssl.h>
 #endif
 
+#include <fcntl.h>  // O_RDONLY
 #include <gflags/gflags.h>
-#include <fcntl.h>                               // O_RDONLY
 #include <signal.h>
 
-#include "butil/build_config.h"                  // OS_LINUX
+#include "butil/build_config.h"  // OS_LINUX
 // Naming services
 #ifdef BAIDU_INTERNAL
 #include "brpc/policy/baidu_naming_service.h"
 #endif
-#include "brpc/policy/file_naming_service.h"
-#include "brpc/policy/list_naming_service.h"
-#include "brpc/policy/domain_naming_service.h"
-#include "brpc/policy/remote_file_naming_service.h"
 #include "brpc/policy/consul_naming_service.h"
 #include "brpc/policy/discovery_naming_service.h"
+#include "brpc/policy/domain_naming_service.h"
+#include "brpc/policy/file_naming_service.h"
+#include "brpc/policy/list_naming_service.h"
+#include "brpc/policy/remote_file_naming_service.h"
 
 // Load Balancers
-#include "brpc/policy/round_robin_load_balancer.h"
-#include "brpc/policy/weighted_round_robin_load_balancer.h"
-#include "brpc/policy/randomized_load_balancer.h"
-#include "brpc/policy/weighted_randomized_load_balancer.h"
-#include "brpc/policy/locality_aware_load_balancer.h"
 #include "brpc/policy/consistent_hashing_load_balancer.h"
-#include "brpc/policy/hasher.h"
 #include "brpc/policy/dynpart_load_balancer.h"
+#include "brpc/policy/hasher.h"
+#include "brpc/policy/locality_aware_load_balancer.h"
+#include "brpc/policy/randomized_load_balancer.h"
+#include "brpc/policy/round_robin_load_balancer.h"
+#include "brpc/policy/weighted_randomized_load_balancer.h"
+#include "brpc/policy/weighted_round_robin_load_balancer.h"
 
 // Compress handlers
 #include "brpc/compress.h"
@@ -55,24 +54,24 @@
 #include "brpc/policy/snappy_compress.h"
 
 // Protocols
-#include "brpc/protocol.h"
 #include "brpc/policy/baidu_rpc_protocol.h"
-#include "brpc/policy/http_rpc_protocol.h"
-#include "brpc/policy/http2_rpc_protocol.h"
-#include "brpc/policy/hulu_pbrpc_protocol.h"
-#include "brpc/policy/nova_pbrpc_protocol.h"
-#include "brpc/policy/public_pbrpc_protocol.h"
-#include "brpc/policy/ubrpc2pb_protocol.h"
-#include "brpc/policy/sofa_pbrpc_protocol.h"
-#include "brpc/policy/memcache_binary_protocol.h"
-#include "brpc/policy/streaming_rpc_protocol.h"
-#include "brpc/policy/mongo_protocol.h"
-#include "brpc/policy/redis_protocol.h"
-#include "brpc/policy/nshead_mcpack_protocol.h"
-#include "brpc/policy/rtmp_protocol.h"
 #include "brpc/policy/esp_protocol.h"
+#include "brpc/policy/http2_rpc_protocol.h"
+#include "brpc/policy/http_rpc_protocol.h"
+#include "brpc/policy/hulu_pbrpc_protocol.h"
+#include "brpc/policy/memcache_binary_protocol.h"
+#include "brpc/policy/mongo_protocol.h"
+#include "brpc/policy/nova_pbrpc_protocol.h"
+#include "brpc/policy/nshead_mcpack_protocol.h"
+#include "brpc/policy/public_pbrpc_protocol.h"
+#include "brpc/policy/redis_protocol.h"
+#include "brpc/policy/rtmp_protocol.h"
+#include "brpc/policy/sofa_pbrpc_protocol.h"
+#include "brpc/policy/streaming_rpc_protocol.h"
+#include "brpc/policy/ubrpc2pb_protocol.h"
+#include "brpc/protocol.h"
 #ifdef ENABLE_THRIFT_FRAMED_PROTOCOL
-# include "brpc/policy/thrift_protocol.h"
+#include "brpc/policy/thrift_protocol.h"
 #endif
 
 // Concurrency Limiters
@@ -80,13 +79,13 @@
 #include "brpc/policy/auto_concurrency_limiter.h"
 #include "brpc/policy/constant_concurrency_limiter.h"
 
-#include "brpc/input_messenger.h"     // get_or_new_client_side_messenger
-#include "brpc/socket_map.h"          // SocketMapList
-#include "brpc/server.h"
-#include "brpc/trackme.h"             // TrackMe
 #include "brpc/details/usercode_backup_pool.h"
+#include "brpc/input_messenger.h"  // get_or_new_client_side_messenger
+#include "brpc/server.h"
+#include "brpc/socket_map.h"  // SocketMapList
+#include "brpc/trackme.h"     // TrackMe
 #if defined(OS_LINUX)
-#include <malloc.h>                   // malloc_trim
+#include <malloc.h>  // malloc_trim
 #endif
 #include "butil/fd_guard.h"
 #include "butil/files/file_watcher.h"
@@ -108,7 +107,7 @@ BRPC_VALIDATE_GFLAG(free_memory_to_system_interval, PassValidate);
 namespace policy {
 // Defined in http_rpc_protocol.cpp
 void InitCommonStrings();
-}
+}  // namespace policy
 
 using namespace policy;
 
@@ -121,9 +120,8 @@ struct GlobalExtensions {
         , ch_mh_lb(CONS_HASH_LB_MURMUR3)
         , ch_md5_lb(CONS_HASH_LB_MD5)
         , ch_ketama_lb(CONS_HASH_LB_KETAMA)
-        , constant_cl(0) {
-    }
-    
+        , constant_cl(0) {}
+
 #ifdef BAIDU_INTERNAL
     BaiduNamingService bns;
 #endif
@@ -150,7 +148,7 @@ struct GlobalExtensions {
 };
 
 static pthread_once_t register_extensions_once = PTHREAD_ONCE_INIT;
-static GlobalExtensions* g_ext = NULL;
+static GlobalExtensions* g_ext                 = NULL;
 
 static long ReadPortOfDummyServer(const char* filename) {
     butil::fd_guard fd(open(filename, O_RDONLY));
@@ -161,16 +159,18 @@ static long ReadPortOfDummyServer(const char* filename) {
     char port_str[32];
     const ssize_t nr = read(fd, port_str, sizeof(port_str));
     if (nr <= 0) {
-        LOG(ERROR) << "Fail to read `" << DUMMY_SERVER_PORT_FILE << "': "
-                   << (nr == 0 ? "nothing to read" : berror());
+        LOG(ERROR) << "Fail to read `" << DUMMY_SERVER_PORT_FILE
+                   << "': " << (nr == 0 ? "nothing to read" : berror());
         return -1;
     }
-    port_str[std::min((size_t)nr, sizeof(port_str)-1)] = '\0';
-    const char* p = port_str;
-    for (; isspace(*p); ++p) {}
-    char* endptr = NULL;
+    port_str[std::min((size_t)nr, sizeof(port_str) - 1)] = '\0';
+    const char* p                                        = port_str;
+    for (; isspace(*p); ++p) {
+    }
+    char* endptr    = NULL;
     const long port = strtol(p, &endptr, 10);
-    for (; isspace(*endptr); ++endptr) {}
+    for (; isspace(*endptr); ++endptr) {
+    }
     if (*endptr != '\0') {
         LOG(ERROR) << "Invalid port=`" << port_str << "'";
         return -1;
@@ -179,9 +179,7 @@ static long ReadPortOfDummyServer(const char* filename) {
 }
 
 // Expose counters of butil::IOBuf
-static int64_t GetIOBufBlockCount(void*) {
-    return butil::IOBuf::block_count();
-}
+static int64_t GetIOBufBlockCount(void*) { return butil::IOBuf::block_count(); }
 static int64_t GetIOBufBlockCountHitTLSThreshold(void*) {
     return butil::IOBuf::block_count_hit_tls_threshold();
 }
@@ -217,18 +215,20 @@ static void* GlobalUpdate(void*) {
 
     butil::FileWatcher fw;
     if (fw.init_from_not_exist(DUMMY_SERVER_PORT_FILE) < 0) {
-        LOG(FATAL) << "Fail to init FileWatcher on `" << DUMMY_SERVER_PORT_FILE << "'";
+        LOG(FATAL) << "Fail to init FileWatcher on `" << DUMMY_SERVER_PORT_FILE
+                   << "'";
         return NULL;
     }
 
     std::vector<SocketId> conns;
-    const int64_t start_time_us = butil::gettimeofday_us();
-    const int WARN_NOSLEEP_THRESHOLD = 2;
-    int64_t last_time_us = start_time_us;
-    int consecutive_nosleep = 0;
+    const int64_t start_time_us          = butil::gettimeofday_us();
+    const int WARN_NOSLEEP_THRESHOLD     = 2;
+    int64_t last_time_us                 = start_time_us;
+    int consecutive_nosleep              = 0;
     int64_t last_return_free_memory_time = start_time_us;
     while (1) {
-        const int64_t sleep_us = 1000000L + last_time_us - butil::gettimeofday_us();
+        const int64_t sleep_us =
+            1000000L + last_time_us - butil::gettimeofday_us();
         if (sleep_us > 0) {
             if (bthread_usleep(sleep_us) < 0) {
                 PLOG_IF(FATAL, errno != ESTOP) << "Fail to sleep";
@@ -245,9 +245,9 @@ static void* GlobalUpdate(void*) {
 
         TrackMe();
 
-        if (!IsDummyServerRunning()
-            && g_running_server_count.load(butil::memory_order_relaxed) == 0
-            && fw.check_and_consume() > 0) {
+        if (!IsDummyServerRunning() &&
+            g_running_server_count.load(butil::memory_order_relaxed) == 0 &&
+            fw.check_and_consume() > 0) {
             long port = ReadPortOfDummyServer(DUMMY_SERVER_PORT_FILE);
             if (port >= 0) {
                 StartDummyServerAt(port);
@@ -264,22 +264,22 @@ static void* GlobalUpdate(void*) {
         }
 
         const int return_mem_interval =
-            FLAGS_free_memory_to_system_interval/*reloadable*/;
+            FLAGS_free_memory_to_system_interval /*reloadable*/;
         if (return_mem_interval > 0 &&
-            last_time_us >= last_return_free_memory_time +
-            return_mem_interval * 1000000L) {
+            last_time_us >=
+                last_return_free_memory_time + return_mem_interval * 1000000L) {
             last_return_free_memory_time = last_time_us;
             // TODO: Calling MallocExtension::instance()->ReleaseFreeMemory may
             // crash the program in later calls to malloc, verified on tcmalloc
             // 1.7 and 2.5, which means making the static member function weak
-            // in details/tcmalloc_extension.cpp is probably not correct, however
-            // it does work for heap profilers.
+            // in details/tcmalloc_extension.cpp is probably not correct,
+            // however it does work for heap profilers.
             if (MallocExtension_ReleaseFreeMemory != NULL) {
                 MallocExtension_ReleaseFreeMemory();
             } else {
 #if defined(OS_LINUX)
                 // GNU specific.
-                malloc_trim(10 * 1024 * 1024/*leave 10M pad*/);
+                malloc_trim(10 * 1024 * 1024 /*leave 10M pad*/);
 #endif
             }
         }
@@ -317,7 +317,7 @@ static void GlobalInitializeOrDieImpl() {
     // Ignore SIGPIPE.
     struct sigaction oldact;
     if (sigaction(SIGPIPE, NULL, &oldact) != 0 ||
-            (oldact.sa_handler == NULL && oldact.sa_sigaction == NULL)) {
+        (oldact.sa_handler == NULL && oldact.sa_sigaction == NULL)) {
         CHECK(NULL == signal(SIGPIPE, SIG_IGN));
     }
 
@@ -330,7 +330,8 @@ static void GlobalInitializeOrDieImpl() {
 
     // Initialize openssl library
     SSL_library_init();
-    // RPC doesn't require openssl.cnf, users can load it by themselves if needed
+    // RPC doesn't require openssl.cnf, users can load it by themselves if
+    // needed
     SSL_load_error_strings();
     if (SSLThreadInit() != 0 || SSLDHInit() != 0) {
         exit(1);
@@ -340,7 +341,7 @@ static void GlobalInitializeOrDieImpl() {
     InitCommonStrings();
 
     // Leave memory of these extensions to process's clean up.
-    g_ext = new(std::nothrow) GlobalExtensions();
+    g_ext = new (std::nothrow) GlobalExtensions();
     if (NULL == g_ext) {
         exit(1);
     }
@@ -369,102 +370,119 @@ static void GlobalInitializeOrDieImpl() {
     LoadBalancerExtension()->RegisterOrDie("_dynpart", &g_ext->dynpart_lb);
 
     // Compress Handlers
-    const CompressHandler gzip_compress =
-        { GzipCompress, GzipDecompress, "gzip" };
+    const CompressHandler gzip_compress = {GzipCompress, GzipDecompress,
+                                           "gzip"};
     if (RegisterCompressHandler(COMPRESS_TYPE_GZIP, gzip_compress) != 0) {
         exit(1);
     }
-    const CompressHandler zlib_compress =
-        { ZlibCompress, ZlibDecompress, "zlib" };
+    const CompressHandler zlib_compress = {ZlibCompress, ZlibDecompress,
+                                           "zlib"};
     if (RegisterCompressHandler(COMPRESS_TYPE_ZLIB, zlib_compress) != 0) {
         exit(1);
     }
-    const CompressHandler snappy_compress =
-        { SnappyCompress, SnappyDecompress, "snappy" };
+    const CompressHandler snappy_compress = {SnappyCompress, SnappyDecompress,
+                                             "snappy"};
     if (RegisterCompressHandler(COMPRESS_TYPE_SNAPPY, snappy_compress) != 0) {
         exit(1);
     }
 
     // Protocols
-    Protocol baidu_protocol = { ParseRpcMessage,
-                                SerializeRequestDefault, PackRpcRequest,
-                                ProcessRpcRequest, ProcessRpcResponse,
-                                VerifyRpcRequest, NULL, NULL,
-                                CONNECTION_TYPE_ALL, "baidu_std" };
+    Protocol baidu_protocol = {ParseRpcMessage,
+                               SerializeRequestDefault,
+                               PackRpcRequest,
+                               ProcessRpcRequest,
+                               ProcessRpcResponse,
+                               VerifyRpcRequest,
+                               NULL,
+                               NULL,
+                               CONNECTION_TYPE_ALL,
+                               "baidu_std"};
     if (RegisterProtocol(PROTOCOL_BAIDU_STD, baidu_protocol) != 0) {
         exit(1);
     }
 
-    Protocol streaming_protocol = { ParseStreamingMessage,
-                                    NULL, NULL, ProcessStreamingMessage,
-                                    ProcessStreamingMessage,
-                                    NULL, NULL, NULL,
-                                    CONNECTION_TYPE_SINGLE, "streaming_rpc" };
+    Protocol streaming_protocol = {
+        ParseStreamingMessage,   NULL,           NULL, ProcessStreamingMessage,
+        ProcessStreamingMessage, NULL,           NULL, NULL,
+        CONNECTION_TYPE_SINGLE,  "streaming_rpc"};
 
     if (RegisterProtocol(PROTOCOL_STREAMING_RPC, streaming_protocol) != 0) {
         exit(1);
     }
 
-    Protocol http_protocol = { ParseHttpMessage,
-                               SerializeHttpRequest, PackHttpRequest,
-                               ProcessHttpRequest, ProcessHttpResponse,
-                               VerifyHttpRequest, ParseHttpServerAddress,
-                               GetHttpMethodName,
-                               CONNECTION_TYPE_POOLED_AND_SHORT,
-                               "http" };
+    Protocol http_protocol = {ParseHttpMessage,
+                              SerializeHttpRequest,
+                              PackHttpRequest,
+                              ProcessHttpRequest,
+                              ProcessHttpResponse,
+                              VerifyHttpRequest,
+                              ParseHttpServerAddress,
+                              GetHttpMethodName,
+                              CONNECTION_TYPE_POOLED_AND_SHORT,
+                              "http"};
     if (RegisterProtocol(PROTOCOL_HTTP, http_protocol) != 0) {
         exit(1);
     }
 
-    Protocol http2_protocol = { ParseH2Message,
-                                SerializeHttpRequest, PackH2Request,
-                                ProcessHttpRequest, ProcessHttpResponse,
-                                VerifyHttpRequest, ParseHttpServerAddress,
-                                GetHttpMethodName,
-                                CONNECTION_TYPE_SINGLE,
-                                "h2" };
+    Protocol http2_protocol = {ParseH2Message,         SerializeHttpRequest,
+                               PackH2Request,          ProcessHttpRequest,
+                               ProcessHttpResponse,    VerifyHttpRequest,
+                               ParseHttpServerAddress, GetHttpMethodName,
+                               CONNECTION_TYPE_SINGLE, "h2"};
     if (RegisterProtocol(PROTOCOL_H2, http2_protocol) != 0) {
         exit(1);
     }
 
-    Protocol hulu_protocol = { ParseHuluMessage,
-                               SerializeRequestDefault, PackHuluRequest,
-                               ProcessHuluRequest, ProcessHuluResponse,
-                               VerifyHuluRequest, NULL, NULL,
-                               CONNECTION_TYPE_ALL, "hulu_pbrpc" };
+    Protocol hulu_protocol = {ParseHuluMessage,
+                              SerializeRequestDefault,
+                              PackHuluRequest,
+                              ProcessHuluRequest,
+                              ProcessHuluResponse,
+                              VerifyHuluRequest,
+                              NULL,
+                              NULL,
+                              CONNECTION_TYPE_ALL,
+                              "hulu_pbrpc"};
     if (RegisterProtocol(PROTOCOL_HULU_PBRPC, hulu_protocol) != 0) {
         exit(1);
     }
 
     // Only valid at client side
-    Protocol nova_protocol = { ParseNsheadMessage,
-                               SerializeNovaRequest, PackNovaRequest,
-                               NULL, ProcessNovaResponse,
-                               NULL, NULL, NULL,
-                               CONNECTION_TYPE_POOLED_AND_SHORT,  "nova_pbrpc" };
+    Protocol nova_protocol = {ParseNsheadMessage,
+                              SerializeNovaRequest,
+                              PackNovaRequest,
+                              NULL,
+                              ProcessNovaResponse,
+                              NULL,
+                              NULL,
+                              NULL,
+                              CONNECTION_TYPE_POOLED_AND_SHORT,
+                              "nova_pbrpc"};
     if (RegisterProtocol(PROTOCOL_NOVA_PBRPC, nova_protocol) != 0) {
         exit(1);
     }
 
     // Only valid at client side
-    Protocol public_pbrpc_protocol = { ParseNsheadMessage,
-                                       SerializePublicPbrpcRequest,
-                                       PackPublicPbrpcRequest,
-                                       NULL, ProcessPublicPbrpcResponse,
-                                       NULL, NULL, NULL,
-                                       // public_pbrpc server implementation
-                                       // doesn't support full duplex
-                                       CONNECTION_TYPE_POOLED_AND_SHORT,
-                                       "public_pbrpc" };
+    Protocol public_pbrpc_protocol = {
+        ParseNsheadMessage, SerializePublicPbrpcRequest, PackPublicPbrpcRequest,
+        NULL, ProcessPublicPbrpcResponse, NULL, NULL, NULL,
+        // public_pbrpc server implementation
+        // doesn't support full duplex
+        CONNECTION_TYPE_POOLED_AND_SHORT, "public_pbrpc"};
     if (RegisterProtocol(PROTOCOL_PUBLIC_PBRPC, public_pbrpc_protocol) != 0) {
         exit(1);
     }
 
-    Protocol sofa_protocol = { ParseSofaMessage,
-                               SerializeRequestDefault, PackSofaRequest,
-                               ProcessSofaRequest, ProcessSofaResponse,
-                               VerifySofaRequest, NULL, NULL,
-                               CONNECTION_TYPE_ALL, "sofa_pbrpc" };
+    Protocol sofa_protocol = {ParseSofaMessage,
+                              SerializeRequestDefault,
+                              PackSofaRequest,
+                              ProcessSofaRequest,
+                              ProcessSofaResponse,
+                              VerifySofaRequest,
+                              NULL,
+                              NULL,
+                              CONNECTION_TYPE_ALL,
+                              "sofa_pbrpc"};
     if (RegisterProtocol(PROTOCOL_SOFA_PBRPC, sofa_protocol) != 0) {
         exit(1);
     }
@@ -472,105 +490,148 @@ static void GlobalInitializeOrDieImpl() {
     // Only valid at server side. We generalize all the protocols that
     // prefixes with nshead as `nshead_protocol' and specify the content
     // parsing after nshead by ServerOptions.nshead_service.
-    Protocol nshead_protocol = { ParseNsheadMessage,
-                                 SerializeNsheadRequest, PackNsheadRequest,
-                                 ProcessNsheadRequest, ProcessNsheadResponse,
-                                 VerifyNsheadRequest, NULL, NULL,
-                                 CONNECTION_TYPE_POOLED_AND_SHORT, "nshead" };
+    Protocol nshead_protocol = {ParseNsheadMessage,
+                                SerializeNsheadRequest,
+                                PackNsheadRequest,
+                                ProcessNsheadRequest,
+                                ProcessNsheadResponse,
+                                VerifyNsheadRequest,
+                                NULL,
+                                NULL,
+                                CONNECTION_TYPE_POOLED_AND_SHORT,
+                                "nshead"};
     if (RegisterProtocol(PROTOCOL_NSHEAD, nshead_protocol) != 0) {
         exit(1);
     }
 
-    Protocol mc_binary_protocol = { ParseMemcacheMessage,
-                                    SerializeMemcacheRequest,
-                                    PackMemcacheRequest,
-                                    NULL, ProcessMemcacheResponse,
-                                    NULL, NULL, GetMemcacheMethodName,
-                                    CONNECTION_TYPE_ALL, "memcache" };
+    Protocol mc_binary_protocol = {ParseMemcacheMessage,
+                                   SerializeMemcacheRequest,
+                                   PackMemcacheRequest,
+                                   NULL,
+                                   ProcessMemcacheResponse,
+                                   NULL,
+                                   NULL,
+                                   GetMemcacheMethodName,
+                                   CONNECTION_TYPE_ALL,
+                                   "memcache"};
     if (RegisterProtocol(PROTOCOL_MEMCACHE, mc_binary_protocol) != 0) {
         exit(1);
     }
 
-    Protocol redis_protocol = { ParseRedisMessage,
-                                SerializeRedisRequest,
-                                PackRedisRequest,
-                                ProcessRedisRequest, ProcessRedisResponse,
-                                NULL, NULL, GetRedisMethodName,
-                                CONNECTION_TYPE_ALL, "redis" };
+    Protocol redis_protocol = {ParseRedisMessage,
+                               SerializeRedisRequest,
+                               PackRedisRequest,
+                               ProcessRedisRequest,
+                               ProcessRedisResponse,
+                               NULL,
+                               NULL,
+                               GetRedisMethodName,
+                               CONNECTION_TYPE_ALL,
+                               "redis"};
     if (RegisterProtocol(PROTOCOL_REDIS, redis_protocol) != 0) {
         exit(1);
     }
 
-    Protocol mongo_protocol = { ParseMongoMessage,
-                                NULL, NULL,
-                                ProcessMongoRequest, NULL,
-                                NULL, NULL, NULL,
-                                CONNECTION_TYPE_POOLED, "mongo" };
+    Protocol mongo_protocol = {ParseMongoMessage,
+                               NULL,
+                               NULL,
+                               ProcessMongoRequest,
+                               NULL,
+                               NULL,
+                               NULL,
+                               NULL,
+                               CONNECTION_TYPE_POOLED,
+                               "mongo"};
     if (RegisterProtocol(PROTOCOL_MONGO, mongo_protocol) != 0) {
         exit(1);
     }
 
-// Use Macro is more straight forward than weak link technology(becasue of static link issue)
+// Use Macro is more straight forward than weak link technology(becasue of
+// static link issue)
 #ifdef ENABLE_THRIFT_FRAMED_PROTOCOL
-    Protocol thrift_binary_protocol = {
-        policy::ParseThriftMessage,
-        policy::SerializeThriftRequest, policy::PackThriftRequest,
-        policy::ProcessThriftRequest, policy::ProcessThriftResponse,
-        policy::VerifyThriftRequest, NULL, NULL,
-        CONNECTION_TYPE_POOLED_AND_SHORT, "thrift" };
+    Protocol thrift_binary_protocol = {policy::ParseThriftMessage,
+                                       policy::SerializeThriftRequest,
+                                       policy::PackThriftRequest,
+                                       policy::ProcessThriftRequest,
+                                       policy::ProcessThriftResponse,
+                                       policy::VerifyThriftRequest,
+                                       NULL,
+                                       NULL,
+                                       CONNECTION_TYPE_POOLED_AND_SHORT,
+                                       "thrift"};
     if (RegisterProtocol(PROTOCOL_THRIFT, thrift_binary_protocol) != 0) {
         exit(1);
     }
 #endif
 
     // Only valid at client side
-    Protocol ubrpc_compack_protocol = {
-        ParseNsheadMessage,
-        SerializeUbrpcCompackRequest, PackUbrpcRequest,
-        NULL, ProcessUbrpcResponse,
-        NULL, NULL, NULL,
-        CONNECTION_TYPE_POOLED_AND_SHORT,  "ubrpc_compack" };
+    Protocol ubrpc_compack_protocol = {ParseNsheadMessage,
+                                       SerializeUbrpcCompackRequest,
+                                       PackUbrpcRequest,
+                                       NULL,
+                                       ProcessUbrpcResponse,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       CONNECTION_TYPE_POOLED_AND_SHORT,
+                                       "ubrpc_compack"};
     if (RegisterProtocol(PROTOCOL_UBRPC_COMPACK, ubrpc_compack_protocol) != 0) {
         exit(1);
     }
-    Protocol ubrpc_mcpack2_protocol = {
-        ParseNsheadMessage,
-        SerializeUbrpcMcpack2Request, PackUbrpcRequest,
-        NULL, ProcessUbrpcResponse,
-        NULL, NULL, NULL,
-        CONNECTION_TYPE_POOLED_AND_SHORT,  "ubrpc_mcpack2" };
+    Protocol ubrpc_mcpack2_protocol = {ParseNsheadMessage,
+                                       SerializeUbrpcMcpack2Request,
+                                       PackUbrpcRequest,
+                                       NULL,
+                                       ProcessUbrpcResponse,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       CONNECTION_TYPE_POOLED_AND_SHORT,
+                                       "ubrpc_mcpack2"};
     if (RegisterProtocol(PROTOCOL_UBRPC_MCPACK2, ubrpc_mcpack2_protocol) != 0) {
         exit(1);
     }
 
     // Only valid at client side
-    Protocol nshead_mcpack_protocol = {
-        ParseNsheadMessage,
-        SerializeNsheadMcpackRequest, PackNsheadMcpackRequest,
-        NULL, ProcessNsheadMcpackResponse,
-        NULL, NULL, NULL,
-        CONNECTION_TYPE_POOLED_AND_SHORT,  "nshead_mcpack" };
+    Protocol nshead_mcpack_protocol = {ParseNsheadMessage,
+                                       SerializeNsheadMcpackRequest,
+                                       PackNsheadMcpackRequest,
+                                       NULL,
+                                       ProcessNsheadMcpackResponse,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       CONNECTION_TYPE_POOLED_AND_SHORT,
+                                       "nshead_mcpack"};
     if (RegisterProtocol(PROTOCOL_NSHEAD_MCPACK, nshead_mcpack_protocol) != 0) {
         exit(1);
     }
 
     Protocol rtmp_protocol = {
         ParseRtmpMessage,
-        SerializeRtmpRequest, PackRtmpRequest,
-        ProcessRtmpMessage, ProcessRtmpMessage,
-        NULL, NULL, NULL,
-        (ConnectionType)(CONNECTION_TYPE_SINGLE|CONNECTION_TYPE_SHORT),
-        "rtmp" };
+        SerializeRtmpRequest,
+        PackRtmpRequest,
+        ProcessRtmpMessage,
+        ProcessRtmpMessage,
+        NULL,
+        NULL,
+        NULL,
+        (ConnectionType)(CONNECTION_TYPE_SINGLE | CONNECTION_TYPE_SHORT),
+        "rtmp"};
     if (RegisterProtocol(PROTOCOL_RTMP, rtmp_protocol) != 0) {
         exit(1);
     }
 
-    Protocol esp_protocol = {
-        ParseEspMessage,
-        SerializeEspRequest, PackEspRequest,
-        NULL, ProcessEspResponse,
-        NULL, NULL, NULL,
-        CONNECTION_TYPE_POOLED_AND_SHORT, "esp"};
+    Protocol esp_protocol = {ParseEspMessage,
+                             SerializeEspRequest,
+                             PackEspRequest,
+                             NULL,
+                             ProcessEspResponse,
+                             NULL,
+                             NULL,
+                             NULL,
+                             CONNECTION_TYPE_POOLED_AND_SHORT,
+                             "esp"};
     if (RegisterProtocol(PROTOCOL_ESP, esp_protocol) != 0) {
         exit(1);
     }
@@ -581,12 +642,12 @@ static void GlobalInitializeOrDieImpl() {
         if (protocols[i].process_response) {
             InputMessageHandler handler;
             // `process_response' is required at client side
-            handler.parse = protocols[i].parse;
+            handler.parse   = protocols[i].parse;
             handler.process = protocols[i].process_response;
             // No need to verify at client side
             handler.verify = NULL;
-            handler.arg = NULL;
-            handler.name = protocols[i].name;
+            handler.arg    = NULL;
+            handler.name   = protocols[i].name;
             if (get_or_new_client_side_messenger()->AddHandler(handler) != 0) {
                 exit(1);
             }
@@ -595,8 +656,9 @@ static void GlobalInitializeOrDieImpl() {
 
     // Concurrency Limiters
     ConcurrencyLimiterExtension()->RegisterOrDie("auto", &g_ext->auto_cl);
-    ConcurrencyLimiterExtension()->RegisterOrDie("constant", &g_ext->constant_cl);
-    
+    ConcurrencyLimiterExtension()->RegisterOrDie("constant",
+                                                 &g_ext->constant_cl);
+
     if (FLAGS_usercode_in_pthread) {
         // Optional. If channel/server are initialized before main(), this
         // flag may be false at here even if it will be set to true after
@@ -612,11 +674,11 @@ static void GlobalInitializeOrDieImpl() {
 }
 
 void GlobalInitializeOrDie() {
-    if (pthread_once(&register_extensions_once,
-                     GlobalInitializeOrDieImpl) != 0) {
+    if (pthread_once(&register_extensions_once, GlobalInitializeOrDieImpl) !=
+        0) {
         LOG(FATAL) << "Fail to pthread_once";
         exit(1);
     }
 }
 
-} // namespace brpc
+}  // namespace brpc

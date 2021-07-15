@@ -15,9 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef  BRPC_JSON2PB_RAPIDJSON_H
-#define  BRPC_JSON2PB_RAPIDJSON_H
-
+#ifndef BRPC_JSON2PB_RAPIDJSON_H
+#define BRPC_JSON2PB_RAPIDJSON_H
 
 #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)
 
@@ -33,15 +32,15 @@
 #include "butil/third_party/rapidjson/encodings.h"
 #include "butil/third_party/rapidjson/filereadstream.h"
 #include "butil/third_party/rapidjson/filewritestream.h"
+#include "butil/third_party/rapidjson/optimized_writer.h"
 #include "butil/third_party/rapidjson/prettywriter.h"
 #include "butil/third_party/rapidjson/rapidjson.h"
 #include "butil/third_party/rapidjson/reader.h"
 #include "butil/third_party/rapidjson/stringbuffer.h"
 #include "butil/third_party/rapidjson/writer.h"
-#include "butil/third_party/rapidjson/optimized_writer.h"
 
 #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)
 #pragma GCC diagnostic pop
 #endif
 
-#endif  //BRPC_JSON2PB_RAPIDJSON_H
+#endif  // BRPC_JSON2PB_RAPIDJSON_H

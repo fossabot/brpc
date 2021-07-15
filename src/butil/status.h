@@ -18,10 +18,10 @@
 #ifndef BUTIL_STATUS_H
 #define BUTIL_STATUS_H
 
-#include <stdarg.h>                       // va_list
-#include <stdlib.h>                       // free
-#include <string>                         // std::string
-#include <ostream>                        // std::ostream
+#include <stdarg.h>  // va_list
+#include <stdlib.h>  // free
+#include <ostream>   // std::ostream
+#include <string>    // std::string
 #include "butil/strings/string_piece.h"
 
 namespace butil {
@@ -49,7 +49,7 @@ public:
     };
 
     // Create a success status.
-    Status() : _state(NULL) { }
+    Status() : _state(NULL) {}
     // Return a success status.
     static Status OK() { return Status(); }
 
@@ -57,8 +57,8 @@ public:
 
     // Create a failed status.
     // error_text is formatted from `fmt' and following arguments.
-    Status(int code, const char* fmt, ...) 
-        __attribute__ ((__format__ (__printf__, 3, 4)))
+    Status(int code, const char* fmt, ...)
+        __attribute__((__format__(__printf__, 3, 4)))
         : _state(NULL) {
         va_list ap;
         va_start(ap, fmt);
@@ -75,11 +75,11 @@ public:
 
     // Reset this status to be OK.
     void reset();
-    
+
     // Reset this status to be failed.
     // Returns 0 on success, -1 otherwise and internal fields are not changed.
     int set_error(int code, const char* error_format, ...)
-        __attribute__ ((__format__ (__printf__, 3, 4)));
+        __attribute__((__format__(__printf__, 3, 4)));
     int set_error(int code, const butil::StringPiece& error_msg);
     int set_errorv(int code, const char* error_format, va_list args);
 
@@ -87,9 +87,7 @@ public:
     bool ok() const { return (_state == NULL); }
 
     // Get the error code
-    int error_code() const {
-        return (_state == NULL) ? 0 : _state->code;
-    }
+    int error_code() const { return (_state == NULL) ? 0 : _state->code; }
 
     // Return a string representation of the status.
     // Returns "OK" for success.
@@ -100,14 +98,15 @@ public:
         return (_state == NULL ? "OK" : _state->message);
     }
     butil::StringPiece error_data() const {
-        return (_state == NULL ? butil::StringPiece("OK", 2) 
-                : butil::StringPiece(_state->message, _state->size));
+        return (_state == NULL
+                    ? butil::StringPiece("OK", 2)
+                    : butil::StringPiece(_state->message, _state->size));
     }
     std::string error_str() const;
 
     void swap(butil::Status& other) { std::swap(_state, other._state); }
 
-private:    
+private:
     // OK status has a NULL _state.  Otherwise, _state is a State object
     // converted from malloc().
     State* _state;

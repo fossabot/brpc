@@ -15,24 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_EVENT_DISPATCHER_H
 #define BRPC_EVENT_DISPATCHER_H
 
-#include "butil/macros.h"                     // DISALLOW_COPY_AND_ASSIGN
-#include "bthread/types.h"                   // bthread_t, bthread_attr_t
-#include "brpc/socket.h"                     // Socket, SocketId
-
+#include "brpc/socket.h"    // Socket, SocketId
+#include "bthread/types.h"  // bthread_t, bthread_attr_t
+#include "butil/macros.h"   // DISALLOW_COPY_AND_ASSIGN
 
 namespace brpc {
 
 // Dispatch edge-triggered events of file descriptors to consumers
 // running in separate bthreads.
 class EventDispatcher {
-friend class Socket;
+    friend class Socket;
+
 public:
     EventDispatcher();
-    
+
     virtual ~EventDispatcher();
 
     // Start this dispatcher in a bthread.
@@ -64,7 +63,7 @@ public:
     // `Socket::HandleEpollOut' will be called with `socket_id'
     // Returns 0 on success, -1 otherwise and errno is set
     int AddEpollOut(SocketId socket_id, int fd, bool pollin);
-    
+
     // Remove EPOLLOUT event on `fd'. If `pollin' is true, EPOLLIN event
     // will be kept and EPOLL_CTL_MOD will be used instead of EPOLL_CTL_DEL
     // Returns 0 on success, -1 otherwise and errno is set
@@ -103,7 +102,6 @@ private:
 
 EventDispatcher& GetGlobalEventDispatcher(int fd);
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_EVENT_DISPATCHER_H

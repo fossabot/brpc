@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_FLAGS_SERVICE_H
 #define BRPC_FLAGS_SERVICE_H
 
-#include "brpc/builtin_service.pb.h"
 #include "brpc/builtin/tabbed.h"
-
+#include "brpc/builtin_service.pb.h"
 
 namespace brpc {
 
@@ -36,11 +34,8 @@ public:
 
 private:
     void set_value_page(Controller* cntl, ::google::protobuf::Closure* done);
-
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-
-#endif // BRPC_FLAGS_SERVICE_H
+#endif  // BRPC_FLAGS_SERVICE_H

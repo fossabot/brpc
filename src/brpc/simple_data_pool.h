@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_SIMPLE_DATA_POOL_H
 #define BRPC_SIMPLE_DATA_POOL_H
 
-#include "butil/scoped_lock.h"
 #include "brpc/data_factory.h"
-
+#include "butil/scoped_lock.h"
 
 namespace brpc {
 
@@ -30,7 +28,7 @@ namespace brpc {
 // memory and should be reused as much as possible, thus unlike the
 // multi-threaded allocator caching objects thread-locally, we just
 // put everything in a global list to maximize sharing. It's currently
-// used by Server to reuse session-local data. 
+// used by Server to reuse session-local data.
 class SimpleDataPool {
 public:
     struct Stat {
@@ -45,7 +43,7 @@ public:
     void* Borrow();
     void Return(void*);
     Stat stat() const;
-    
+
 private:
     butil::Mutex _mutex;
     unsigned _capacity;
@@ -55,6 +53,6 @@ private:
     const DataFactory* _factory;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_SIMPLE_DATA_POOL_H

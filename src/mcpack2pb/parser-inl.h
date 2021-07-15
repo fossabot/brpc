@@ -45,7 +45,7 @@ inline size_t InputStream::popn(size_t n) {
     _popped_bytes += saved_n - n;
     return saved_n - n;
 }
-    
+
 inline size_t InputStream::cutn(void* out, size_t n) {
     const size_t saved_n = n;
     do {
@@ -72,7 +72,7 @@ template <typename T>
 inline size_t InputStream::cut_packed_pod(T* packed_pod) {
     if (_size >= (int)sizeof(T)) {
         *packed_pod = *(T*)_data;
-        _data = (const char*)_data + sizeof(T);
+        _data       = (const char*)_data + sizeof(T);
         _size -= sizeof(T);
         _popped_bytes += sizeof(T);
         return sizeof(T);
@@ -85,7 +85,7 @@ inline T InputStream::cut_packed_pod() {
     T packed_pod;
     if (_size >= (int)sizeof(T)) {
         packed_pod = *(T*)_data;
-        _data = (const char*)_data + sizeof(T);
+        _data      = (const char*)_data + sizeof(T);
         _size -= sizeof(T);
         _popped_bytes += sizeof(T);
         return packed_pod;
@@ -93,7 +93,7 @@ inline T InputStream::cut_packed_pod() {
     cutn(&packed_pod, sizeof(T));
     return packed_pod;
 }
-    
+
 inline butil::StringPiece InputStream::ref_cut(std::string* aux, size_t n) {
     if (_size >= (int64_t)n) {
         butil::StringPiece ret((const char*)_data, n);
@@ -140,10 +140,10 @@ inline ISOArrayIterator UnparsedValue::as_iso_array() {
 }
 
 inline void ObjectIterator::init(InputStream* stream, size_t size) {
-    _field_count = 0;
-    _stream = stream;
+    _field_count           = 0;
+    _stream                = stream;
     _expected_popped_bytes = _stream->popped_bytes() + sizeof(ItemsHead);
-    _expected_popped_end = _stream->popped_bytes() + size;
+    _expected_popped_end   = _stream->popped_bytes() + size;
     ItemsHead items_head;
     if (_stream->cut_packed_pod(&items_head) != sizeof(ItemsHead)) {
         CHECK(false) << "buffer(size=" << size << ") is not enough";
@@ -154,10 +154,10 @@ inline void ObjectIterator::init(InputStream* stream, size_t size) {
 }
 
 inline void ArrayIterator::init(InputStream* stream, size_t size) {
-    _item_count = 0;
-    _stream = stream;
+    _item_count            = 0;
+    _stream                = stream;
     _expected_popped_bytes = _stream->popped_bytes() + sizeof(ItemsHead);
-    _expected_popped_end = _stream->popped_bytes() + size;
+    _expected_popped_end   = _stream->popped_bytes() + size;
     ItemsHead items_head;
     if (_stream->cut_packed_pod(&items_head) != sizeof(ItemsHead)) {
         CHECK(false) << "buffer(size=" << size << ") is not enough";
@@ -168,12 +168,12 @@ inline void ArrayIterator::init(InputStream* stream, size_t size) {
 }
 
 inline void ISOArrayIterator::init(InputStream* stream, size_t size) {
-    _buf_index = 0;
-    _buf_count = 0;
-    _stream = stream;
-    _item_type = (PrimitiveFieldType)0;
-    _item_size = 0;
-    _item_count = 0;
+    _buf_index       = 0;
+    _buf_count       = 0;
+    _stream          = stream;
+    _item_type       = (PrimitiveFieldType)0;
+    _item_size       = 0;
+    _item_count      = 0;
     _left_item_count = 0;
     IsoItemsHead items_head;
     if (_stream->cut_packed_pod(&items_head) != sizeof(IsoItemsHead)) {
@@ -184,15 +184,15 @@ inline void ISOArrayIterator::init(InputStream* stream, size_t size) {
     _item_size = get_primitive_type_size(_item_type);
     if (!_item_size) {
         CHECK(false) << "type=" << type2str(_item_type)
-                   << " in primitive isoarray is not primitive";
+                     << " in primitive isoarray is not primitive";
         return set_bad();
     }
     const size_t items_full_size = size - sizeof(IsoItemsHead);
-    _item_count = items_full_size / _item_size;
+    _item_count                  = items_full_size / _item_size;
     if (_item_count * _item_size != items_full_size) {
         CHECK(false) << "inconsistent item_count(" << _item_count
-                   << ") and value_size(" << items_full_size
-                   << "), item_size=" << _item_size;
+                     << ") and value_size(" << items_full_size
+                     << "), item_size=" << _item_size;
         return set_bad();
     }
     _left_item_count = _item_count;
@@ -211,7 +211,8 @@ inline void ISOArrayIterator::operator++() {
         set_end();
         return;
     }
-    _buf_count = std::min((uint32_t)sizeof(_item_buf) / _item_size, _left_item_count);
+    _buf_count =
+        std::min((uint32_t)sizeof(_item_buf) / _item_size, _left_item_count);
     _buf_index = 0;
     if (_stream->cutn(_item_buf, _buf_count * _item_size) !=
         _buf_count * _item_size) {

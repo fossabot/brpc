@@ -21,12 +21,12 @@
 // To brpc developers: This is a header included by user, don't depend
 // on internal structures, use opaque pointers instead.
 
-#include "butil/strings/string_piece.h"
 #include "brpc/options.pb.h"
+#include "butil/strings/string_piece.h"
 
 namespace brpc {
 
-class AdaptiveMaxConcurrency{
+class AdaptiveMaxConcurrency {
 public:
     explicit AdaptiveMaxConcurrency();
     explicit AdaptiveMaxConcurrency(int max_concurrency);
@@ -64,12 +64,13 @@ private:
     int _max_concurrency;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const AdaptiveMaxConcurrency& amc) {
+inline std::ostream& operator<<(std::ostream& os,
+                                const AdaptiveMaxConcurrency& amc) {
     return os << amc.value();
 }
 
 bool operator==(const AdaptiveMaxConcurrency& adaptive_concurrency,
-                       const butil::StringPiece& concurrency);
+                const butil::StringPiece& concurrency);
 
 inline bool operator==(const butil::StringPiece& concurrency,
                        const AdaptiveMaxConcurrency& adaptive_concurrency) {
@@ -82,11 +83,10 @@ inline bool operator!=(const AdaptiveMaxConcurrency& adaptive_concurrency,
 }
 
 inline bool operator!=(const butil::StringPiece& concurrency,
-                  const AdaptiveMaxConcurrency& adaptive_concurrency) {
+                       const AdaptiveMaxConcurrency& adaptive_concurrency) {
     return !(adaptive_concurrency == concurrency);
 }
 
 }  // namespace brpc
 
-
-#endif // BRPC_ADAPTIVE_MAX_CONCURRENCY_H
+#endif  // BRPC_ADAPTIVE_MAX_CONCURRENCY_H

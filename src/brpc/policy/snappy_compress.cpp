@@ -15,12 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "butil/logging.h"
-#include "butil/third_party/snappy/snappy.h"
 #include "brpc/policy/snappy_compress.h"
 #include "brpc/protocol.h"
-
+#include "butil/logging.h"
+#include "butil/third_party/snappy/snappy.h"
 
 namespace brpc {
 namespace policy {
@@ -37,7 +35,8 @@ bool SnappyCompress(const google::protobuf::Message& res, butil::IOBuf* buf) {
     return false;
 }
 
-bool SnappyDecompress(const butil::IOBuf& data, google::protobuf::Message* req) {
+bool SnappyDecompress(const butil::IOBuf& data,
+                      google::protobuf::Message* req) {
     butil::IOBufAsSnappySource source(data);
     butil::IOBuf binary_pb;
     butil::IOBufAsSnappySink sink(binary_pb);
@@ -61,4 +60,4 @@ bool SnappyDecompress(const butil::IOBuf& in, butil::IOBuf* out) {
 }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc

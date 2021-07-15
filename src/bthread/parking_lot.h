@@ -22,8 +22,8 @@
 #ifndef BTHREAD_PARKING_LOT_H
 #define BTHREAD_PARKING_LOT_H
 
-#include "butil/atomicops.h"
 #include "bthread/sys_futex.h"
+#include "butil/atomicops.h"
 
 namespace bthread {
 
@@ -32,10 +32,11 @@ class BAIDU_CACHELINE_ALIGNMENT ParkingLot {
 public:
     class State {
     public:
-        State(): val(0) {}
+        State() : val(0) {}
         bool stopped() const { return val & 1; }
+
     private:
-    friend class ParkingLot;
+        friend class ParkingLot;
         State(int val) : val(val) {}
         int val;
     };
@@ -60,11 +61,12 @@ public:
         futex_wait_private(&_pending_signal, expected_state.val, NULL);
     }
 
-    // Wakeup suspended wait() and make them unwaitable ever. 
+    // Wakeup suspended wait() and make them unwaitable ever.
     void stop() {
         _pending_signal.fetch_or(1);
         futex_wake_private(&_pending_signal, 10000);
     }
+
 private:
     // higher 31 bits for signalling, LSB for stopping.
     butil::atomic<int> _pending_signal;

@@ -15,39 +15,39 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <google/protobuf/descriptor.h>         // MethodDescriptor
-#include <google/protobuf/message.h>            // Message
 #include <gflags/gflags.h>
+#include <google/protobuf/descriptor.h>  // MethodDescriptor
+#include <google/protobuf/message.h>     // Message
 
-#include "butil/time.h" 
-#include "butil/iobuf.h"                        // butil::IOBuf
-#include "brpc/log.h"
-#include "brpc/controller.h"                    // Controller
-#include "brpc/socket.h"                        // Socket
-#include "brpc/server.h"                        // Server
-#include "brpc/span.h"
-#include "brpc/details/server_private_accessor.h"
+#include "brpc/controller.h"  // Controller
 #include "brpc/details/controller_private_accessor.h"
-#include "brpc/thrift_service.h"
+#include "brpc/details/server_private_accessor.h"
+#include "brpc/details/usercode_backup_pool.h"
+#include "brpc/log.h"
 #include "brpc/policy/most_common_message.h"
 #include "brpc/policy/thrift_protocol.h"
-#include "brpc/details/usercode_backup_pool.h"
+#include "brpc/server.h"  // Server
+#include "brpc/socket.h"  // Socket
+#include "brpc/span.h"
+#include "brpc/thrift_service.h"
+#include "butil/iobuf.h"  // butil::IOBuf
+#include "butil/time.h"
 
-#include <thrift/Thrift.h>
-#include <thrift/transport/TBufferTransports.h>
-#include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/TApplicationException.h>
+#include <thrift/Thrift.h>
+#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/transport/TBufferTransports.h>
 
-// _THRIFT_STDCXX_H_ is defined by thrift/stdcxx.h which was added since thrift 0.11.0
-#include <thrift/TProcessor.h> // to include stdcxx.h if present
+// _THRIFT_STDCXX_H_ is defined by thrift/stdcxx.h which was added since thrift
+// 0.11.0
+#include <thrift/TProcessor.h>  // to include stdcxx.h if present
 #ifndef THRIFT_STDCXX
- #if defined(_THRIFT_STDCXX_H_)
- # define THRIFT_STDCXX apache::thrift::stdcxx
- #else
- # define THRIFT_STDCXX boost
- # include <boost/make_shared.hpp>
- #endif
+#if defined(_THRIFT_STDCXX_H_)
+#define THRIFT_STDCXX apache::thrift::stdcxx
+#else
+#define THRIFT_STDCXX boost
+#include <boost/make_shared.hpp>
+#endif
 #endif
 
 extern "C" {
@@ -57,32 +57,30 @@ void bthread_assign_data(void* data);
 namespace brpc {
 namespace policy {
 
-static const uint32_t MAX_THRIFT_METHOD_NAME_LENGTH = 256; // reasonably large
-static const uint32_t THRIFT_HEAD_VERSION_MASK = (uint32_t)0xffffff00;
-static const uint32_t THRIFT_HEAD_VERSION_1 = (uint32_t)0x80010000;
+static const uint32_t MAX_THRIFT_METHOD_NAME_LENGTH = 256;  // reasonably large
+static const uint32_t THRIFT_HEAD_VERSION_MASK      = (uint32_t)0xffffff00;
+static const uint32_t THRIFT_HEAD_VERSION_1         = (uint32_t)0x80010000;
 struct thrift_head_t {
     uint32_t body_len;
 };
 
 // A faster implementation of TProtocol::readMessageBegin without depending
 // on thrift stuff.
-static butil::Status
-ReadThriftMessageBegin(butil::IOBuf* body,
-                       std::string* method_name,
-                       ::apache::thrift::protocol::TMessageType* mtype,
-                       uint32_t* seq_id) {
+static butil::Status ReadThriftMessageBegin(
+    butil::IOBuf* body, std::string* method_name,
+    ::apache::thrift::protocol::TMessageType* mtype, uint32_t* seq_id) {
     // Thrift protocol format:
     // Version + Message type + Length + Method + Sequence Id
     //   |             |          |        |          |
     //   3     +       1      +   4    +   >0   +     4
     uint32_t version_and_len_buf[2];
     size_t k = body->copy_to(version_and_len_buf, sizeof(version_and_len_buf));
-    if (k != sizeof(version_and_len_buf) ) {
+    if (k != sizeof(version_and_len_buf)) {
         return butil::Status(-1, "Fail to copy %" PRIu64 " bytes from body",
                              sizeof(version_and_len_buf));
     }
-    *mtype = (apache::thrift::protocol::TMessageType)
-        (ntohl(version_and_len_buf[0]) & 0x000000FF);
+    *mtype = (apache::thrift::protocol::TMessageType)(
+        ntohl(version_and_len_buf[0]) & 0x000000FF);
     const uint32_t method_name_length = ntohl(version_and_len_buf[1]);
     if (method_name_length > MAX_THRIFT_METHOD_NAME_LENGTH) {
         return butil::Status(-1, "method_name_length=%u is too long",
@@ -96,7 +94,8 @@ ReadThriftMessageBegin(butil::IOBuf* body,
     }
     method_name->assign(buf + sizeof(version_and_len_buf), method_name_length);
     // suppress strict-aliasing warning
-    uint32_t* p_seq_id = (uint32_t*)(buf + sizeof(version_and_len_buf) + method_name_length);
+    uint32_t* p_seq_id =
+        (uint32_t*)(buf + sizeof(version_and_len_buf) + method_name_length);
     *seq_id = ntohl(*p_seq_id);
     return butil::Status::OK();
 }
@@ -105,13 +104,12 @@ inline size_t ThriftMessageBeginSize(const std::string& method_name) {
     return 12 + method_name.size();
 }
 
-static void
-WriteThriftMessageBegin(char* buf,
-                        const std::string& method_name,
-                        ::apache::thrift::protocol::TMessageType mtype,
-                        uint32_t seq_id) {
+static void WriteThriftMessageBegin(
+    char* buf, const std::string& method_name,
+    ::apache::thrift::protocol::TMessageType mtype, uint32_t seq_id) {
     char* p = buf;
-    *(uint32_t*)p = htonl(THRIFT_HEAD_VERSION_1 | (((uint32_t)mtype) & 0x000000FF));
+    *(uint32_t*)p =
+        htonl(THRIFT_HEAD_VERSION_1 | (((uint32_t)mtype) & 0x000000FF));
     p += 4;
     *(uint32_t*)p = htonl(method_name.size());
     p += 4;
@@ -120,8 +118,7 @@ WriteThriftMessageBegin(char* buf,
     *p = htonl(seq_id);
 }
 
-bool ReadThriftStruct(const butil::IOBuf& body,
-                      ThriftMessageBase* raw_msg,
+bool ReadThriftStruct(const butil::IOBuf& body, ThriftMessageBase* raw_msg,
                       int16_t expected_fid) {
     const size_t body_len  = body.size();
     uint8_t* thrift_buffer = (uint8_t*)malloc(body_len);
@@ -130,7 +127,9 @@ bool ReadThriftStruct(const butil::IOBuf& body,
         THRIFT_STDCXX::make_shared<apache::thrift::transport::TMemoryBuffer>(
             thrift_buffer, body_len,
             ::apache::thrift::transport::TMemoryBuffer::TAKE_OWNERSHIP);
-    apache::thrift::protocol::TBinaryProtocolT<apache::thrift::transport::TMemoryBuffer> iprot(in_buffer);
+    apache::thrift::protocol::TBinaryProtocolT<
+        apache::thrift::transport::TMemoryBuffer>
+        iprot(in_buffer);
 
     // The following code was taken from thrift auto generate code
     std::string fname;
@@ -166,14 +165,16 @@ bool ReadThriftStruct(const butil::IOBuf& body,
 
 void ReadThriftException(const butil::IOBuf& body,
                          ::apache::thrift::TApplicationException* x) {
-    size_t body_len  = body.size();
+    size_t body_len        = body.size();
     uint8_t* thrift_buffer = (uint8_t*)malloc(body_len);
     body.copy_to(thrift_buffer, body_len);
     auto in_buffer =
         THRIFT_STDCXX::make_shared<apache::thrift::transport::TMemoryBuffer>(
             thrift_buffer, body_len,
             ::apache::thrift::transport::TMemoryBuffer::TAKE_OWNERSHIP);
-    apache::thrift::protocol::TBinaryProtocolT<apache::thrift::transport::TMemoryBuffer> iprot(in_buffer);
+    apache::thrift::protocol::TBinaryProtocolT<
+        apache::thrift::transport::TMemoryBuffer>
+        iprot(in_buffer);
 
     x->read(&iprot);
     iprot.readMessageEnd();
@@ -195,7 +196,7 @@ public:
 
 private:
     void DoRun();
-friend void ProcessThriftRequest(InputMessageBase* msg_base);
+    friend void ProcessThriftRequest(InputMessageBase* msg_base);
 
     butil::atomic<int> _run_counter;
     int64_t _received_us;
@@ -204,13 +205,9 @@ friend void ProcessThriftRequest(InputMessageBase* msg_base);
     Controller _controller;
 };
 
-inline ThriftClosure::ThriftClosure()
-    : _run_counter(1), _received_us(0) {
-}
+inline ThriftClosure::ThriftClosure() : _run_counter(1), _received_us(0) {}
 
-ThriftClosure::~ThriftClosure() {
-    LogErrorTextAndDelete(false)(&_controller);
-}
+ThriftClosure::~ThriftClosure() { LogErrorTextAndDelete(false)(&_controller); }
 
 inline void ThriftClosure::SuspendRunning() {
     _run_counter.fetch_add(1, butil::memory_order_relaxed);
@@ -239,19 +236,19 @@ void ThriftClosure::DoRun() {
         span->set_start_send_us(butil::cpuwide_time_us());
     }
     Socket* sock = accessor.get_sending_socket();
-    MethodStatus* method_status = (server->options().thrift_service ? 
-        server->options().thrift_service->_status : NULL);
-    ConcurrencyRemover concurrency_remover(method_status, &_controller, _received_us);
+    MethodStatus* method_status =
+        (server->options().thrift_service
+             ? server->options().thrift_service->_status
+             : NULL);
+    ConcurrencyRemover concurrency_remover(method_status, &_controller,
+                                           _received_us);
     if (!method_status) {
         // Judge errors belongings.
         // may not be accurate, but it does not matter too much.
         const int error_code = _controller.ErrorCode();
-        if (error_code == ENOSERVICE ||
-            error_code == ENOMETHOD ||
-            error_code == EREQUEST ||
-            error_code == ECLOSE ||
-            error_code == ELOGOFF ||
-            error_code == ELIMIT) {
+        if (error_code == ENOSERVICE || error_code == ENOMETHOD ||
+            error_code == EREQUEST || error_code == ECLOSE ||
+            error_code == ELOGOFF || error_code == ELIMIT) {
             ServerPrivateAccessor(server).AddError();
         }
     }
@@ -280,9 +277,11 @@ void ThriftClosure::DoRun() {
 
     // The following code was taken and modified from thrift auto generated code
     if (_controller.Failed()) {
-        auto out_buffer =
-            THRIFT_STDCXX::make_shared<apache::thrift::transport::TMemoryBuffer>();
-        apache::thrift::protocol::TBinaryProtocolT<apache::thrift::transport::TMemoryBuffer> oprot(out_buffer);
+        auto out_buffer = THRIFT_STDCXX::make_shared<
+            apache::thrift::transport::TMemoryBuffer>();
+        apache::thrift::protocol::TBinaryProtocolT<
+            apache::thrift::transport::TMemoryBuffer>
+            oprot(out_buffer);
         ::apache::thrift::TApplicationException x(_controller.ErrorText());
         oprot.writeMessageBegin(
             method_name, ::apache::thrift::protocol::T_EXCEPTION, seq_id);
@@ -294,18 +293,20 @@ void ThriftClosure::DoRun() {
         uint8_t* buf;
         uint32_t sz;
         out_buffer->getBuffer(&buf, &sz);
-        const thrift_head_t head = { htonl(sz) };
+        const thrift_head_t head = {htonl(sz)};
         write_buf.append(&head, sizeof(head));
         write_buf.append(buf, sz);
     } else if (_response.raw_instance()) {
-        auto out_buffer =
-            THRIFT_STDCXX::make_shared<apache::thrift::transport::TMemoryBuffer>();
-        apache::thrift::protocol::TBinaryProtocolT<apache::thrift::transport::TMemoryBuffer> oprot(out_buffer);
-        oprot.writeMessageBegin(
-            method_name, ::apache::thrift::protocol::T_REPLY, seq_id);
+        auto out_buffer = THRIFT_STDCXX::make_shared<
+            apache::thrift::transport::TMemoryBuffer>();
+        apache::thrift::protocol::TBinaryProtocolT<
+            apache::thrift::transport::TMemoryBuffer>
+            oprot(out_buffer);
+        oprot.writeMessageBegin(method_name,
+                                ::apache::thrift::protocol::T_REPLY, seq_id);
 
         uint32_t xfer = 0;
-        xfer += oprot.writeStructBegin("rpc_result"); // can be any valid name
+        xfer += oprot.writeStructBegin("rpc_result");  // can be any valid name
         xfer += oprot.writeFieldBegin("success",
                                       ::apache::thrift::protocol::T_STRUCT,
                                       THRIFT_RESPONSE_FID);
@@ -321,7 +322,7 @@ void ThriftClosure::DoRun() {
         uint8_t* buf;
         uint32_t sz;
         out_buffer->getBuffer(&buf, &sz);
-        const thrift_head_t head = { htonl(sz) };
+        const thrift_head_t head = {htonl(sz)};
         write_buf.append(&head, sizeof(head));
         write_buf.append(buf, sz);
     } else {
@@ -329,13 +330,13 @@ void ThriftClosure::DoRun() {
         char buf[sizeof(thrift_head_t) + mb_size];
         // suppress strict-aliasing warning
         thrift_head_t* head = (thrift_head_t*)buf;
-        head->body_len = htonl(mb_size + _response.body.size());
+        head->body_len      = htonl(mb_size + _response.body.size());
         WriteThriftMessageBegin(buf + sizeof(thrift_head_t), method_name,
                                 ::apache::thrift::protocol::T_REPLY, seq_id);
         write_buf.append(buf, sizeof(buf));
         write_buf.append(_response.body.movable());
     }
-    
+
     if (span) {
         span->set_response_size(write_buf.size());
     }
@@ -357,8 +358,8 @@ void ThriftClosure::DoRun() {
     }
 }
 
-ParseResult ParseThriftMessage(butil::IOBuf* source,
-                               Socket*, bool /*read_eof*/, const void* /*arg*/) {
+ParseResult ParseThriftMessage(butil::IOBuf* source, Socket*, bool /*read_eof*/,
+                               const void* /*arg*/) {
     char header_buf[sizeof(thrift_head_t) + 4];
     const size_t n = source->copy_to(header_buf, sizeof(header_buf));
     if (n < sizeof(header_buf)) {
@@ -366,14 +367,14 @@ ParseResult ParseThriftMessage(butil::IOBuf* source,
     }
 
     const uint32_t sz = ntohl(*(uint32_t*)(header_buf + sizeof(thrift_head_t)));
-    uint32_t version = sz & THRIFT_HEAD_VERSION_MASK;
+    uint32_t version  = sz & THRIFT_HEAD_VERSION_MASK;
     if (version != THRIFT_HEAD_VERSION_1) {
         RPC_VLOG << "version=" << version
                  << " doesn't match THRIFT_VERSION=" << THRIFT_HEAD_VERSION_1;
         return MakeParseError(PARSE_ERROR_TRY_OTHERS);
     }
     // suppress strict-aliasing warning
-    thrift_head_t* head = (thrift_head_t*)header_buf;
+    thrift_head_t* head     = (thrift_head_t*)header_buf;
     const uint32_t body_len = ntohl(head->body_len);
     if (body_len > FLAGS_max_body_size) {
         return MakeParseError(PARSE_ERROR_TOO_BIG_DATA);
@@ -388,10 +389,10 @@ ParseResult ParseThriftMessage(butil::IOBuf* source,
 }
 
 inline void ProcessThriftFramedRequestNoExcept(ThriftService* service,
-                                                   Controller* cntl,
-                                                   ThriftFramedMessage* req,
-                                                   ThriftFramedMessage* res,
-                                                   ThriftClosure* done) {
+                                               Controller* cntl,
+                                               ThriftFramedMessage* req,
+                                               ThriftFramedMessage* res,
+                                               ThriftClosure* done) {
     // NOTE: done is not actually run before ResumeRunning() is called so that
     // we can still set `cntl' in the catch branch.
     done->SuspendRunning();
@@ -418,12 +419,11 @@ struct CallMethodInBackupThreadArgs {
 };
 
 static void CallMethodInBackupThread(void* void_args) {
-    CallMethodInBackupThreadArgs* args = (CallMethodInBackupThreadArgs*)void_args;
-    ProcessThriftFramedRequestNoExcept(args->service,
-                                           args->controller,
-                                           args->request,
-                                           args->response,
-                                           args->done);
+    CallMethodInBackupThreadArgs* args =
+        (CallMethodInBackupThreadArgs*)void_args;
+    ProcessThriftFramedRequestNoExcept(args->service, args->controller,
+                                       args->request, args->response,
+                                       args->done);
     delete args;
 }
 
@@ -433,28 +433,29 @@ static void EndRunningCallMethodInPool(ThriftService* service,
                                        ThriftFramedMessage* response,
                                        ThriftClosure* done) {
     CallMethodInBackupThreadArgs* args = new CallMethodInBackupThreadArgs;
-    args->service = service;
-    args->controller = controller;
-    args->request = request;
-    args->response = response;
-    args->done = done;
+    args->service                      = service;
+    args->controller                   = controller;
+    args->request                      = request;
+    args->response                     = response;
+    args->done                         = done;
     return EndRunningUserCodeInPool(CallMethodInBackupThread, args);
 };
 
 void ProcessThriftRequest(InputMessageBase* msg_base) {
-    const int64_t start_parse_us = butil::cpuwide_time_us();   
+    const int64_t start_parse_us = butil::cpuwide_time_us();
 
-    DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
+    DestroyingPtr<MostCommonMessage> msg(
+        static_cast<MostCommonMessage*>(msg_base));
     SocketUniquePtr socket_guard(msg->ReleaseSocket());
-    Socket* socket = socket_guard.get();
+    Socket* socket       = socket_guard.get();
     const Server* server = static_cast<const Server*>(msg_base->arg());
     ScopedNonServiceError non_service_error(server);
 
     ThriftClosure* thrift_done = new ThriftClosure;
     ClosureGuard done_guard(thrift_done);
-    Controller* cntl = &(thrift_done->_controller);
-    ThriftFramedMessage* req = &(thrift_done->_request);
-    ThriftFramedMessage* res = &(thrift_done->_response);
+    Controller* cntl          = &(thrift_done->_controller);
+    ThriftFramedMessage* req  = &(thrift_done->_request);
+    ThriftFramedMessage* res  = &(thrift_done->_response);
     thrift_done->_received_us = msg->received_us();
 
     ServerPrivateAccessor server_accessor(server);
@@ -479,14 +480,15 @@ void ProcessThriftRequest(InputMessageBase* msg_base) {
     }
     msg->payload.swap(req->body);
     req->field_id = THRIFT_REQUEST_FID;
-    cntl->set_log_id(seq_id);    // Pass seq_id by log_id
+    cntl->set_log_id(seq_id);  // Pass seq_id by log_id
 
     ThriftService* service = server->options().thrift_service;
     if (service == NULL) {
         LOG_EVERY_SECOND(ERROR)
             << "Received thrift request however the server does not set"
-            " ServerOptions.thrift_service, close the connection.";
-        return cntl->SetFailed(EINTERNAL, "ServerOptions.thrift_service is NULL");
+               " ServerOptions.thrift_service, close the connection.";
+        return cntl->SetFailed(EINTERNAL,
+                               "ServerOptions.thrift_service is NULL");
     }
 
     // Switch to service-specific error.
@@ -495,8 +497,8 @@ void ProcessThriftRequest(InputMessageBase* msg_base) {
     if (method_status) {
         if (!method_status->OnRequested()) {
             return cntl->SetFailed(ELIMIT, "Reached %s's max_concurrency=%d",
-                            cntl->thrift_method_name().c_str(),
-                            method_status->MaxConcurrency());
+                                   cntl->thrift_method_name().c_str(),
+                                   method_status->MaxConcurrency());
         }
     }
 
@@ -521,16 +523,18 @@ void ProcessThriftRequest(InputMessageBase* msg_base) {
         return cntl->SetFailed(ELOGOFF, "Server is stopping");
     }
     if (socket->is_overcrowded()) {
-        return cntl->SetFailed(EOVERCROWDED, "Connection to %s is overcrowded",
-                butil::endpoint2str(socket->remote_side()).c_str());
+        return cntl->SetFailed(
+            EOVERCROWDED, "Connection to %s is overcrowded",
+            butil::endpoint2str(socket->remote_side()).c_str());
     }
     if (!server_accessor.AddConcurrency(cntl)) {
         return cntl->SetFailed(ELIMIT, "Reached server's max_concurrency=%d",
-                server->options().max_concurrency);
+                               server->options().max_concurrency);
     }
     if (FLAGS_usercode_in_pthread && TooManyUserCode()) {
-        return cntl->SetFailed(ELIMIT, "Too many user code to run when"
-                " -usercode_in_pthread is on");
+        return cntl->SetFailed(ELIMIT,
+                               "Too many user code to run when"
+                               " -usercode_in_pthread is on");
     }
 
     msg.reset();  // optional, just release resourse ASAP
@@ -544,11 +548,13 @@ void ProcessThriftRequest(InputMessageBase* msg_base) {
     done_guard.release();
 
     if (!FLAGS_usercode_in_pthread) {
-        return ProcessThriftFramedRequestNoExcept(service, cntl, req, res, thrift_done);
+        return ProcessThriftFramedRequestNoExcept(service, cntl, req, res,
+                                                  thrift_done);
     }
 
     if (BeginRunningUserCode()) {
-        ProcessThriftFramedRequestNoExcept(service, cntl, req, res, thrift_done);
+        ProcessThriftFramedRequestNoExcept(service, cntl, req, res,
+                                           thrift_done);
         return EndRunningUserCodeInPlace();
     } else {
         return EndRunningCallMethodInPool(service, cntl, req, res, thrift_done);
@@ -557,12 +563,13 @@ void ProcessThriftRequest(InputMessageBase* msg_base) {
 
 void ProcessThriftResponse(InputMessageBase* msg_base) {
     const int64_t start_parse_us = butil::cpuwide_time_us();
-    DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
-    
+    DestroyingPtr<MostCommonMessage> msg(
+        static_cast<MostCommonMessage*>(msg_base));
+
     // Fetch correlation id that we saved before in `PacThriftRequest'
-    const CallId cid = { static_cast<uint64_t>(msg->socket()->correlation_id()) };
+    const CallId cid = {static_cast<uint64_t>(msg->socket()->correlation_id())};
     Controller* cntl = NULL;
-    const int rc = bthread_id_lock(cid, (void**)&cntl);
+    const int rc     = bthread_id_lock(cid, (void**)&cntl);
     if (rc != 0) {
         LOG_IF(ERROR, rc != EINVAL && rc != EPERM)
             << "Fail to lock correlation_id=" << cid << ": " << berror(rc);
@@ -583,9 +590,10 @@ void ProcessThriftResponse(InputMessageBase* msg_base) {
         // The following code was taken from thrift auto generate code
         std::string fname;
         ::apache::thrift::protocol::TMessageType mtype;
-        uint32_t seq_id = 0; // unchecked
-        
-        butil::Status st = ReadThriftMessageBegin(&msg->payload, &fname, &mtype, &seq_id);
+        uint32_t seq_id = 0;  // unchecked
+
+        butil::Status st =
+            ReadThriftMessageBegin(&msg->payload, &fname, &mtype, &seq_id);
         if (!st.ok()) {
             cntl->SetFailed(ERESPONSE, "%s", st.error_cstr());
             break;
@@ -602,14 +610,15 @@ void ProcessThriftResponse(InputMessageBase* msg_base) {
             break;
         }
         if (fname != cntl->thrift_method_name()) {
-            cntl->SetFailed(ERESPONSE,
-                            "response.method_name=%s does not match request.method_name=%s",
-                            fname.c_str(), cntl->thrift_method_name().c_str());
+            cntl->SetFailed(
+                ERESPONSE,
+                "response.method_name=%s does not match request.method_name=%s",
+                fname.c_str(), cntl->thrift_method_name().c_str());
             break;
         }
 
         // Read presult
-        
+
         // MUST be ThriftFramedMessage (checked in SerializeThriftRequest)
         ThriftFramedMessage* response = (ThriftFramedMessage*)cntl->response();
         if (response) {
@@ -623,7 +632,7 @@ void ProcessThriftResponse(InputMessageBase* msg_base) {
                 msg->payload.swap(response->body);
                 response->field_id = THRIFT_RESPONSE_FID;
             }
-        } // else just ignore the response.
+        }  // else just ignore the response.
     } while (false);
 
     // Unlocks correlation_id inside. Revert controller's
@@ -647,16 +656,18 @@ void SerializeThriftRequest(butil::IOBuf* request_buf, Controller* cntl,
         return cntl->SetFailed(EREQUEST, "request is NULL");
     }
     if (req_base->GetDescriptor() != ThriftFramedMessage::descriptor()) {
-        return cntl->SetFailed(EINVAL, "Type of request must be ThriftFramedMessage");
+        return cntl->SetFailed(EINVAL,
+                               "Type of request must be ThriftFramedMessage");
     }
-    if (cntl->response() != NULL &&
-        cntl->response()->GetDescriptor() != ThriftFramedMessage::descriptor()) {
-        return cntl->SetFailed(EINVAL, "Type of response must be ThriftFramedMessage");
+    if (cntl->response() != NULL && cntl->response()->GetDescriptor() !=
+                                        ThriftFramedMessage::descriptor()) {
+        return cntl->SetFailed(EINVAL,
+                               "Type of response must be ThriftFramedMessage");
     }
 
     const std::string& method_name = cntl->thrift_method_name();
-    // we should do more check on the thrift method name, but since it is rare when
-    // the method_name is just some white space or something else
+    // we should do more check on the thrift method name, but since it is rare
+    // when the method_name is just some white space or something else
     if (method_name.empty() || method_name[0] == ' ') {
         return cntl->SetFailed(ENOMETHOD, "Invalid thrift_method_name!");
     }
@@ -668,12 +679,14 @@ void SerializeThriftRequest(butil::IOBuf* request_buf, Controller* cntl,
 
     // xxx_pargs write
     if (req->raw_instance()) {
-        auto out_buffer =
-            THRIFT_STDCXX::make_shared<apache::thrift::transport::TMemoryBuffer>();
-        apache::thrift::protocol::TBinaryProtocolT<apache::thrift::transport::TMemoryBuffer> oprot(out_buffer);
+        auto out_buffer = THRIFT_STDCXX::make_shared<
+            apache::thrift::transport::TMemoryBuffer>();
+        apache::thrift::protocol::TBinaryProtocolT<
+            apache::thrift::transport::TMemoryBuffer>
+            oprot(out_buffer);
 
-        oprot.writeMessageBegin(
-            method_name, ::apache::thrift::protocol::T_CALL, 0/*seq_id*/);
+        oprot.writeMessageBegin(method_name, ::apache::thrift::protocol::T_CALL,
+                                0 /*seq_id*/);
 
         uint32_t xfer = 0;
         char struct_begin_str[32 + method_name.size()];
@@ -686,12 +699,13 @@ void SerializeThriftRequest(butil::IOBuf* request_buf, Controller* cntl,
         p += 6;
         *p = '\0';
         xfer += oprot.writeStructBegin(struct_begin_str);
-        xfer += oprot.writeFieldBegin("request", ::apache::thrift::protocol::T_STRUCT,
+        xfer += oprot.writeFieldBegin("request",
+                                      ::apache::thrift::protocol::T_STRUCT,
                                       THRIFT_REQUEST_FID);
 
         // request's write
         xfer += req->raw_instance()->Write(&oprot);
-        
+
         xfer += oprot.writeFieldEnd();
         xfer += oprot.writeFieldStop();
         xfer += oprot.writeStructEnd();
@@ -704,7 +718,7 @@ void SerializeThriftRequest(butil::IOBuf* request_buf, Controller* cntl,
         uint32_t sz;
         out_buffer->getBuffer(&buf, &sz);
 
-        const thrift_head_t head = { htonl(sz) };
+        const thrift_head_t head = {htonl(sz)};
         request_buf->append(&head, sizeof(head));
         request_buf->append(buf, sz);
     } else {
@@ -712,22 +726,20 @@ void SerializeThriftRequest(butil::IOBuf* request_buf, Controller* cntl,
         char buf[sizeof(thrift_head_t) + mb_size];
         // suppress strict-aliasing warning
         thrift_head_t* head = (thrift_head_t*)buf;
-        head->body_len = htonl(mb_size + req->body.size());
+        head->body_len      = htonl(mb_size + req->body.size());
         WriteThriftMessageBegin(buf + sizeof(thrift_head_t), method_name,
-                                ::apache::thrift::protocol::T_CALL, 0/*seq_id*/);
+                                ::apache::thrift::protocol::T_CALL,
+                                0 /*seq_id*/);
         request_buf->append(buf, sizeof(buf));
         request_buf->append(req->body);
     }
 }
 
-void PackThriftRequest(
-    butil::IOBuf* packet_buf,
-    SocketMessage**,
-    uint64_t correlation_id,
-    const google::protobuf::MethodDescriptor*,
-    Controller* cntl,
-    const butil::IOBuf& request,
-    const Authenticator*) {
+void PackThriftRequest(butil::IOBuf* packet_buf, SocketMessage**,
+                       uint64_t correlation_id,
+                       const google::protobuf::MethodDescriptor*,
+                       Controller* cntl, const butil::IOBuf& request,
+                       const Authenticator*) {
     ControllerPrivateAccessor accessor(cntl);
     if (cntl->connection_type() == CONNECTION_TYPE_SINGLE) {
         return cntl->SetFailed(
@@ -748,5 +760,5 @@ void PackThriftRequest(
     packet_buf->append(request);
 }
 
-} // namespace policy
-} // namespace brpc
+}  // namespace policy
+}  // namespace brpc

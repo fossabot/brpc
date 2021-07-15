@@ -15,36 +15,28 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #include "brpc/simple_data_pool.h"
 
 namespace brpc {
 
 SimpleDataPool::SimpleDataPool(const DataFactory* factory)
-    : _capacity(0)
-    , _size(0)
-    , _ncreated(0)
-    , _pool(NULL)
-    , _factory(factory) {
-}
+    : _capacity(0), _size(0), _ncreated(0), _pool(NULL), _factory(factory) {}
 
-SimpleDataPool::~SimpleDataPool() {
-    Reset(NULL);
-}
+SimpleDataPool::~SimpleDataPool() { Reset(NULL); }
 
 void SimpleDataPool::Reset(const DataFactory* factory) {
-    unsigned saved_size = 0;
-    void** saved_pool = NULL;
+    unsigned saved_size              = 0;
+    void** saved_pool                = NULL;
     const DataFactory* saved_factory = NULL;
     {
         BAIDU_SCOPED_LOCK(_mutex);
-        saved_size = _size;
-        saved_pool = _pool;
+        saved_size    = _size;
+        saved_pool    = _pool;
         saved_factory = _factory;
-        _capacity = 0;
-        _size = 0;
+        _capacity     = 0;
+        _size         = 0;
         _ncreated.store(0, butil::memory_order_relaxed);
-        _pool = NULL;
+        _pool    = NULL;
         _factory = factory;
     }
     if (saved_pool) {
@@ -67,7 +59,7 @@ void SimpleDataPool::Reserve(unsigned n) {
     }
     // Resize.
     const unsigned new_cap = std::max(_capacity * 3 / 2, n);
-    void** new_pool = (void**)malloc(new_cap * sizeof(void*));
+    void** new_pool        = (void**)malloc(new_cap * sizeof(void*));
     if (NULL == new_pool) {
         return;
     }
@@ -76,15 +68,15 @@ void SimpleDataPool::Reserve(unsigned n) {
         free(_pool);
     }
     unsigned i = _capacity;
-    _capacity = new_cap;
-    _pool = new_pool;
+    _capacity  = new_cap;
+    _pool      = new_pool;
 
     for (; i < n; ++i) {
         void* data = _factory->CreateData();
         if (data == NULL) {
             break;
         }
-        _ncreated.fetch_add(1,  butil::memory_order_relaxed);
+        _ncreated.fetch_add(1, butil::memory_order_relaxed);
         _pool[_size++] = data;
     }
 }
@@ -98,7 +90,7 @@ void* SimpleDataPool::Borrow() {
     }
     void* data = _factory->CreateData();
     if (data) {
-        _ncreated.fetch_add(1,  butil::memory_order_relaxed);
+        _ncreated.fetch_add(1, butil::memory_order_relaxed);
     }
     return data;
 }
@@ -108,12 +100,12 @@ void SimpleDataPool::Return(void* data) {
         return;
     }
     if (!_factory->ResetData(data)) {
-        return _factory->DestroyData(data); 
+        return _factory->DestroyData(data);
     }
     std::unique_lock<butil::Mutex> mu(_mutex);
     if (_capacity == _size) {
         const unsigned new_cap = (_capacity <= 1 ? 128 : (_capacity * 3 / 2));
-        void** new_pool = (void**)malloc(new_cap * sizeof(void*));
+        void** new_pool        = (void**)malloc(new_cap * sizeof(void*));
         if (NULL == new_pool) {
             mu.unlock();
             return _factory->DestroyData(data);
@@ -123,15 +115,14 @@ void SimpleDataPool::Return(void* data) {
             free(_pool);
         }
         _capacity = new_cap;
-        _pool = new_pool;
+        _pool     = new_pool;
     }
     _pool[_size++] = data;
 }
 
 SimpleDataPool::Stat SimpleDataPool::stat() const {
-    Stat s = { _size, _ncreated.load(butil::memory_order_relaxed) };
+    Stat s = {_size, _ncreated.load(butil::memory_order_relaxed)};
     return s;
 }
 
-} // namespace brpc
-
+}  // namespace brpc

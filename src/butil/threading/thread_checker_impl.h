@@ -18,24 +18,24 @@ namespace butil {
 // Note: You should almost always use the ThreadChecker class to get the
 // right version for your build configuration.
 class BUTIL_EXPORT ThreadCheckerImpl {
- public:
-  ThreadCheckerImpl();
-  ~ThreadCheckerImpl();
+public:
+    ThreadCheckerImpl();
+    ~ThreadCheckerImpl();
 
-  bool CalledOnValidThread() const;
+    bool CalledOnValidThread() const;
 
-  // Changes the thread that is checked for in CalledOnValidThread.  This may
-  // be useful when an object may be created on one thread and then used
-  // exclusively on another thread.
-  void DetachFromThread();
+    // Changes the thread that is checked for in CalledOnValidThread.  This may
+    // be useful when an object may be created on one thread and then used
+    // exclusively on another thread.
+    void DetachFromThread();
 
- private:
-  void EnsureThreadIdAssigned() const;
+private:
+    void EnsureThreadIdAssigned() const;
 
-  mutable butil::Lock lock_;
-  // This is mutable so that CalledOnValidThread can set it.
-  // It's guarded by |lock_|.
-  mutable PlatformThreadRef valid_thread_id_;
+    mutable butil::Lock lock_;
+    // This is mutable so that CalledOnValidThread can set it.
+    // It's guarded by |lock_|.
+    mutable PlatformThreadRef valid_thread_id_;
 };
 
 }  // namespace butil

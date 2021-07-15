@@ -15,12 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "butil/macros.h"
-#include "butil/fast_rand.h"
-#include "brpc/socket.h"
 #include "brpc/policy/round_robin_load_balancer.h"
-
+#include "brpc/socket.h"
+#include "butil/fast_rand.h"
+#include "butil/macros.h"
 
 namespace brpc {
 namespace policy {
@@ -49,8 +47,8 @@ bool RoundRobinLoadBalancer::Add(Servers& bg, const ServerId& id) {
 bool RoundRobinLoadBalancer::Remove(Servers& bg, const ServerId& id) {
     std::map<ServerId, size_t>::iterator it = bg.server_map.find(id);
     if (it != bg.server_map.end()) {
-        const size_t index = it->second;
-        bg.server_list[index] = bg.server_list.back();
+        const size_t index                   = it->second;
+        bg.server_list[index]                = bg.server_list.back();
         bg.server_map[bg.server_list[index]] = index;
         bg.server_list.pop_back();
         bg.server_map.erase(it);
@@ -59,8 +57,8 @@ bool RoundRobinLoadBalancer::Remove(Servers& bg, const ServerId& id) {
     return false;
 }
 
-size_t RoundRobinLoadBalancer::BatchAdd(
-    Servers& bg, const std::vector<ServerId>& servers) {
+size_t RoundRobinLoadBalancer::BatchAdd(Servers& bg,
+                                        const std::vector<ServerId>& servers) {
     size_t count = 0;
     for (size_t i = 0; i < servers.size(); ++i) {
         count += !!Add(bg, servers[i]);
@@ -88,9 +86,8 @@ bool RoundRobinLoadBalancer::RemoveServer(const ServerId& id) {
 size_t RoundRobinLoadBalancer::AddServersInBatch(
     const std::vector<ServerId>& servers) {
     const size_t n = _db_servers.Modify(BatchAdd, servers);
-    LOG_IF(ERROR, n != servers.size())
-        << "Fail to AddServersInBatch, expected " << servers.size()
-        << " actually " << n;
+    LOG_IF(ERROR, n != servers.size()) << "Fail to AddServersInBatch, expected "
+                                       << servers.size() << " actually " << n;
     return n;
 }
 
@@ -112,7 +109,8 @@ int RoundRobinLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
     if (n == 0) {
         return ENODATA;
     }
-    if (_cluster_recover_policy && _cluster_recover_policy->StopRecoverIfNecessary()) {
+    if (_cluster_recover_policy &&
+        _cluster_recover_policy->StopRecoverIfNecessary()) {
         if (_cluster_recover_policy->DoReject(s->server_list)) {
             return EREJECT;
         }
@@ -124,12 +122,11 @@ int RoundRobinLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
     }
 
     for (size_t i = 0; i < n; ++i) {
-        tls.offset = (tls.offset + tls.stride) % n;
+        tls.offset        = (tls.offset + tls.stride) % n;
         const SocketId id = s->server_list[tls.offset].id;
         if (((i + 1) == n  // always take last chance
-             || !ExcludedServers::IsExcluded(in.excluded, id))
-            && Socket::Address(id, out->ptr) == 0
-            && (*out->ptr)->IsAvailable()) {
+             || !ExcludedServers::IsExcluded(in.excluded, id)) &&
+            Socket::Address(id, out->ptr) == 0 && (*out->ptr)->IsAvailable()) {
             s.tls() = tls;
             return 0;
         }
@@ -151,12 +148,10 @@ RoundRobinLoadBalancer* RoundRobinLoadBalancer::New(
     return lb;
 }
 
-void RoundRobinLoadBalancer::Destroy() {
-    delete this;
-}
+void RoundRobinLoadBalancer::Destroy() { delete this; }
 
-void RoundRobinLoadBalancer::Describe(
-    std::ostream &os, const DescribeOptions& options) {
+void RoundRobinLoadBalancer::Describe(std::ostream& os,
+                                      const DescribeOptions& options) {
     if (!options.verbose) {
         os << "rr";
         return;
@@ -179,4 +174,4 @@ bool RoundRobinLoadBalancer::SetParameters(const butil::StringPiece& params) {
 }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc

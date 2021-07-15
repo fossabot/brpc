@@ -19,8 +19,8 @@
 
 // Date: Tue Jul 10 17:40:58 CST 2012
 
-#include <signal.h>
 #include "bthread/interrupt_pthread.h"
+#include <signal.h>
 
 namespace bthread {
 
@@ -30,9 +30,7 @@ void do_nothing_handler(int) {}
 
 static pthread_once_t register_sigurg_once = PTHREAD_ONCE_INIT;
 
-static void register_sigurg() {
-    signal(SIGURG, do_nothing_handler);
-}
+static void register_sigurg() { signal(SIGURG, do_nothing_handler); }
 
 int interrupt_pthread(pthread_t th) {
     pthread_once(&register_sigurg_once, register_sigurg);

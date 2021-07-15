@@ -9,15 +9,13 @@
 namespace butil {
 
 bool NonThreadSafeImpl::CalledOnValidThread() const {
-  return thread_checker_.CalledOnValidThread();
+    return thread_checker_.CalledOnValidThread();
 }
 
-NonThreadSafeImpl::~NonThreadSafeImpl() {
-  DCHECK(CalledOnValidThread());
-}
+NonThreadSafeImpl::~NonThreadSafeImpl() { DCHECK(CalledOnValidThread()); }
 
 void NonThreadSafeImpl::DetachFromThread() {
-  thread_checker_.DetachFromThread();
+    thread_checker_.DetachFromThread();
 }
 
 }  // namespace butil

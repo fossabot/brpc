@@ -15,12 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_GRPC_H
 #define BRPC_GRPC_H
 
-#include <map>
 #include <brpc/http2.h>
+#include <map>
 
 namespace brpc {
 
@@ -142,7 +141,7 @@ enum GrpcStatus {
     GRPC_UNAUTHENTICATED,
 
     GRPC_MAX,
-}; 
+};
 
 // Get description of the error.
 const char* GrpcStatusToString(GrpcStatus);
@@ -155,7 +154,6 @@ void PercentEncode(const std::string& str, std::string* str_out);
 
 void PercentDecode(const std::string& str, std::string* str_out);
 
+}  // namespace brpc
 
-} // namespace brpc
-
-#endif // BRPC_GRPC_H
+#endif  // BRPC_GRPC_H

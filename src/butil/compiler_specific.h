@@ -22,12 +22,12 @@
 
 // MSVC_SUPPRESS_WARNING disables warning |n| for the remainder of the line and
 // for the next line of the source file.
-#define MSVC_SUPPRESS_WARNING(n) __pragma(warning(suppress:n))
+#define MSVC_SUPPRESS_WARNING(n) __pragma(warning(suppress : n))
 
 // MSVC_PUSH_DISABLE_WARNING pushes |n| onto a stack of warnings to be disabled.
 // The warning remains disabled until popped by MSVC_POP_WARNING.
-#define MSVC_PUSH_DISABLE_WARNING(n) __pragma(warning(push)) \
-                                     __pragma(warning(disable:n))
+#define MSVC_PUSH_DISABLE_WARNING(n) \
+    __pragma(warning(push)) __pragma(warning(disable : n))
 
 // MSVC_PUSH_WARNING_LEVEL pushes |n| as the global warning level.  The level
 // remains in effect until popped by MSVC_POP_WARNING().  Use 0 to disable all
@@ -52,8 +52,9 @@
 // Note that this is intended to be used only when no access to the base class'
 // static data is done through derived classes or inline methods. For more info,
 // see http://msdn.microsoft.com/en-us/library/3tdb471s(VS.80).aspx
-#define NON_EXPORTED_BASE(code) MSVC_SUPPRESS_WARNING(4275) \
-                                code
+#define NON_EXPORTED_BASE(code) \
+    MSVC_SUPPRESS_WARNING(4275) \
+    code
 
 #else  // Not MSVC
 
@@ -66,7 +67,6 @@
 #define NON_EXPORTED_BASE(code) code
 
 #endif  // COMPILER_MSVC
-
 
 // The C++ standard requires that static const members have an out-of-class
 // definition (in a single compilation unit), but MSVC chokes on this (when
@@ -114,7 +114,7 @@
 
 #ifndef BUTIL_FORCE_INLINE
 #if defined(COMPILER_MSVC)
-#define BUTIL_FORCE_INLINE    __forceinline
+#define BUTIL_FORCE_INLINE __forceinline
 #else
 #define BUTIL_FORCE_INLINE inline __attribute__((always_inline))
 #endif
@@ -148,7 +148,7 @@
 #if defined(__clang__) || defined(COMPILER_MSVC)
 #define OVERRIDE override
 #elif defined(COMPILER_GCC) && __cplusplus >= 201103 && \
-      (__GNUC__ * 10000 + __GNUC_MINOR__ * 100) >= 40700
+    (__GNUC__ * 10000 + __GNUC_MINOR__ * 100) >= 40700
 // GCC 4.7 supports explicit virtual overrides when C++11 support is enabled.
 #define OVERRIDE override
 #else
@@ -163,7 +163,7 @@
 #if defined(__clang__) || defined(COMPILER_MSVC)
 #define FINAL final
 #elif defined(COMPILER_GCC) && __cplusplus >= 201103 && \
-      (__GNUC__ * 10000 + __GNUC_MINOR__ * 100) >= 40700
+    (__GNUC__ * 10000 + __GNUC_MINOR__ * 100) >= 40700
 // GCC 4.7 supports explicit virtual overrides when C++11 support is enabled.
 #define FINAL final
 #else
@@ -176,7 +176,7 @@
 // To explicitly ignore a result, see |ignore_result()| in "butil/basictypes.h".
 // FIXME(gejun): GCC 3.4 report "unused" variable incorrectly (actually used).
 #if defined(COMPILER_GCC) && __cplusplus >= 201103 && \
-      (__GNUC__ * 10000 + __GNUC_MINOR__ * 100) >= 40700
+    (__GNUC__ * 10000 + __GNUC_MINOR__ * 100) >= 40700
 #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #else
 #define WARN_UNUSED_RESULT
@@ -208,7 +208,7 @@
 // Mark a memory region fully initialized.
 // Use this to annotate code that deliberately reads uninitialized data, for
 // example a GC scavenging root set pointers from the stack.
-#define MSAN_UNPOISON(p, s)  __msan_unpoison(p, s)
+#define MSAN_UNPOISON(p, s) __msan_unpoison(p, s)
 #else  // MEMORY_SANITIZER
 #define MSAN_UNPOISON(p, s)
 #endif  // MEMORY_SANITIZER
@@ -226,57 +226,57 @@
 // We can't remove the BAIDU_ prefix because the name is likely to conflict,
 // namely kylin already has the macro.
 #if defined(COMPILER_GCC)
-#  if defined(__cplusplus)
-#    define BAIDU_LIKELY(expr) (__builtin_expect((bool)(expr), true))
-#    define BAIDU_UNLIKELY(expr) (__builtin_expect((bool)(expr), false))
-#  else
-#    define BAIDU_LIKELY(expr) (__builtin_expect(!!(expr), 1))
-#    define BAIDU_UNLIKELY(expr) (__builtin_expect(!!(expr), 0))
-#  endif
+#if defined(__cplusplus)
+#define BAIDU_LIKELY(expr) (__builtin_expect((bool)(expr), true))
+#define BAIDU_UNLIKELY(expr) (__builtin_expect((bool)(expr), false))
 #else
-#  define BAIDU_LIKELY(expr) (expr)
-#  define BAIDU_UNLIKELY(expr) (expr)
+#define BAIDU_LIKELY(expr) (__builtin_expect(!!(expr), 1))
+#define BAIDU_UNLIKELY(expr) (__builtin_expect(!!(expr), 0))
+#endif
+#else
+#define BAIDU_LIKELY(expr) (expr)
+#define BAIDU_UNLIKELY(expr) (expr)
 #endif
 
 // BAIDU_DEPRECATED void dont_call_me_anymore(int arg);
 // ...
 // warning: 'void dont_call_me_anymore(int)' is deprecated
 #if defined(COMPILER_GCC)
-# define BAIDU_DEPRECATED __attribute__((deprecated))
+#define BAIDU_DEPRECATED __attribute__((deprecated))
 #elif defined(COMPILER_MSVC)
-# define BAIDU_DEPRECATED __declspec(deprecated)
+#define BAIDU_DEPRECATED __declspec(deprecated)
 #else
-# define BAIDU_DEPRECATED
+#define BAIDU_DEPRECATED
 #endif
 
 // Mark function as weak. This is GCC only feature.
 #if defined(COMPILER_GCC)
-# define BAIDU_WEAK __attribute__((weak))
+#define BAIDU_WEAK __attribute__((weak))
 #else
-# define BAIDU_WEAK
+#define BAIDU_WEAK
 #endif
 
 // Cacheline related --------------------------------------
 #define BAIDU_CACHELINE_SIZE 64
 
 #ifdef _MSC_VER
-# define BAIDU_CACHELINE_ALIGNMENT __declspec(align(BAIDU_CACHELINE_SIZE))
+#define BAIDU_CACHELINE_ALIGNMENT __declspec(align(BAIDU_CACHELINE_SIZE))
 #endif /* _MSC_VER */
 
 #ifdef __GNUC__
-# define BAIDU_CACHELINE_ALIGNMENT __attribute__((aligned(BAIDU_CACHELINE_SIZE)))
+#define BAIDU_CACHELINE_ALIGNMENT __attribute__((aligned(BAIDU_CACHELINE_SIZE)))
 #endif /* __GNUC__ */
 
 #ifndef BAIDU_CACHELINE_ALIGNMENT
-# define BAIDU_CACHELINE_ALIGNMENT /*BAIDU_CACHELINE_ALIGNMENT*/
+#define BAIDU_CACHELINE_ALIGNMENT /*BAIDU_CACHELINE_ALIGNMENT*/
 #endif
 
 #ifndef BAIDU_NOEXCEPT
-# if defined(BUTIL_CXX11_ENABLED)
-#  define BAIDU_NOEXCEPT noexcept
-# else
-#  define BAIDU_NOEXCEPT
-# endif
+#if defined(BUTIL_CXX11_ENABLED)
+#define BAIDU_NOEXCEPT noexcept
+#else
+#define BAIDU_NOEXCEPT
+#endif
 #endif
 
 #endif  // BUTIL_COMPILER_SPECIFIC_H_

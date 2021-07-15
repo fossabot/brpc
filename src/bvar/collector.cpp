@@ -17,11 +17,11 @@
 
 // Date: Mon Dec 14 19:12:30 CST 2015
 
-#include <map>
+#include "bvar/collector.h"
 #include <gflags/gflags.h>
+#include <map>
 #include "butil/memory/singleton_on_pthread_once.h"
 #include "bvar/bvar.h"
-#include "bvar/collector.h"
 
 namespace bvar {
 
@@ -34,14 +34,14 @@ DEFINE_int32(bvar_collector_expected_per_second, 1000,
              "Expected number of samples to be collected per second");
 
 // CAUTION: Don't change this value unless you know exactly what it means.
-static const int64_t COLLECTOR_GRAB_INTERVAL_US = 100000L; // 100ms
+static const int64_t COLLECTOR_GRAB_INTERVAL_US = 100000L;  // 100ms
 
 BAIDU_CASSERT(!(COLLECTOR_SAMPLING_BASE & (COLLECTOR_SAMPLING_BASE - 1)),
               must_be_power_of_2);
 
 // Combine two circular linked list into one.
 struct CombineCollected {
-    void operator()(Collected* & s1, Collected* s2) const {
+    void operator()(Collected*& s1, Collected* s2) const {
         if (s2 == NULL) {
             return;
         }
@@ -89,15 +89,15 @@ private:
         Collector* d = static_cast<Collector*>(arg);
         return d->_ngrab - d->_ndump - d->_ndrop;
     }
-    
+
 private:
     // periodically modified by grab_thread, accessed by every submit.
     // Make sure that this cacheline does not include frequently modified field.
     int64_t _last_active_cpuwide_us;
-    
-    bool _created;      // Mark validness of _grab_thread.
-    bool _stop;         // Set to true in dtor.
-    pthread_t _grab_thread;     // For joining.
+
+    bool _created;           // Mark validness of _grab_thread.
+    bool _stop;              // Set to true in dtor.
+    pthread_t _grab_thread;  // For joining.
     pthread_t _dump_thread;
     int64_t _ngrab BAIDU_CACHELINE_ALIGNMENT;
     int64_t _ndrop;
@@ -148,10 +148,11 @@ static T deref_value(void* arg) {
 }
 
 // for limiting samples returning NULL in speed_limit()
-static CollectorSpeedLimit g_null_speed_limit = BVAR_COLLECTOR_SPEED_LIMIT_INITIALIZER;
+static CollectorSpeedLimit g_null_speed_limit =
+    BVAR_COLLECTOR_SPEED_LIMIT_INITIALIZER;
 
 void Collector::grab_thread() {
-    _last_active_cpuwide_us = butil::cpuwide_time_us();
+    _last_active_cpuwide_us       = butil::cpuwide_time_us();
     int64_t last_before_update_sl = _last_active_cpuwide_us;
 
     // This is the thread for collecting TLS submissions. User's callbacks are
@@ -164,7 +165,8 @@ void Collector::grab_thread() {
     bvar::PassiveStatus<int64_t> pending_sampled_data(
         "bvar_collector_pending_samples", get_pending_count, this);
     double busy_seconds = 0;
-    bvar::PassiveStatus<double> busy_seconds_var(deref_value<double>, &busy_seconds);
+    bvar::PassiveStatus<double> busy_seconds_var(deref_value<double>,
+                                                 &busy_seconds);
     bvar::PerSecond<bvar::PassiveStatus<double> > busy_seconds_second(
         "bvar_collector_grab_thread_usage", &busy_seconds_var);
 
@@ -183,11 +185,12 @@ void Collector::grab_thread() {
 
     // The main loop.
     while (!_stop) {
-        const int64_t abstime = _last_active_cpuwide_us + COLLECTOR_GRAB_INTERVAL_US;
+        const int64_t abstime =
+            _last_active_cpuwide_us + COLLECTOR_GRAB_INTERVAL_US;
 
         // Clear and reuse vectors in prep_map, don't clear prep_map directly.
-        for (PreprocessorMap::iterator it = prep_map.begin(); it != prep_map.end();
-             ++it) {
+        for (PreprocessorMap::iterator it = prep_map.begin();
+             it != prep_map.end(); ++it) {
             it->second.clear();
         }
 
@@ -197,9 +200,10 @@ void Collector::grab_thread() {
             butil::LinkNode<Collected> tmp_root;
             head->InsertBeforeAsList(&tmp_root);
             head = NULL;
-            
+
             // Group samples by preprocessors.
-            for (butil::LinkNode<Collected>* p = tmp_root.next(); p != &tmp_root;) {
+            for (butil::LinkNode<Collected>* p = tmp_root.next();
+                 p != &tmp_root;) {
                 butil::LinkNode<Collected>* saved_next = p->next();
                 p->RemoveFromList();
                 CollectorPreprocessor* prep = p->value()->preprocessor();
@@ -210,7 +214,7 @@ void Collector::grab_thread() {
             butil::LinkNode<Collected> root;
             for (PreprocessorMap::iterator it = prep_map.begin();
                  it != prep_map.end(); ++it) {
-                std::vector<Collected*> & list = it->second;
+                std::vector<Collected*>& list = it->second;
                 if (it->second.empty()) {
                     // don't call preprocessor when there's no samples.
                     continue;
@@ -219,7 +223,7 @@ void Collector::grab_thread() {
                     it->first->process(list);
                 }
                 for (size_t i = 0; i < list.size(); ++i) {
-                    Collected* p = list[i];
+                    Collected* p                     = list[i];
                     CollectorSpeedLimit* speed_limit = p->speed_limit();
                     if (speed_limit == NULL) {
                         ++ngrab_map[&g_null_speed_limit];
@@ -230,8 +234,9 @@ void Collector::grab_thread() {
                     // Drop samples if dump_thread is too busy.
                     // FIXME: equal probabilities to drop.
                     ++_ngrab;
-                    if (_ngrab >= _ndrop + _ndump +
-                        FLAGS_bvar_collector_max_pending_samples) {
+                    if (_ngrab >=
+                        _ndrop + _ndump +
+                            FLAGS_bvar_collector_max_pending_samples) {
                         ++_ndrop;
                         p->destroy();
                     } else {
@@ -248,15 +253,15 @@ void Collector::grab_thread() {
                 pthread_cond_signal(&_dump_thread_cond);
             }
         }
-        int64_t now = butil::cpuwide_time_us();
-        int64_t interval = now - last_before_update_sl;
+        int64_t now           = butil::cpuwide_time_us();
+        int64_t interval      = now - last_before_update_sl;
         last_before_update_sl = now;
-        for (GrapMap::iterator it = ngrab_map.begin();
-             it != ngrab_map.end(); ++it) {
+        for (GrapMap::iterator it = ngrab_map.begin(); it != ngrab_map.end();
+             ++it) {
             update_speed_limit(it->first, &last_ngrab_map[it->first],
                                it->second, interval);
         }
-        
+
         now = butil::cpuwide_time_us();
         // calcuate thread usage.
         busy_seconds += (now - _last_active_cpuwide_us) / 1000000.0;
@@ -274,7 +279,7 @@ void Collector::grab_thread() {
     // make sure _stop is true, we may have other reasons to quit above loop
     {
         BAIDU_SCOPED_LOCK(_dump_thread_mutex);
-        _stop = true; 
+        _stop = true;
         pthread_cond_signal(&_dump_thread_cond);
     }
     CHECK_EQ(0, pthread_join(_dump_thread, NULL));
@@ -287,9 +292,8 @@ void Collector::wakeup_grab_thread() {
 }
 
 // Adjust speed_limit to match collected samples per second
-void Collector::update_speed_limit(CollectorSpeedLimit* sl,
-                                   size_t* last_ngrab, size_t cur_ngrab,
-                                   int64_t interval_us) {
+void Collector::update_speed_limit(CollectorSpeedLimit* sl, size_t* last_ngrab,
+                                   size_t cur_ngrab, int64_t interval_us) {
     // FIXME: May become too large at startup.
     const size_t round_ngrab = cur_ngrab - *last_ngrab;
     if (round_ngrab == 0) {
@@ -299,7 +303,7 @@ void Collector::update_speed_limit(CollectorSpeedLimit* sl,
     if (interval_us < 0) {
         interval_us = 0;
     }
-    size_t new_sampling_range = 0;
+    size_t new_sampling_range       = 0;
     const size_t old_sampling_range = sl->sampling_range;
     if (!sl->ever_grabbed) {
         if (sl->first_sample_real_us) {
@@ -312,17 +316,20 @@ void Collector::update_speed_limit(CollectorSpeedLimit* sl,
             // use the default interval which may make the calculated
             // sampling_range larger.
         }
-        new_sampling_range = FLAGS_bvar_collector_expected_per_second
-            * interval_us * COLLECTOR_SAMPLING_BASE / (1000000L * round_ngrab);
+        new_sampling_range = FLAGS_bvar_collector_expected_per_second *
+                             interval_us * COLLECTOR_SAMPLING_BASE /
+                             (1000000L * round_ngrab);
     } else {
         // NOTE: the multiplications are unlikely to overflow.
-        new_sampling_range = FLAGS_bvar_collector_expected_per_second
-            * interval_us * old_sampling_range / (1000000L * round_ngrab);
+        new_sampling_range = FLAGS_bvar_collector_expected_per_second *
+                             interval_us * old_sampling_range /
+                             (1000000L * round_ngrab);
         // Don't grow or shrink too fast.
         if (interval_us < 1000000L) {
             new_sampling_range =
                 (new_sampling_range * interval_us +
-                 old_sampling_range * (1000000L - interval_us)) / 1000000L;
+                 old_sampling_range * (1000000L - interval_us)) /
+                1000000L;
         }
     }
     // Make sure new value is sane.
@@ -333,7 +340,7 @@ void Collector::update_speed_limit(CollectorSpeedLimit* sl,
     }
 
     // NOTE: don't update unmodified fields in sl to avoid meaningless
-    // flushing of the cacheline. 
+    // flushing of the cacheline.
     if (new_sampling_range != old_sampling_range) {
         sl->sampling_range = new_sampling_range;
     }
@@ -344,8 +351,8 @@ void Collector::update_speed_limit(CollectorSpeedLimit* sl,
 
 size_t is_collectable_before_first_time_grabbed(CollectorSpeedLimit* sl) {
     if (!sl->ever_grabbed) {
-        int before_add = sl->count_before_grabbed.fetch_add(
-            1, butil::memory_order_relaxed);
+        int before_add =
+            sl->count_before_grabbed.fetch_add(1, butil::memory_order_relaxed);
         if (before_add == 0) {
             sl->first_sample_real_us = butil::gettimeofday_us();
         } else if (before_add >= FLAGS_bvar_collector_expected_per_second) {
@@ -361,7 +368,8 @@ void Collector::dump_thread() {
 
     // vars
     double busy_seconds = 0;
-    bvar::PassiveStatus<double> busy_seconds_var(deref_value<double>, &busy_seconds);
+    bvar::PassiveStatus<double> busy_seconds_var(deref_value<double>,
+                                                 &busy_seconds);
     bvar::PerSecond<bvar::PassiveStatus<double> > busy_seconds_second(
         "bvar_collector_dump_thread_usage", &busy_seconds_var);
 
@@ -395,7 +403,8 @@ void Collector::dump_thread() {
         newhead->InsertBeforeAsList(&root);
 
         // Call callbacks.
-        for (butil::LinkNode<Collected>* p = root.next(); !_stop && p != &root;) {
+        for (butil::LinkNode<Collected>* p = root.next();
+             !_stop && p != &root;) {
             // We remove p from the list, save next first.
             butil::LinkNode<Collected>* saved_next = p->next();
             p->RemoveFromList();
@@ -412,9 +421,10 @@ void Collected::submit(int64_t cpuwide_us) {
     // Destroy the sample in-place if the grab_thread did not run for twice
     // of the normal interval. This also applies to the situation that
     // grab_thread aborts due to severe errors.
-    // Collector::_last_active_cpuwide_us is periodically modified by grab_thread,
-    // cache bouncing is tolerable.
-    if (cpuwide_us < d->last_active_cpuwide_us() + COLLECTOR_GRAB_INTERVAL_US * 2) {
+    // Collector::_last_active_cpuwide_us is periodically modified by
+    // grab_thread, cache bouncing is tolerable.
+    if (cpuwide_us <
+        d->last_active_cpuwide_us() + COLLECTOR_GRAB_INTERVAL_US * 2) {
         *d << this;
     } else {
         destroy();
@@ -423,12 +433,11 @@ void Collected::submit(int64_t cpuwide_us) {
 
 static double get_sampling_ratio(void* arg) {
     return ((const CollectorSpeedLimit*)arg)->sampling_range /
-        (double)COLLECTOR_SAMPLING_BASE;
+           (double)COLLECTOR_SAMPLING_BASE;
 }
 
 DisplaySamplingRatio::DisplaySamplingRatio(const char* name,
                                            const CollectorSpeedLimit* sl)
-    : _var(name, get_sampling_ratio, (void*)sl) {
-}
+    : _var(name, get_sampling_ratio, (void*)sl) {}
 
 }  // namespace bvar

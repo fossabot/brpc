@@ -22,13 +22,13 @@
 #ifndef BTHREAD_TASK_GROUP_H
 #define BTHREAD_TASK_GROUP_H
 
-#include "butil/time.h"                             // cpuwide_time_ns
-#include "bthread/task_control.h"
-#include "bthread/task_meta.h"                     // bthread_t, TaskMeta
-#include "bthread/work_stealing_queue.h"           // WorkStealingQueue
-#include "bthread/remote_task_queue.h"             // RemoteTaskQueue
-#include "butil/resource_pool.h"                    // ResourceId
 #include "bthread/parking_lot.h"
+#include "bthread/remote_task_queue.h"  // RemoteTaskQueue
+#include "bthread/task_control.h"
+#include "bthread/task_meta.h"            // bthread_t, TaskMeta
+#include "bthread/work_stealing_queue.h"  // WorkStealingQueue
+#include "butil/resource_pool.h"          // ResourceId
+#include "butil/time.h"                   // cpuwide_time_ns
 
 namespace bthread {
 
@@ -37,12 +37,9 @@ class ExitException : public std::exception {
 public:
     explicit ExitException(void* value) : _value(value) {}
     ~ExitException() throw() {}
-    const char* what() const throw() override {
-        return "ExitException";
-    }
-    void* value() const {
-        return _value;
-    }
+    const char* what() const throw() override { return "ExitException"; }
+    void* value() const { return _value; }
+
 private:
     void* _value;
 };
@@ -57,11 +54,9 @@ public:
     // the identifier into `tid'. Switch to the new task and schedule old task
     // to run.
     // Return 0 on success, errno otherwise.
-    static int start_foreground(TaskGroup** pg,
-                                bthread_t* __restrict tid,
+    static int start_foreground(TaskGroup** pg, bthread_t* __restrict tid,
                                 const bthread_attr_t* __restrict attr,
-                                void * (*fn)(void*),
-                                void* __restrict arg);
+                                void* (*fn)(void*), void* __restrict arg);
 
     // Create task `fn(arg)' with attributes `attr' in this TaskGroup, put the
     // identifier into `tid'. Schedule the new thread to run.
@@ -71,8 +66,7 @@ public:
     template <bool REMOTE>
     int start_background(bthread_t* __restrict tid,
                          const bthread_attr_t* __restrict attr,
-                         void * (*fn)(void*),
-                         void* __restrict arg);
+                         void* (*fn)(void*), void* __restrict arg);
 
     // Suspend caller and run next bthread in TaskGroup *pg.
     static void sched(TaskGroup** pg);
@@ -90,10 +84,10 @@ public:
     // the target to be suspended already.
     typedef void (*RemainedFn)(void*);
     void set_remained(RemainedFn cb, void* arg) {
-        _last_context_remained = cb;
+        _last_context_remained     = cb;
         _last_context_remained_arg = arg;
     }
-    
+
     // Suspend caller for at least |timeout_us| microseconds.
     // If |timeout_us| is 0, this function does nothing.
     // If |group| is NULL or current thread is non-bthread, call usleep(3)
@@ -138,14 +132,16 @@ public:
     TaskMeta* current_task() const { return _cur_meta; }
     bthread_t current_tid() const { return _cur_meta->tid; }
     // Uptime of current task in nanoseconds.
-    int64_t current_uptime_ns() const
-    { return butil::cpuwide_time_ns() - _cur_meta->cpuwide_start_ns; }
+    int64_t current_uptime_ns() const {
+        return butil::cpuwide_time_ns() - _cur_meta->cpuwide_start_ns;
+    }
 
     // True iff current task is the one running run_main_task()
     bool is_current_main_task() const { return current_tid() == _main_tid; }
     // True iff current task is in pthread-mode.
-    bool is_current_pthread_task() const
-    { return _cur_meta->stack == _main_stack; }
+    bool is_current_pthread_task() const {
+        return _cur_meta->stack == _main_stack;
+    }
 
     // Active time in nanoseconds spent by this TaskGroup.
     int64_t cumulated_cputime_ns() const { return _cumulated_cputime_ns; }
@@ -183,7 +179,7 @@ public:
     void push_rq(bthread_t tid);
 
 private:
-friend class TaskControl;
+    friend class TaskControl;
 
     // You shall use TaskControl::create_group to create new instance.
     explicit TaskGroup(TaskControl*);
@@ -226,7 +222,7 @@ friend class TaskControl;
 #endif
 
     TaskMeta* _cur_meta;
-    
+
     // the control that this group belongs to
     TaskControl* _control;
     int _num_nosignal;

@@ -15,24 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_CHANNEL_BASE_H
 #define BRPC_CHANNEL_BASE_H
 
+#include <google/protobuf/service.h>  // google::protobuf::RpcChannel
 #include <stdlib.h>
 #include <ostream>
-#include "butil/logging.h"
-#include <google/protobuf/service.h>            // google::protobuf::RpcChannel
 #include "brpc/describable.h"
+#include "butil/logging.h"
 
 // To brpc developers: This is a header included by user, don't depend
 // on internal structures, use opaque pointers instead.
 
-
 namespace brpc {
 
 // Base of all brpc channels.
-class ChannelBase : public google::protobuf::RpcChannel/*non-copyable*/,
+class ChannelBase : public google::protobuf::RpcChannel /*non-copyable*/,
                     public Describable {
 public:
     virtual int Weight() {
@@ -43,7 +41,6 @@ public:
     virtual int CheckHealth() = 0;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_CHANNEL_BASE_H

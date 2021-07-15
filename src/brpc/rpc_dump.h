@@ -15,15 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_RPC_DUMP_H
 #define BRPC_RPC_DUMP_H
 
 #include <gflags/gflags_declare.h>
-#include "butil/iobuf.h"                            // IOBuf
-#include "butil/files/file_path.h"                  // FilePath
+#include "brpc/rpc_dump.pb.h"       // RpcDumpMeta
+#include "butil/files/file_path.h"  // FilePath
+#include "butil/iobuf.h"            // IOBuf
 #include "bvar/collector.h"
-#include "brpc/rpc_dump.pb.h"                       // RpcDumpMeta
 
 namespace butil {
 class FileEnumerator;
@@ -93,14 +92,13 @@ private:
     // Parse on request from the buf. Set `format_error' to true when
     // the buf does not match the format.
     static SampledRequest* Pop(butil::IOBuf& buf, bool* format_error);
-    
+
     butil::IOPortal _cur_buf;
     int _cur_fd;
     butil::FileEnumerator* _enum;
     butil::FilePath _dir;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_RPC_DUMP_H

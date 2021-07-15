@@ -15,11 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "brpc/http2.h"
 #include <limits>
-#include "butil/logging.h"
 #include "brpc/details/hpack.h"
 #include "brpc/errno.pb.h"
-#include "brpc/http2.h"
+#include "butil/logging.h"
 
 namespace brpc {
 
@@ -30,17 +30,18 @@ H2Settings::H2Settings()
     , stream_window_size(256 * 1024)
     , connection_window_size(1024 * 1024)
     , max_frame_size(DEFAULT_MAX_FRAME_SIZE)
-    , max_header_list_size(std::numeric_limits<uint32_t>::max()) {
-}
+    , max_header_list_size(std::numeric_limits<uint32_t>::max()) {}
 
 bool H2Settings::IsValid(bool log_error) const {
     if (stream_window_size > MAX_WINDOW_SIZE) {
-        LOG_IF(ERROR, log_error) << "Invalid stream_window_size=" << stream_window_size;
+        LOG_IF(ERROR, log_error)
+            << "Invalid stream_window_size=" << stream_window_size;
         return false;
     }
     if (connection_window_size < DEFAULT_INITIAL_WINDOW_SIZE ||
         connection_window_size > MAX_WINDOW_SIZE) {
-        LOG_IF(ERROR, log_error) << "Invalid connection_window_size=" << connection_window_size;
+        LOG_IF(ERROR, log_error)
+            << "Invalid connection_window_size=" << connection_window_size;
         return false;
     }
     if (max_frame_size < DEFAULT_MAX_FRAME_SIZE ||
@@ -60,27 +61,40 @@ std::ostream& operator<<(std::ostream& os, const H2Settings& s) {
         os << " conn_window_size=" << s.connection_window_size;
     }
     os << " max_frame_size=" << s.max_frame_size
-       << " max_header_list_size=" << s.max_header_list_size
-       << '}';
+       << " max_header_list_size=" << s.max_header_list_size << '}';
     return os;
 }
 
 const char* H2ErrorToString(H2Error e) {
     switch (e) {
-    case H2_NO_ERROR: return "NO_ERROR";
-    case H2_PROTOCOL_ERROR: return "PROTOCOL_ERROR";
-    case H2_INTERNAL_ERROR: return "INTERNAL_ERROR";
-    case H2_FLOW_CONTROL_ERROR: return "FLOW_CONTROL_ERROR";
-    case H2_SETTINGS_TIMEOUT: return "SETTINGS_TIMEOUT";
-    case H2_STREAM_CLOSED_ERROR: return "STREAM_CLOSED";
-    case H2_FRAME_SIZE_ERROR: return "FRAME_SIZE_ERROR";
-    case H2_REFUSED_STREAM: return "REFUSED_STREAM";
-    case H2_CANCEL: return "CANCEL";
-    case H2_COMPRESSION_ERROR: return "COMPRESSION_ERROR";
-    case H2_CONNECT_ERROR: return "CONNECT_ERROR";
-    case H2_ENHANCE_YOUR_CALM: return "ENHANCE_YOUR_CALM";
-    case H2_INADEQUATE_SECURITY: return "INADEQUATE_SECURITY";
-    case H2_HTTP_1_1_REQUIRED: return "HTTP_1_1_REQUIRED";
+    case H2_NO_ERROR:
+        return "NO_ERROR";
+    case H2_PROTOCOL_ERROR:
+        return "PROTOCOL_ERROR";
+    case H2_INTERNAL_ERROR:
+        return "INTERNAL_ERROR";
+    case H2_FLOW_CONTROL_ERROR:
+        return "FLOW_CONTROL_ERROR";
+    case H2_SETTINGS_TIMEOUT:
+        return "SETTINGS_TIMEOUT";
+    case H2_STREAM_CLOSED_ERROR:
+        return "STREAM_CLOSED";
+    case H2_FRAME_SIZE_ERROR:
+        return "FRAME_SIZE_ERROR";
+    case H2_REFUSED_STREAM:
+        return "REFUSED_STREAM";
+    case H2_CANCEL:
+        return "CANCEL";
+    case H2_COMPRESSION_ERROR:
+        return "COMPRESSION_ERROR";
+    case H2_CONNECT_ERROR:
+        return "CONNECT_ERROR";
+    case H2_ENHANCE_YOUR_CALM:
+        return "ENHANCE_YOUR_CALM";
+    case H2_INADEQUATE_SECURITY:
+        return "INADEQUATE_SECURITY";
+    case H2_HTTP_1_1_REQUIRED:
+        return "HTTP_1_1_REQUIRED";
     }
     return "Unknown-H2Error";
 }
@@ -112,4 +126,4 @@ int H2ErrorToStatusCode(H2Error e) {
     return HTTP_STATUS_INTERNAL_SERVER_ERROR;
 }
 
-} // namespace brpc
+}  // namespace brpc

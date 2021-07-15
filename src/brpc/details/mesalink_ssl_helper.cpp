@@ -15,22 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifdef USE_MESALINK
 
-#include <sys/socket.h>                // recv
-#include <mesalink/openssl/ssl.h>
-#include <mesalink/openssl/err.h>
-#include <mesalink/openssl/x509.h>
 #include <mesalink/openssl/bio.h>
+#include <mesalink/openssl/err.h>
 #include <mesalink/openssl/evp.h>
 #include <mesalink/openssl/pem.h>
-#include "butil/unique_ptr.h"
-#include "butil/logging.h"
-#include "butil/string_splitter.h"
+#include <mesalink/openssl/ssl.h>
+#include <mesalink/openssl/x509.h>
+#include <sys/socket.h>  // recv
+#include "brpc/details/ssl_helper.h"
 #include "brpc/socket.h"
 #include "brpc/ssl_options.h"
-#include "brpc/details/ssl_helper.h"
+#include "butil/logging.h"
+#include "butil/string_splitter.h"
+#include "butil/unique_ptr.h"
 
 namespace brpc {
 
@@ -40,7 +39,7 @@ static bool IsPemString(const std::string& input) {
     for (const char* s = input.c_str(); *s != '\0'; ++s) {
         if (*s != '\n') {
             return strncmp(s, PEM_START, strlen(PEM_START)) == 0;
-        } 
+        }
     }
     return false;
 }
@@ -66,11 +65,12 @@ static int ParseSSLProtocols(const std::string& str_protocol) {
     for (; sp; ++sp) {
         butil::StringPiece protocol(sp.field(), sp.length());
         protocol.trim_spaces();
-        if (strncasecmp(protocol.data(), "SSLv3", protocol.size()) == 0
-            || strncasecmp(protocol.data(), "TLSv1", protocol.size()) == 0
-            || strncasecmp(protocol.data(), "TLSv1.1", protocol.size()) == 0) {
+        if (strncasecmp(protocol.data(), "SSLv3", protocol.size()) == 0 ||
+            strncasecmp(protocol.data(), "TLSv1", protocol.size()) == 0 ||
+            strncasecmp(protocol.data(), "TLSv1.1", protocol.size()) == 0) {
             LOG(WARNING) << "Ignored insecure SSL/TLS protocol=" << protocol;
-        } else if (strncasecmp(protocol.data(), "TLSv1.2", protocol.size()) == 0) {
+        } else if (strncasecmp(protocol.data(), "TLSv1.2", protocol.size()) ==
+                   0) {
             protocol_flag |= TLSv1_2;
         } else {
             LOG(ERROR) << "Unknown SSL protocol=" << protocol;
@@ -98,7 +98,7 @@ std::ostream& operator<<(std::ostream& os, const CertInfo& cert) {
         os << cert.certificate.substr(pos, 16) << "...";
     } else {
         os << cert.certificate;
-    } 
+    }
 
     os << "] private-key[";
     if (IsPemString(cert.private_key)) {
@@ -117,11 +117,11 @@ std::ostream& operator<<(std::ostream& os, const CertInfo& cert) {
 }
 
 void ExtractHostnames(X509* x, std::vector<std::string>* hostnames) {
-    STACK_OF(X509_NAME)* names = (STACK_OF(X509_NAME)*)
-            X509_get_alt_subject_names(x);
+    STACK_OF(X509_NAME)* names =
+        (STACK_OF(X509_NAME)*)X509_get_alt_subject_names(x);
     if (names) {
         for (int i = 0; i < sk_X509_NAME_num(names); i++) {
-            char buf[255] = {0};
+            char buf[255]   = {0};
             X509_NAME* name = sk_X509_NAME_value(names, i);
             if (X509_NAME_oneline(name, buf, 255)) {
                 std::string hostname(buf);
@@ -164,8 +164,7 @@ struct FreeEVPKEY {
     }
 };
 
-static int LoadCertificate(SSL_CTX* ctx,
-                           const std::string& certificate,
+static int LoadCertificate(SSL_CTX* ctx, const std::string& certificate,
                            const std::string& private_key,
                            std::vector<std::string>* hostnames) {
     // Load the private key
@@ -180,8 +179,8 @@ static int LoadCertificate(SSL_CTX* ctx,
             return -1;
         }
     } else {
-        if (SSL_CTX_use_PrivateKey_file(
-                ctx, private_key.c_str(), SSL_FILETYPE_PEM) != 1) {
+        if (SSL_CTX_use_PrivateKey_file(ctx, private_key.c_str(),
+                                        SSL_FILETYPE_PEM) != 1) {
             LOG(ERROR) << "Fail to load " << private_key << ": "
                        << SSLError(ERR_get_error());
             return -1;
@@ -207,7 +206,7 @@ static int LoadCertificate(SSL_CTX* ctx,
                    << SSLError(ERR_get_error());
         return -1;
     }
-    
+
     // Load the main certficate
     if (SSL_CTX_use_certificate(ctx, x.get()) != 1) {
         LOG(ERROR) << "Fail to load " << certificate << ": "
@@ -216,19 +215,19 @@ static int LoadCertificate(SSL_CTX* ctx,
     }
 
     // Load the certificate chain
-    //SSL_CTX_clear_chain_certs(ctx);
+    // SSL_CTX_clear_chain_certs(ctx);
     X509* ca = NULL;
     while ((ca = PEM_read_bio_X509(cbio.get(), NULL, 0, NULL))) {
         if (SSL_CTX_add_extra_chain_cert(ctx, ca) != 1) {
-            LOG(ERROR) << "Fail to load chain certificate in "
-                       << certificate << ": " << SSLError(ERR_get_error());
+            LOG(ERROR) << "Fail to load chain certificate in " << certificate
+                       << ": " << SSLError(ERR_get_error());
             X509_free(ca);
             return -1;
         }
     }
     ERR_clear_error();
 
-    // Validate certificate and private key 
+    // Validate certificate and private key
     if (SSL_CTX_check_private_key(ctx) != 1) {
         LOG(ERROR) << "Fail to verify " << private_key << ": "
                    << SSLError(ERR_get_error());
@@ -244,13 +243,13 @@ static int SetSSLOptions(SSL_CTX* ctx, const std::string& ciphers,
         std::string cafile = verify.ca_file_path;
         if (!cafile.empty()) {
             if (SSL_CTX_load_verify_locations(ctx, cafile.c_str(), NULL) == 0) {
-                LOG(ERROR) << "Fail to load CA file " << cafile
-                           << ": " << SSLError(ERR_get_error());
+                LOG(ERROR) << "Fail to load CA file " << cafile << ": "
+                           << SSLError(ERR_get_error());
                 return -1;
             }
         }
-        SSL_CTX_set_verify(ctx, (SSL_VERIFY_PEER
-                                 | SSL_VERIFY_FAIL_IF_NO_PEER_CERT), NULL);
+        SSL_CTX_set_verify(
+            ctx, (SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT), NULL);
     } else {
         SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
     }
@@ -266,17 +265,15 @@ SSL_CTX* CreateClientSSLContext(const ChannelSSLOptions& options) {
         return NULL;
     }
 
-    if (!options.client_cert.certificate.empty()
-        && LoadCertificate(ssl_ctx.get(),
-                           options.client_cert.certificate,
-                           options.client_cert.private_key, NULL) != 0) {
+    if (!options.client_cert.certificate.empty() &&
+        LoadCertificate(ssl_ctx.get(), options.client_cert.certificate,
+                        options.client_cert.private_key, NULL) != 0) {
         return NULL;
     }
 
     int protocols = ParseSSLProtocols(options.protocols);
-    if (protocols < 0
-        || SetSSLOptions(ssl_ctx.get(), options.ciphers,
-                         protocols, options.verify) != 0) {
+    if (protocols < 0 || SetSSLOptions(ssl_ctx.get(), options.ciphers,
+                                       protocols, options.verify) != 0) {
         return NULL;
     }
 
@@ -295,8 +292,8 @@ SSL_CTX* CreateServerSSLContext(const std::string& certificate,
         return NULL;
     }
 
-    if (LoadCertificate(ssl_ctx.get(), certificate,
-                        private_key, hostnames) != 0) {
+    if (LoadCertificate(ssl_ctx.get(), certificate, private_key, hostnames) !=
+        0) {
         return NULL;
     }
 
@@ -304,8 +301,8 @@ SSL_CTX* CreateServerSSLContext(const std::string& certificate,
     if (!options.disable_ssl3) {
         protocols |= SSLv3;
     }
-    if (SetSSLOptions(ssl_ctx.get(), options.ciphers,
-                      protocols, options.verify) != 0) {
+    if (SetSSLOptions(ssl_ctx.get(), options.ciphers, protocols,
+                      options.verify) != 0) {
         return NULL;
     }
 
@@ -367,16 +364,16 @@ SSLState DetectSSLState(int fd, int* error_code) {
             if (errno == ENOTSOCK) {
                 return SSL_OFF;
             }
-            *error_code = errno;   // Including EAGAIN and EINTR
-        } else if (nr == 0) {      // EOF
+            *error_code = errno;  // Including EAGAIN and EINTR
+        } else if (nr == 0) {     // EOF
             *error_code = 0;
-        } else {                   // Not enough data, need retry
+        } else {  // Not enough data, need retry
             *error_code = EAGAIN;
         }
         return SSL_UNKNOWN;
     }
-    
-    if ((header[0] == 0x16 && header[5] == 0x01) // SSLv3 or TLSv1.0, 1.1, 1.2
+
+    if ((header[0] == 0x16 && header[5] == 0x01)  // SSLv3 or TLSv1.0, 1.1, 1.2
         || ((header[0] & 0x80) == 0x80 && header[2] == 0x01)) {  // SSLv2
         return SSL_CONNECTING;
     } else {
@@ -384,19 +381,15 @@ SSLState DetectSSLState(int fd, int* error_code) {
     }
 }
 
-int SSLThreadInit() {
-    return 0;
-}
+int SSLThreadInit() { return 0; }
 
-int SSLDHInit() {
-    return 0;
-}
+int SSLDHInit() { return 0; }
 
 void Print(std::ostream& os, SSL* ssl, const char* sep) {
     os << "cipher=" << SSL_get_cipher_name(ssl) << sep
        << "protocol=" << SSL_get_version(ssl) << sep;
 }
 
-} // namespace brpc
+}  // namespace brpc
 
-#endif // USE_MESALINK
+#endif  // USE_MESALINK

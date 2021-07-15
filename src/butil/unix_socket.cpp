@@ -17,10 +17,10 @@
 
 // Date: Mon. Jan 27  23:08:35 CST 2014
 
-#include <sys/types.h>                          // socket
-#include <sys/socket.h>                         // ^
-#include <sys/un.h>                             // unix domain socket
-#include "butil/fd_guard.h"                     // fd_guard
+#include <sys/socket.h>      // ^
+#include <sys/types.h>       // socket
+#include <sys/un.h>          // unix domain socket
+#include "butil/fd_guard.h"  // fd_guard
 #include "butil/logging.h"
 
 namespace butil {
@@ -39,8 +39,8 @@ int unix_socket_listen(const char* sockname, bool remove_previous_file) {
         remove(sockname);
     }
     if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
-        PLOG(ERROR) << "Fail to bind sockfd=" << fd << " as unix socket="
-                    << sockname;
+        PLOG(ERROR) << "Fail to bind sockfd=" << fd
+                    << " as unix socket=" << sockname;
         return -1;
     }
     if (listen(fd, SOMAXCONN) != 0) {

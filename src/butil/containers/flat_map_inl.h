@@ -24,14 +24,12 @@ namespace butil {
 
 inline uint32_t find_next_prime(uint32_t nbucket) {
     static const unsigned long prime_list[] = {
-        29ul, 
-        53ul,         97ul,         193ul,       389ul,       769ul,
-        1543ul,       3079ul,       6151ul,      12289ul,     24593ul,
-        49157ul,      98317ul,      196613ul,    393241ul,    786433ul,
-        1572869ul,    3145739ul,    6291469ul,   12582917ul,  25165843ul,
-        50331653ul,   100663319ul,  201326611ul, 402653189ul, 805306457ul,
-        1610612741ul, 3221225473ul, 4294967291ul
-    };
+        29ul,        53ul,         97ul,         193ul,       389ul,
+        769ul,       1543ul,       3079ul,       6151ul,      12289ul,
+        24593ul,     49157ul,      98317ul,      196613ul,    393241ul,
+        786433ul,    1572869ul,    3145739ul,    6291469ul,   12582917ul,
+        25165843ul,  50331653ul,   100663319ul,  201326611ul, 402653189ul,
+        805306457ul, 1610612741ul, 3221225473ul, 4294967291ul};
     const size_t nprimes = sizeof(prime_list) / sizeof(prime_list[0]);
     for (size_t i = 0; i < nprimes; i++) {
         if (nbucket <= prime_list[i]) {
@@ -58,7 +56,7 @@ inline uint64_t find_power2(uint64_t b) {
 // when the collisions are significant) and still stick to round-to-power-2
 // solution right now.
 inline size_t flatmap_round(size_t nbucket) {
-#ifdef FLAT_MAP_ROUND_BUCKET_BY_USE_NEXT_PRIME    
+#ifdef FLAT_MAP_ROUND_BUCKET_BY_USE_NEXT_PRIME
     return find_next_prime(nbucket);
 #else
     return find_power2(nbucket);
@@ -74,7 +72,8 @@ inline size_t flatmap_mod(size_t hash_code, size_t nbucket) {
 }
 
 // Iterate FlatMap
-template <typename Map, typename Value> class FlatMapIterator {
+template <typename Map, typename Value>
+class FlatMapIterator {
 public:
     typedef Value value_type;
     typedef Value& reference;
@@ -85,29 +84,31 @@ public:
     typedef std::forward_iterator_tag iterator_category;
     typedef ptrdiff_t difference_type;
     typedef typename remove_const<Value>::type NonConstValue;
-    
-    FlatMapIterator() : _node(NULL), _entry(NULL) {}    
+
+    FlatMapIterator() : _node(NULL), _entry(NULL) {}
     FlatMapIterator(const Map* map, size_t pos) {
         if (map->initialized()) {
             _entry = map->_buckets + pos;
             find_and_set_valid_node();
         } else {
-            _node = NULL;
+            _node  = NULL;
             _entry = NULL;
         }
     }
     FlatMapIterator(const FlatMapIterator<Map, NonConstValue>& rhs)
         : _node(rhs._node), _entry(rhs._entry) {}
     ~FlatMapIterator() {}  // required by style-checker
-    
+
     // *this == rhs
-    bool operator==(const FlatMapIterator& rhs) const
-    { return _node == rhs._node; }
+    bool operator==(const FlatMapIterator& rhs) const {
+        return _node == rhs._node;
+    }
 
     // *this != rhs
-    bool operator!=(const FlatMapIterator& rhs) const
-    { return _node != rhs._node; }
-        
+    bool operator!=(const FlatMapIterator& rhs) const {
+        return _node != rhs._node;
+    }
+
     // ++ it
     FlatMapIterator& operator++() {
         if (NULL == _node->next) {
@@ -132,21 +133,23 @@ public:
     const_pointer operator->() const { return &_node->element().value_ref(); }
 
 private:
-friend class FlatMapIterator<Map, ConstValue>;
-friend class FlatMap<typename Map::key_type, typename Map::mapped_type,
-                     typename Map::hasher, typename Map::key_equal>;
+    friend class FlatMapIterator<Map, ConstValue>;
+    friend class FlatMap<typename Map::key_type, typename Map::mapped_type,
+                         typename Map::hasher, typename Map::key_equal>;
 
     void find_and_set_valid_node() {
-        for (; !_entry->is_valid(); ++_entry);
+        for (; !_entry->is_valid(); ++_entry)
+            ;
         _node = _entry;
     }
-  
+
     typename Map::Bucket* _node;
     typename Map::Bucket* _entry;
 };
 
 // Iterate SparseFlatMap
-template <typename Map, typename Value> class SparseFlatMapIterator {
+template <typename Map, typename Value>
+class SparseFlatMapIterator {
 public:
     typedef Value value_type;
     typedef Value& reference;
@@ -157,7 +160,7 @@ public:
     typedef std::forward_iterator_tag iterator_category;
     typedef ptrdiff_t difference_type;
     typedef typename remove_const<Value>::type NonConstValue;
-    
+
     SparseFlatMapIterator() : _node(NULL), _pos(0), _map(NULL) {}
     SparseFlatMapIterator(const Map* map, size_t pos) {
         if (map->initialized()) {
@@ -166,23 +169,24 @@ public:
             find_and_set_valid_node();
         } else {
             _node = NULL;
-            _map = NULL;
-            _pos = 0;
+            _map  = NULL;
+            _pos  = 0;
         }
     }
     SparseFlatMapIterator(const SparseFlatMapIterator<Map, NonConstValue>& rhs)
-        : _node(rhs._node), _pos(rhs._pos), _map(rhs._map)
-    {}
+        : _node(rhs._node), _pos(rhs._pos), _map(rhs._map) {}
     ~SparseFlatMapIterator() {}  // required by style-checker
-    
+
     // *this == rhs
-    bool operator==(const SparseFlatMapIterator& rhs) const
-    { return _node == rhs._node; }
+    bool operator==(const SparseFlatMapIterator& rhs) const {
+        return _node == rhs._node;
+    }
 
     // *this != rhs
-    bool operator!=(const SparseFlatMapIterator& rhs) const
-    { return _node != rhs._node; }
-        
+    bool operator!=(const SparseFlatMapIterator& rhs) const {
+        return _node != rhs._node;
+    }
+
     // ++ it
     SparseFlatMapIterator& operator++() {
         if (NULL == _node->next) {
@@ -207,8 +211,8 @@ public:
     const_pointer operator->() const { return &_node->element().value_ref(); }
 
 private:
-friend class SparseFlatMapIterator<Map, ConstValue>;
-    
+    friend class SparseFlatMapIterator<Map, ConstValue>;
+
     void find_and_set_valid_node() {
         if (!_map->_buckets[_pos].is_valid()) {
             _pos = bit_array_first1(_map->_thumbnail, _pos + 1, _map->_nbucket);
@@ -220,7 +224,6 @@ friend class SparseFlatMapIterator<Map, ConstValue>;
     size_t _pos;
     const Map* _map;
 };
- 
 
 template <typename _K, typename _T, typename _H, typename _E, bool _S>
 FlatMap<_K, _T, _H, _E, _S>::FlatMap(const hasher& hashfn, const key_equal& eql)
@@ -230,8 +233,7 @@ FlatMap<_K, _T, _H, _E, _S>::FlatMap(const hasher& hashfn, const key_equal& eql)
     , _thumbnail(NULL)
     , _load_factor(0)
     , _hashfn(hashfn)
-    , _eql(eql)
-{}
+    , _eql(eql) {}
 
 template <typename _K, typename _T, typename _H, typename _E, bool _S>
 FlatMap<_K, _T, _H, _E, _S>::~FlatMap() {
@@ -239,8 +241,8 @@ FlatMap<_K, _T, _H, _E, _S>::~FlatMap() {
     free(_buckets);
     _buckets = NULL;
     free(_thumbnail);
-    _thumbnail = NULL;
-    _nbucket = 0;
+    _thumbnail   = NULL;
+    _nbucket     = 0;
     _load_factor = 0;
 }
 
@@ -257,8 +259,8 @@ FlatMap<_K, _T, _H, _E, _S>::FlatMap(const FlatMap& rhs)
 }
 
 template <typename _K, typename _T, typename _H, typename _E, bool _S>
-void
-FlatMap<_K, _T, _H, _E, _S>::operator=(const FlatMap<_K, _T, _H, _E, _S>& rhs) {
+void FlatMap<_K, _T, _H, _E, _S>::operator=(
+    const FlatMap<_K, _T, _H, _E, _S>& rhs) {
     if (this == &rhs) {
         return;
     }
@@ -275,7 +277,7 @@ FlatMap<_K, _T, _H, _E, _S>::operator=(const FlatMap<_K, _T, _H, _E, _S>& rhs) {
         free(_buckets);
         _nbucket = rhs._nbucket;
         // note: need an extra bucket to let iterator know where buckets end
-        _buckets = (Bucket*)malloc(sizeof(Bucket) * (_nbucket + 1/*note*/));
+        _buckets = (Bucket*)malloc(sizeof(Bucket) * (_nbucket + 1 /*note*/));
         if (NULL == _buckets) {
             LOG(ERROR) << "Fail to new _buckets";
             return;
@@ -305,16 +307,16 @@ FlatMap<_K, _T, _H, _E, _S>::operator=(const FlatMap<_K, _T, _H, _E, _S>& rhs) {
                 Bucket* p2 = rhs._buckets[i].next;
                 while (p2) {
                     p1->next = new (_pool.get()) Bucket(*p2);
-                    p1 = p1->next;
-                    p2 = p2->next;
+                    p1       = p1->next;
+                    p2       = p2->next;
                 }
             }
         }
         _buckets[rhs._nbucket].next = NULL;
-        _size = rhs._size;
+        _size                       = rhs._size;
     } else {
         for (const_iterator it = rhs.begin(); it != rhs.end(); ++it) {
-            operator[](Element::first_ref_from_value(*it)) = 
+            operator[](Element::first_ref_from_value(*it)) =
                 Element::second_ref_from_value(*it);
         }
     }
@@ -330,10 +332,10 @@ int FlatMap<_K, _T, _H, _E, _S>::init(size_t nbucket, u_int load_factor) {
         LOG(ERROR) << "Invalid load_factor=" << load_factor;
         return -1;
     }
-    _size = 0;
-    _nbucket = flatmap_round(nbucket);
+    _size        = 0;
+    _nbucket     = flatmap_round(nbucket);
     _load_factor = load_factor;
-                                
+
     _buckets = (Bucket*)malloc(sizeof(Bucket) * (_nbucket + 1));
     if (NULL == _buckets) {
         LOG(ERROR) << "Fail to new _buckets";
@@ -356,7 +358,7 @@ int FlatMap<_K, _T, _H, _E, _S>::init(size_t nbucket, u_int load_factor) {
 }
 
 template <typename _K, typename _T, typename _H, typename _E, bool _S>
-void FlatMap<_K, _T, _H, _E, _S>::swap(FlatMap<_K, _T, _H, _E, _S> & rhs) {
+void FlatMap<_K, _T, _H, _E, _S>::swap(FlatMap<_K, _T, _H, _E, _S>& rhs) {
     std::swap(rhs._size, _size);
     std::swap(rhs._nbucket, _nbucket);
     std::swap(rhs._buckets, _buckets);
@@ -370,8 +372,8 @@ void FlatMap<_K, _T, _H, _E, _S>::swap(FlatMap<_K, _T, _H, _E, _S> & rhs) {
 template <typename _K, typename _T, typename _H, typename _E, bool _S>
 _T* FlatMap<_K, _T, _H, _E, _S>::insert(const key_type& key,
                                         const mapped_type& value) {
-    mapped_type *p = &operator[](key);
-    *p = value;
+    mapped_type* p = &operator[](key);
+    *p             = value;
     return p;
 }
 
@@ -411,7 +413,7 @@ size_t FlatMap<_K, _T, _H, _E, _S>::erase(const K2& key, _T* old_value) {
             //   };
             // After copying, num_ptr will be invalid.
             // Calling operator= is the price that we have to pay.
-            Bucket* p = first_node.next;
+            Bucket* p       = first_node.next;
             first_node.next = p->next;
             const_cast<_K&>(first_node.element().first_ref()) =
                 p->element().first_ref();
@@ -422,8 +424,8 @@ size_t FlatMap<_K, _T, _H, _E, _S>::erase(const K2& key, _T* old_value) {
         --_size;
         return 1UL;
     }
-    Bucket *p = first_node.next;
-    Bucket *last_p = &first_node;
+    Bucket* p      = first_node.next;
+    Bucket* last_p = &first_node;
     while (p) {
         if (_eql(p->element().first_ref(), key)) {
             if (old_value) {
@@ -436,7 +438,7 @@ size_t FlatMap<_K, _T, _H, _E, _S>::erase(const K2& key, _T* old_value) {
             return 1UL;
         }
         last_p = p;
-        p = p->next;
+        p      = p->next;
     }
     return 0;
 }
@@ -487,7 +489,7 @@ _T* FlatMap<_K, _T, _H, _E, _S>::seek(const K2& key) const {
     if (_eql(first_node.element().first_ref(), key)) {
         return &first_node.element().second_ref();
     }
-    Bucket *p = first_node.next;
+    Bucket* p = first_node.next;
     while (p) {
         if (_eql(p->element().first_ref(), key)) {
             return &p->element().second_ref();
@@ -512,7 +514,7 @@ _T& FlatMap<_K, _T, _H, _E, _S>::operator[](const key_type& key) {
     if (_eql(first_node.element().first_ref(), key)) {
         return first_node.element().second_ref();
     }
-    Bucket *p = first_node.next;
+    Bucket* p = first_node.next;
     if (NULL == p) {
         if (is_too_crowded(_size)) {
             if (resize(_nbucket + 1)) {
@@ -521,7 +523,7 @@ _T& FlatMap<_K, _T, _H, _E, _S>::operator[](const key_type& key) {
             // fail to resize is OK
         }
         ++_size;
-        Bucket* newp = new (_pool.get()) Bucket(key);
+        Bucket* newp    = new (_pool.get()) Bucket(key);
         first_node.next = newp;
         return newp->element().second_ref();
     }
@@ -538,7 +540,7 @@ _T& FlatMap<_K, _T, _H, _E, _S>::operator[](const key_type& key) {
             }
             ++_size;
             Bucket* newp = new (_pool.get()) Bucket(key);
-            p->next = newp;
+            p->next      = newp;
             return newp->element().second_ref();
         }
         p = p->next;
@@ -546,24 +548,24 @@ _T& FlatMap<_K, _T, _H, _E, _S>::operator[](const key_type& key) {
 }
 
 template <typename _K, typename _T, typename _H, typename _E, bool _S>
-void FlatMap<_K, _T, _H, _E, _S>::save_iterator(
-    const const_iterator& it, PositionHint* hint) const {
+void FlatMap<_K, _T, _H, _E, _S>::save_iterator(const const_iterator& it,
+                                                PositionHint* hint) const {
     hint->nbucket = _nbucket;
-    hint->offset = it._entry - _buckets;
+    hint->offset  = it._entry - _buckets;
     if (it != end()) {
         hint->at_entry = (it._entry == it._node);
-        hint->key = it->first;
+        hint->key      = it->first;
     } else {
         hint->at_entry = false;
-        hint->key = key_type();
+        hint->key      = key_type();
     }
 }
 
 template <typename _K, typename _T, typename _H, typename _E, bool _S>
 typename FlatMap<_K, _T, _H, _E, _S>::const_iterator
 FlatMap<_K, _T, _H, _E, _S>::restore_iterator(const PositionHint& hint) const {
-    if (hint.nbucket != _nbucket/*resized*/ ||
-        hint.offset >= _nbucket/*invalid hint*/) {
+    if (hint.nbucket != _nbucket /*resized*/ ||
+        hint.offset >= _nbucket /*invalid hint*/) {
         return begin();  // restart
     }
     Bucket& first_node = _buckets[hint.offset];
@@ -574,11 +576,11 @@ FlatMap<_K, _T, _H, _E, _S>::restore_iterator(const PositionHint& hint) const {
         // All elements hashed to the entry were removed, try next entry.
         return const_iterator(this, hint.offset + 1);
     }
-    Bucket *p = &first_node;
+    Bucket* p = &first_node;
     do {
         if (_eql(p->element().first_ref(), hint.key)) {
             const_iterator it;
-            it._node = p;
+            it._node  = p;
             it._entry = &first_node;
             return it;
         }
@@ -604,7 +606,7 @@ bool FlatMap<_K, _T, _H, _E, _S>::resize(size_t nbucket2) {
         return false;
     }
     for (iterator it = begin(); it != end(); ++it) {
-        new_map[Element::first_ref_from_value(*it)] = 
+        new_map[Element::first_ref_from_value(*it)] =
             Element::second_ref_from_value(*it);
     }
     new_map.swap(*this);
@@ -613,17 +615,18 @@ bool FlatMap<_K, _T, _H, _E, _S>::resize(size_t nbucket2) {
 
 template <typename _K, typename _T, typename _H, typename _E, bool _S>
 BucketInfo FlatMap<_K, _T, _H, _E, _S>::bucket_info() const {
-    size_t max_n = 0;
+    size_t max_n  = 0;
     size_t nentry = 0;
     for (size_t i = 0; i < _nbucket; ++i) {
         if (_buckets[i].is_valid()) {
             size_t n = 1;
-            for (Bucket* p = _buckets[i].next; p; p = p->next, ++n);
+            for (Bucket* p = _buckets[i].next; p; p = p->next, ++n)
+                ;
             max_n = std::max(max_n, n);
             ++nentry;
         }
     }
-    const BucketInfo info = { max_n, size() / (double)nentry };
+    const BucketInfo info = {max_n, size() / (double)nentry};
     return info;
 }
 
@@ -633,25 +636,29 @@ inline std::ostream& operator<<(std::ostream& os, const BucketInfo& info) {
 }
 
 template <typename _K, typename _T, typename _H, typename _E, bool _S>
-typename FlatMap<_K, _T, _H, _E, _S>::iterator FlatMap<_K, _T, _H, _E, _S>::begin() {
+typename FlatMap<_K, _T, _H, _E, _S>::iterator
+FlatMap<_K, _T, _H, _E, _S>::begin() {
     return iterator(this, 0);
 }
 
 template <typename _K, typename _T, typename _H, typename _E, bool _S>
-typename FlatMap<_K, _T, _H, _E, _S>::iterator FlatMap<_K, _T, _H, _E, _S>::end() {
+typename FlatMap<_K, _T, _H, _E, _S>::iterator
+FlatMap<_K, _T, _H, _E, _S>::end() {
     return iterator(this, _nbucket);
 }
 
 template <typename _K, typename _T, typename _H, typename _E, bool _S>
-typename FlatMap<_K, _T, _H, _E, _S>::const_iterator FlatMap<_K, _T, _H, _E, _S>::begin() const {
+typename FlatMap<_K, _T, _H, _E, _S>::const_iterator
+FlatMap<_K, _T, _H, _E, _S>::begin() const {
     return const_iterator(this, 0);
 }
 
 template <typename _K, typename _T, typename _H, typename _E, bool _S>
-typename FlatMap<_K, _T, _H, _E, _S>::const_iterator FlatMap<_K, _T, _H, _E, _S>::end() const {
+typename FlatMap<_K, _T, _H, _E, _S>::const_iterator
+FlatMap<_K, _T, _H, _E, _S>::end() const {
     return const_iterator(this, _nbucket);
 }
 
 }  // namespace butil
 
-#endif  //BUTIL_FLAT_MAP_INL_H
+#endif  // BUTIL_FLAT_MAP_INL_H

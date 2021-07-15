@@ -25,32 +25,31 @@
 #include "butil/build_config.h"
 
 // Pause instruction to prevent excess processor bus usage, only works in GCC
-# ifndef cpu_relax
+#ifndef cpu_relax
 #if defined(ARCH_CPU_ARM_FAMILY)
-# define cpu_relax() asm volatile("yield\n": : :"memory")
+#define cpu_relax() asm volatile("yield\n" : : : "memory")
 #else
-# define cpu_relax() asm volatile("pause\n": : :"memory")
+#define cpu_relax() asm volatile("pause\n" : : : "memory")
 #endif
-# endif
+#endif
 
 // Compile read-write barrier
-# ifndef barrier
-# define barrier() asm volatile("": : :"memory")
-# endif
+#ifndef barrier
+#define barrier() asm volatile("" : : : "memory")
+#endif
 
-
-# define BT_LOOP_WHEN(expr, num_spins)                                  \
-    do {                                                                \
-        /*sched_yield may change errno*/                                \
-        const int saved_errno = errno;                                  \
-        for (int cnt = 0, saved_nspin = (num_spins); (expr); ++cnt) {   \
-            if (cnt < saved_nspin) {                                    \
-                cpu_relax();                                            \
-            } else {                                                    \
-                sched_yield();                                          \
-            }                                                           \
-        }                                                               \
-        errno = saved_errno;                                            \
+#define BT_LOOP_WHEN(expr, num_spins)                                 \
+    do {                                                              \
+        /*sched_yield may change errno*/                              \
+        const int saved_errno = errno;                                \
+        for (int cnt = 0, saved_nspin = (num_spins); (expr); ++cnt) { \
+            if (cnt < saved_nspin) {                                  \
+                cpu_relax();                                          \
+            } else {                                                  \
+                sched_yield();                                        \
+            }                                                         \
+        }                                                             \
+        errno = saved_errno;                                          \
     } while (0)
 
-#endif // BTHREAD_PROCESSOR_H
+#endif  // BTHREAD_PROCESSOR_H

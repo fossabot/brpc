@@ -19,11 +19,11 @@
 #define BRPC_SERVER_PRIVATE_ACCESSOR_H
 
 #include <google/protobuf/descriptor.h>
-#include "brpc/server.h"
 #include "brpc/acceptor.h"
-#include "brpc/details/method_status.h"
 #include "brpc/builtin/bad_method_service.h"
+#include "brpc/details/method_status.h"
 #include "brpc/restful.h"
+#include "brpc/server.h"
 
 namespace brpc {
 
@@ -36,9 +36,7 @@ public:
         _server = svr;
     }
 
-    void AddError() {
-        _server->_nerror_bvar << 1;
-    }
+    void AddError() { _server->_nerror_bvar << 1; }
 
     // Returns true if the `max_concurrency' limit is not reached.
     bool AddConcurrency(Controller* c) {
@@ -46,48 +44,51 @@ public:
             return true;
         }
         c->add_flag(Controller::FLAGS_ADDED_CONCURRENCY);
-        return (butil::subtle::NoBarrier_AtomicIncrement(&_server->_concurrency, 1)
-                <= _server->options().max_concurrency);
+        return (butil::subtle::NoBarrier_AtomicIncrement(&_server->_concurrency,
+                                                         1) <=
+                _server->options().max_concurrency);
     }
 
     void RemoveConcurrency(const Controller* c) {
         if (c->has_flag(Controller::FLAGS_ADDED_CONCURRENCY)) {
-            butil::subtle::NoBarrier_AtomicIncrement(&_server->_concurrency, -1);
+            butil::subtle::NoBarrier_AtomicIncrement(&_server->_concurrency,
+                                                     -1);
         }
     }
 
     // Find by MethodDescriptor::full_name
-    const Server::MethodProperty*
-    FindMethodPropertyByFullName(const butil::StringPiece &fullname) {
+    const Server::MethodProperty* FindMethodPropertyByFullName(
+        const butil::StringPiece& fullname) {
         return _server->FindMethodPropertyByFullName(fullname);
     }
-    const Server::MethodProperty*
-    FindMethodPropertyByFullName(const butil::StringPiece& fullname) const {
+    const Server::MethodProperty* FindMethodPropertyByFullName(
+        const butil::StringPiece& fullname) const {
         return _server->FindMethodPropertyByFullName(fullname);
     }
-    const Server::MethodProperty*
-    FindMethodPropertyByFullName(const butil::StringPiece& full_service_name,
-                                 const butil::StringPiece& method_name) const {
-        return _server->FindMethodPropertyByFullName(
-            full_service_name, method_name);
+    const Server::MethodProperty* FindMethodPropertyByFullName(
+        const butil::StringPiece& full_service_name,
+        const butil::StringPiece& method_name) const {
+        return _server->FindMethodPropertyByFullName(full_service_name,
+                                                     method_name);
     }
     const Server::MethodProperty* FindMethodPropertyByNameAndIndex(
         const butil::StringPiece& service_name, int method_index) const {
-        return _server->FindMethodPropertyByNameAndIndex(service_name, method_index);
+        return _server->FindMethodPropertyByNameAndIndex(service_name,
+                                                         method_index);
     }
 
-    const Server::ServiceProperty*
-    FindServicePropertyByFullName(const butil::StringPiece& fullname) const {
+    const Server::ServiceProperty* FindServicePropertyByFullName(
+        const butil::StringPiece& fullname) const {
         return _server->FindServicePropertyByFullName(fullname);
     }
 
-    const Server::ServiceProperty*
-    FindServicePropertyByName(const butil::StringPiece& name) const {
+    const Server::ServiceProperty* FindServicePropertyByName(
+        const butil::StringPiece& name) const {
         return _server->FindServicePropertyByName(name);
     }
 
-    const Server::ServiceProperty*
-    FindServicePropertyAdaptively(const butil::StringPiece& service_name) const {
+    const Server::ServiceProperty* FindServicePropertyAdaptively(
+        const butil::StringPiece& service_name) const {
         if (service_name.find('.') == butil::StringPiece::npos) {
             return _server->FindServicePropertyByName(service_name);
         } else {
@@ -97,8 +98,9 @@ public:
 
     Acceptor* acceptor() const { return _server->_am; }
 
-    RestfulMap* global_restful_map() const
-    { return _server->_global_restful_map; }
+    RestfulMap* global_restful_map() const {
+        return _server->_global_restful_map;
+    }
 
 private:
     const Server* _server;
@@ -116,15 +118,15 @@ public:
     }
     const Server* release() {
         const Server* tmp = _server;
-        _server = NULL;
+        _server           = NULL;
         return tmp;
     }
+
 private:
     DISALLOW_COPY_AND_ASSIGN(ScopedNonServiceError);
     const Server* _server;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_SERVER_PRIVATE_ACCESSOR_H
+#endif  // BRPC_SERVER_PRIVATE_ACCESSOR_H

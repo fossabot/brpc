@@ -15,12 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_AMF_INL_H
 #define BRPC_AMF_INL_H
 
-void* fast_memcpy(void *__restrict dest, const void *__restrict src, size_t n);
-
+void* fast_memcpy(void* __restrict dest, const void* __restrict src, size_t n);
 
 namespace brpc {
 
@@ -52,7 +50,7 @@ inline bool AMFInputStream::check_emptiness() {
 
 inline size_t AMFInputStream::cut_u8(uint8_t* val) {
     if (_size >= 1) {
-        *val = *(uint8_t*)_data;
+        *val  = *(uint8_t*)_data;
         _data = (const char*)_data + 1;
         _size -= 1;
         _popped_bytes += 1;
@@ -64,45 +62,45 @@ inline size_t AMFInputStream::cut_u8(uint8_t* val) {
 inline size_t AMFInputStream::cut_u16(uint16_t* val) {
     if (_size >= 2) {
         const uint16_t netval = *(uint16_t*)_data;
-        *val = butil::NetToHost16(netval);
-        _data = (const char*)_data + 2;
+        *val                  = butil::NetToHost16(netval);
+        _data                 = (const char*)_data + 2;
         _size -= 2;
         _popped_bytes += 2;
         return 2;
     }
-    uint16_t netval = 0;
+    uint16_t netval  = 0;
     const size_t ret = cutn(&netval, 2);
-    *val = butil::NetToHost16(netval);
+    *val             = butil::NetToHost16(netval);
     return ret;
 }
 
 inline size_t AMFInputStream::cut_u32(uint32_t* val) {
     if (_size >= 4) {
         const uint32_t netval = *(uint32_t*)_data;
-        *val = butil::NetToHost32(netval);
-        _data = (const char*)_data + 4;
+        *val                  = butil::NetToHost32(netval);
+        _data                 = (const char*)_data + 4;
         _size -= 4;
         _popped_bytes += 4;
         return 4;
     }
-    uint32_t netval = 0;
+    uint32_t netval  = 0;
     const size_t ret = cutn(&netval, 4);
-    *val = butil::NetToHost32(netval);
+    *val             = butil::NetToHost32(netval);
     return ret;
 }
 
 inline size_t AMFInputStream::cut_u64(uint64_t* val) {
     if (_size >= 8) {
         const uint64_t netval = *(uint64_t*)_data;
-        *val = butil::NetToHost64(netval);
-        _data = (const char*)_data + 8;
+        *val                  = butil::NetToHost64(netval);
+        _data                 = (const char*)_data + 8;
         _size -= 8;
         _popped_bytes += 8;
         return 8;
     }
-    uint64_t netval = 0;
+    uint64_t netval  = 0;
     const size_t ret = cutn(&netval, 8);
-    *val = butil::NetToHost64(netval);
+    *val             = butil::NetToHost64(netval);
     return ret;
 }
 
@@ -139,7 +137,7 @@ inline void AMFOutputStream::put_u8(uint8_t val) {
     do {
         if (_size > 0) {
             *(uint8_t*)_data = val;
-            _data = (char*)_data + 1;
+            _data            = (char*)_data + 1;
             --_size;
             ++_pushed_bytes;
             return;
@@ -165,7 +163,6 @@ inline void AMFOutputStream::put_u64(uint64_t val) {
     return putn(&netval, sizeof(netval));
 }
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_AMF_INL_H

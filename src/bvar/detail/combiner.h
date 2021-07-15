@@ -17,19 +17,19 @@
 
 // Date 2014/09/22 11:57:43
 
-#ifndef  BVAR_COMBINER_H
-#define  BVAR_COMBINER_H
+#ifndef BVAR_COMBINER_H
+#define BVAR_COMBINER_H
 
-#include <string>                       // std::string
-#include <vector>                       // std::vector
-#include "butil/atomicops.h"             // butil::atomic
-#include "butil/scoped_lock.h"           // BAIDU_SCOPED_LOCK
-#include "butil/type_traits.h"           // butil::add_cr_non_integral
-#include "butil/synchronization/lock.h"  // butil::Lock
-#include "butil/containers/linked_list.h"// LinkNode
-#include "bvar/detail/agent_group.h"    // detail::AgentGroup
-#include "bvar/detail/is_atomical.h"
+#include <string>                          // std::string
+#include <vector>                          // std::vector
+#include "butil/atomicops.h"               // butil::atomic
+#include "butil/containers/linked_list.h"  // LinkNode
+#include "butil/scoped_lock.h"             // BAIDU_SCOPED_LOCK
+#include "butil/synchronization/lock.h"    // butil::Lock
+#include "butil/type_traits.h"             // butil::add_cr_non_integral
+#include "bvar/detail/agent_group.h"       // detail::AgentGroup
 #include "bvar/detail/call_op_returning_void.h"
+#include "bvar/detail/is_atomical.h"
 
 namespace bvar {
 namespace detail {
@@ -71,7 +71,9 @@ private:
 // Abstraction of tls element whose operations are all atomic.
 template <typename T, typename Enabler = void>
 class ElementContainer {
-template <typename> friend class GlobalValue;
+    template <typename>
+    friend class GlobalValue;
+
 public:
     void load(T* out) {
         butil::AutoLock guard(_lock);
@@ -85,19 +87,19 @@ public:
 
     void exchange(T* prev, const T& new_value) {
         butil::AutoLock guard(_lock);
-        *prev = _value;
+        *prev  = _value;
         _value = new_value;
     }
 
     template <typename Op, typename T1>
-    void modify(const Op &op, const T1 &value2) {
+    void modify(const Op& op, const T1& value2) {
         butil::AutoLock guard(_lock);
         call_op_returning_void(op, _value, value2);
     }
 
     // [Unique]
     template <typename Op, typename GlobalValue>
-    void merge_global(const Op &op, GlobalValue & global_value) {
+    void merge_global(const Op& op, GlobalValue& global_value) {
         _lock.Acquire();
         op(global_value, _value);
         _lock.Release();
@@ -109,11 +111,11 @@ private:
 };
 
 template <typename T>
-class ElementContainer<
-    T, typename butil::enable_if<is_atomical<T>::value>::type> {
+class ElementContainer<T,
+                       typename butil::enable_if<is_atomical<T>::value>::type> {
 public:
     // We don't need any memory fencing here, every op is relaxed.
-    
+
     inline void load(T* out) {
         *out = _value.load(butil::memory_order_relaxed);
     }
@@ -133,7 +135,7 @@ public:
     }
 
     template <typename Op, typename T1>
-    void modify(const Op &op, const T1 &value2) {
+    void modify(const Op& op, const T1& value2) {
         T old_value = _value.load(butil::memory_order_relaxed);
         T new_value = old_value;
         call_op_returning_void(op, new_value, value2);
@@ -141,8 +143,8 @@ public:
         // if the tls value has been modified during _op, the
         // compare_exchange_weak operation will fail and recalculation is
         // to be processed according to the new version of value
-        while (!_value.compare_exchange_weak(
-                   old_value, new_value, butil::memory_order_relaxed)) {
+        while (!_value.compare_exchange_weak(old_value, new_value,
+                                             butil::memory_order_relaxed)) {
             new_value = old_value;
             call_op_returning_void(op, new_value, value2);
         }
@@ -158,8 +160,8 @@ public:
     typedef ResultTp result_type;
     typedef ElementTp element_type;
     typedef AgentCombiner<ResultTp, ElementTp, BinaryOp> self_type;
-friend class GlobalValue<self_type>;
-    
+    friend class GlobalValue<self_type>;
+
     struct Agent : public butil::LinkNode<Agent> {
         Agent() : combiner(NULL) {}
 
@@ -169,7 +171,7 @@ friend class GlobalValue<self_type>;
                 combiner = NULL;
             }
         }
-        
+
         void reset(const ElementTp& val, self_type* c) {
             combiner = c;
             element.store(val);
@@ -181,11 +183,11 @@ friend class GlobalValue<self_type>;
         //       void operator()(GlobalValue<Combiner> & global_value,
         //                       ElementTp & local_value) const {
         //           if (test_for_merging(local_value)) {
-        // 
+        //
         //               // Unlock tls element and lock combiner. Obviously
         //               // tls element can be changed during lock().
         //               ResultTp* g = global_value.lock();
-        // 
+        //
         //               // *g and local_value are not changed provided
         //               // merge_global is called from the thread owning
         //               // the agent.
@@ -200,29 +202,28 @@ friend class GlobalValue<self_type>;
         //           ...
         //       }
         //   };
-        // 
+        //
         // NOTE: Only available to non-atomic types.
         template <typename Op>
-        void merge_global(const Op &op) {
+        void merge_global(const Op& op) {
             GlobalValue<self_type> g(this, combiner);
             element.merge_global(op, g);
         }
 
-        self_type *combiner;
+        self_type* combiner;
         ElementContainer<ElementTp> element;
     };
 
     typedef detail::AgentGroup<Agent> AgentGroup;
 
-    explicit AgentCombiner(const ResultTp result_identity = ResultTp(),
+    explicit AgentCombiner(const ResultTp result_identity   = ResultTp(),
                            const ElementTp element_identity = ElementTp(),
-                           const BinaryOp& op = BinaryOp())
+                           const BinaryOp& op               = BinaryOp())
         : _id(AgentGroup::create_new_agent())
         , _op(op)
         , _global_result(result_identity)
         , _result_identity(result_identity)
-        , _element_identity(element_identity) {
-    }
+        , _element_identity(element_identity) {}
 
     ~AgentCombiner() {
         if (_id >= 0) {
@@ -231,33 +232,37 @@ friend class GlobalValue<self_type>;
             _id = -1;
         }
     }
-    
+
     // [Threadsafe] May be called from anywhere
     ResultTp combine_agents() const {
         ElementTp tls_value;
         butil::AutoLock guard(_lock);
         ResultTp ret = _global_result;
         for (butil::LinkNode<Agent>* node = _agents.head();
-             node != _agents.end(); node = node->next()) {
+             node != _agents.end(); node  = node->next()) {
             node->value()->element.load(&tls_value);
             call_op_returning_void(_op, ret, tls_value);
         }
         return ret;
     }
 
-    typename butil::add_cr_non_integral<ElementTp>::type element_identity() const 
-    { return _element_identity; }
-    typename butil::add_cr_non_integral<ResultTp>::type result_identity() const 
-    { return _result_identity; }
+    typename butil::add_cr_non_integral<ElementTp>::type element_identity()
+        const {
+        return _element_identity;
+    }
+    typename butil::add_cr_non_integral<ResultTp>::type result_identity()
+        const {
+        return _result_identity;
+    }
 
     // [Threadsafe] May be called from anywhere.
     ResultTp reset_all_agents() {
         ElementTp prev;
         butil::AutoLock guard(_lock);
-        ResultTp tmp = _global_result;
+        ResultTp tmp   = _global_result;
         _global_result = _result_identity;
         for (butil::LinkNode<Agent>* node = _agents.head();
-             node != _agents.end(); node = node->next()) {
+             node != _agents.end(); node  = node->next()) {
             node->value()->element.exchange(&prev, _element_identity);
             call_op_returning_void(_op, tmp, prev);
         }
@@ -265,7 +270,7 @@ friend class GlobalValue<self_type>;
     }
 
     // Always called from the thread owning the agent.
-    void commit_and_erase(Agent *agent) {
+    void commit_and_erase(Agent* agent) {
         if (NULL == agent) {
             return;
         }
@@ -279,7 +284,7 @@ friend class GlobalValue<self_type>;
     }
 
     // Always called from the thread owning the agent
-    void commit_and_clear(Agent *agent) {
+    void commit_and_clear(Agent* agent) {
         if (NULL == agent) {
             return;
         }
@@ -317,10 +322,10 @@ friend class GlobalValue<self_type>;
         // reseting agents is must because the agent object may be reused.
         // Set element to be default-constructed so that if it's non-pod,
         // internal allocations should be released.
-        for (butil::LinkNode<Agent>* 
-                node = _agents.head(); node != _agents.end();) {
+        for (butil::LinkNode<Agent>* node = _agents.head();
+             node != _agents.end();) {
             node->value()->reset(ElementTp(), NULL);
-            butil::LinkNode<Agent>* const saved_next =  node->next();
+            butil::LinkNode<Agent>* const saved_next = node->next();
             node->RemoveFromList();
             node = saved_next;
         }
@@ -331,13 +336,13 @@ friend class GlobalValue<self_type>;
     bool valid() const { return _id >= 0; }
 
 private:
-    AgentId                                     _id;
-    BinaryOp                                    _op;
-    mutable butil::Lock                          _lock;
-    ResultTp                                    _global_result;
-    ResultTp                                    _result_identity;
-    ElementTp                                   _element_identity;
-    butil::LinkedList<Agent>                     _agents;
+    AgentId _id;
+    BinaryOp _op;
+    mutable butil::Lock _lock;
+    ResultTp _global_result;
+    ResultTp _result_identity;
+    ElementTp _element_identity;
+    butil::LinkedList<Agent> _agents;
 };
 
 }  // namespace detail

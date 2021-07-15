@@ -17,21 +17,21 @@ namespace butil {
 // Note: You should almost always use the NonThreadSafe class to get
 // the right version of the class for your build configuration.
 class BUTIL_EXPORT NonThreadSafeImpl {
- public:
-  bool CalledOnValidThread() const;
+public:
+    bool CalledOnValidThread() const;
 
- protected:
-  ~NonThreadSafeImpl();
+protected:
+    ~NonThreadSafeImpl();
 
-  // Changes the thread that is checked for in CalledOnValidThread. The next
-  // call to CalledOnValidThread will attach this class to a new thread. It is
-  // up to the NonThreadSafe derived class to decide to expose this or not.
-  // This may be useful when an object may be created on one thread and then
-  // used exclusively on another thread.
-  void DetachFromThread();
+    // Changes the thread that is checked for in CalledOnValidThread. The next
+    // call to CalledOnValidThread will attach this class to a new thread. It is
+    // up to the NonThreadSafe derived class to decide to expose this or not.
+    // This may be useful when an object may be created on one thread and then
+    // used exclusively on another thread.
+    void DetachFromThread();
 
- private:
-  ThreadCheckerImpl thread_checker_;
+private:
+    ThreadCheckerImpl thread_checker_;
 };
 
 }  // namespace butil

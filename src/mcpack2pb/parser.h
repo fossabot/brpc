@@ -22,8 +22,8 @@
 #ifndef MCPACK2PB_MCPACK_PARSER_H
 #define MCPACK2PB_MCPACK_PARSER_H
 
-#include <limits>  // std::numeric_limits
 #include <google/protobuf/io/zero_copy_stream.h>
+#include <limits>  // std::numeric_limits
 #include "butil/logging.h"
 #include "butil/strings/string_piece.h"
 #include "mcpack2pb/field_type.h"
@@ -41,10 +41,9 @@ public:
         , _size(0)
         , _data(NULL)
         , _zc_stream(stream)
-        , _popped_bytes(0)
-    {}
+        , _popped_bytes(0) {}
 
-    ~InputStream() { }
+    ~InputStream() {}
 
     // Pop at-most n bytes from front side.
     // Returns bytes popped.
@@ -54,8 +53,10 @@ public:
     // Returns bytes cut.
     size_t cutn(void* out, size_t n);
 
-    template <typename T> size_t cut_packed_pod(T* packed_pod);
-    template <typename T> T cut_packed_pod();
+    template <typename T>
+    size_t cut_packed_pod(T* packed_pod);
+    template <typename T>
+    T cut_packed_pod();
 
     // Cut off at-most n bytes from front side. If the data is stored in
     // continuous memory, return the reference directly, otherwise copy
@@ -71,11 +72,11 @@ public:
 
     // Returns false if error occurred in other consuming functions.
     bool good() const { return _good; }
-    
+
     // If the error prevents parsing from going on, call this method.
     // This method is also called in other functions in this class.
     void set_bad() { _good = false; }
-    
+
 private:
     bool _good;
     int _size;
@@ -90,16 +91,15 @@ class ISOArrayIterator;
 
 // Represent a piece of unparsed(and unread) data of InputStream.
 struct UnparsedValue {
-    UnparsedValue()
-        : _type(FIELD_UNKNOWN), _stream(NULL), _size(0) {}
+    UnparsedValue() : _type(FIELD_UNKNOWN), _stream(NULL), _size(0) {}
     UnparsedValue(FieldType type, InputStream* stream, size_t size)
         : _type(type), _stream(stream), _size(size) {}
     void set(FieldType type, InputStream* stream, size_t size) {
-        _type = type;
+        _type   = type;
         _stream = stream;
-        _size = size;
+        _size   = size;
     }
-    
+
     FieldType type() const { return _type; }
     InputStream* stream() { return _stream; }
     const InputStream* stream() const { return _stream; }
@@ -122,12 +122,12 @@ struct UnparsedValue {
     std::string as_string(const char* var);
     void as_binary(std::string* out, const char* var);
     std::string as_binary(const char* var);
-        
+
 private:
-friend class ObjectIterator;
-friend class ArrayIterator;
+    friend class ObjectIterator;
+    friend class ArrayIterator;
     void set_end() { _type = FIELD_UNKNOWN; }
-    
+
     FieldType _type;
     InputStream* _stream;
     size_t _size;
@@ -153,15 +153,16 @@ public:
 
     // Parse `n' bytes from `stream' as fields of an object.
     ObjectIterator(InputStream* stream, size_t n) { init(stream, n); }
-    explicit ObjectIterator(UnparsedValue& value)
-    { init(value.stream(), value.size()); }
+    explicit ObjectIterator(UnparsedValue& value) {
+        init(value.stream(), value.size());
+    }
     ~ObjectIterator() {}
 
     Field* operator->() { return &_current_field; }
     Field& operator*() { return _current_field; }
     void operator++();
     operator void*() const { return (void*)_current_field.value.type(); }
-    
+
     // Number of fields in the object.
     uint32_t field_count() const { return _field_count; }
 
@@ -172,9 +173,10 @@ private:
         _stream->set_bad();
     }
     void set_end() { _current_field.value._type = FIELD_UNKNOWN; }
-    size_t left_size() const
-    { return _expected_popped_end - _expected_popped_bytes; }
-    
+    size_t left_size() const {
+        return _expected_popped_end - _expected_popped_bytes;
+    }
+
     Field _current_field;
     uint32_t _field_count;
     std::string _name_backup_string;
@@ -193,8 +195,9 @@ public:
     typedef UnparsedValue Field;
 
     ArrayIterator(InputStream* stream, size_t size) { init(stream, size); }
-    explicit ArrayIterator(UnparsedValue& value)
-    { init(value.stream(), value.size()); }
+    explicit ArrayIterator(UnparsedValue& value) {
+        init(value.stream(), value.size());
+    }
     ~ArrayIterator() {}
 
     Field* operator->() { return &_current_field; }
@@ -204,7 +207,7 @@ public:
 
     // Number of items in the array.
     uint32_t item_count() const { return _item_count; }
-    
+
 private:
     void init(InputStream* stream, size_t n);
     void set_bad() {
@@ -212,9 +215,10 @@ private:
         _stream->set_bad();
     }
     void set_end() { _current_field._type = FIELD_UNKNOWN; }
-    size_t left_size() const
-    { return _expected_popped_end - _expected_popped_bytes; }
-    
+    size_t left_size() const {
+        return _expected_popped_end - _expected_popped_bytes;
+    }
+
     Field _current_field;
     uint32_t _item_count;
     InputStream* _stream;
@@ -227,14 +231,17 @@ private:
 class ISOArrayIterator {
 public:
     ISOArrayIterator(InputStream* stream, size_t size) { init(stream, size); }
-    explicit ISOArrayIterator(UnparsedValue& value)
-    { init(value.stream(), value.size()); }
+    explicit ISOArrayIterator(UnparsedValue& value) {
+        init(value.stream(), value.size());
+    }
     ~ISOArrayIterator() {}
     void operator++();
     operator void*() const { return (void*)(uintptr_t)_item_type; }
 
-    template <typename T> T as_integer() const;
-    template <typename T> T as_fp() const;
+    template <typename T>
+    T as_integer() const;
+    template <typename T>
+    T as_fp() const;
     int64_t as_int64() const { return as_integer<int64_t>(); }
     uint64_t as_uint64() const { return as_integer<uint64_t>(); }
     int32_t as_int32() const { return as_integer<int32_t>(); }

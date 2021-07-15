@@ -15,25 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_PERIODIC_NAMING_SERVICE_H
 #define BRPC_PERIODIC_NAMING_SERVICE_H
 
 #include "brpc/naming_service.h"
 
-
 namespace brpc {
 
 class PeriodicNamingService : public NamingService {
 protected:
-    virtual int GetServers(const char *service_name,
+    virtual int GetServers(const char* service_name,
                            std::vector<ServerNode>* servers) = 0;
-    
+
     int RunNamingService(const char* service_name,
                          NamingServiceActions* actions);
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_PERIODIC_NAMING_SERVICE_H

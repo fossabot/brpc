@@ -15,13 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_COMPRESS_H
 #define BRPC_COMPRESS_H
 
-#include <google/protobuf/message.h>              // Message
-#include "butil/iobuf.h"                           // butil::IOBuf
-#include "brpc/options.pb.h"                     // CompressType
+#include <google/protobuf/message.h>  // Message
+#include "brpc/options.pb.h"          // CompressType
+#include "butil/iobuf.h"              // butil::IOBuf
 
 namespace brpc {
 
@@ -32,7 +31,8 @@ struct CompressHandler {
 
     // Parse decompressed `data' as `msg'.
     // Returns true on success, false otherwise
-    bool (*Decompress)(const butil::IOBuf& data, google::protobuf::Message* msg);
+    bool (*Decompress)(const butil::IOBuf& data,
+                       google::protobuf::Message* msg);
 
     // Name of the compression algorithm, must be string constant.
     const char* name;
@@ -57,10 +57,8 @@ bool ParseFromCompressedData(const butil::IOBuf& data,
 // Compress serialized `msg' into `buf' using registered `compress_type'.
 // Returns true on success, false otherwise
 bool SerializeAsCompressedData(const google::protobuf::Message& msg,
-                               butil::IOBuf* buf,
-                               CompressType compress_type);
+                               butil::IOBuf* buf, CompressType compress_type);
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_COMPRESS_H
+#endif  // BRPC_COMPRESS_H

@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_SSL_HELPER_H
 #define BRPC_SSL_HELPER_H
 
@@ -25,25 +24,25 @@
 // For some versions of openssl, SSL_* are defined inside this header
 #include <openssl/ossl_typ.h>
 #else
-#include <mesalink/openssl/ssl.h>
 #include <mesalink/openssl/err.h>
+#include <mesalink/openssl/ssl.h>
 #include <mesalink/openssl/x509.h>
 #endif
-#include "brpc/socket_id.h"            // SocketId
-#include "brpc/ssl_options.h"          // ServerSSLOptions
+#include "brpc/socket_id.h"    // SocketId
+#include "brpc/ssl_options.h"  // ServerSSLOptions
 
 namespace brpc {
 
 enum SSLState {
-    SSL_UNKNOWN = 0,
-    SSL_OFF = 1,                // Not an SSL connection
-    SSL_CONNECTING = 2,         // During SSL handshake
-    SSL_CONNECTED = 3,          // SSL handshake completed
+    SSL_UNKNOWN    = 0,
+    SSL_OFF        = 1,  // Not an SSL connection
+    SSL_CONNECTING = 2,  // During SSL handshake
+    SSL_CONNECTED  = 3,  // SSL handshake completed
 };
 
 enum SSLProtocol {
-    SSLv3 = 1 << 0,
-    TLSv1 = 1 << 1,
+    SSLv3   = 1 << 0,
+    TLSv1   = 1 << 1,
     TLSv1_1 = 1 << 2,
     TLSv1_2 = 1 << 3,
 };
@@ -57,7 +56,7 @@ struct FreeSSLCTX {
 };
 
 struct SSLError {
-    explicit SSLError(unsigned long e) : error(e) { }
+    explicit SSLError(unsigned long e) : error(e) {}
     unsigned long error;
 };
 std::ostream& operator<<(std::ostream& os, const SSLError&);
@@ -102,6 +101,6 @@ SSLState DetectSSLState(int fd, int* error_code);
 void Print(std::ostream& os, SSL* ssl, const char* sep);
 void Print(std::ostream& os, X509* cert, const char* sep);
 
-} // namespace brpc
+}  // namespace brpc
 
-#endif // BRPC_SSL_HELPER_H
+#endif  // BRPC_SSL_HELPER_H

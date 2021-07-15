@@ -28,13 +28,14 @@ namespace butil {
 // use protobuf.
 // -------------------------------------------------------------------------
 
-// This utility class packs 32-bit and 64-bit integers into binary data 
-// that can be unpacked by RawUnpacker. Notice that the packed data is 
-// schemaless and user must match pack..() methods with same-width 
+// This utility class packs 32-bit and 64-bit integers into binary data
+// that can be unpacked by RawUnpacker. Notice that the packed data is
+// schemaless and user must match pack..() methods with same-width
 // unpack..() methods to get the integers back.
 // Example:
 //   char buf[16];  // 4 + 8 + 4 bytes.
-//   butil::RawPacker(buf).pack32(a).pack64(b).pack32(c);  // buf holds packed data
+//   butil::RawPacker(buf).pack32(a).pack64(b).pack32(c);  // buf holds packed
+//   data
 //
 //   ... network ...
 //
@@ -55,9 +56,9 @@ public:
     }
 
     RawPacker& pack64(uint64_t host_value) {
-        uint32_t *p = (uint32_t*)_stream;
-        p[0] = HostToNet32(host_value >> 32);
-        p[1] = HostToNet32(host_value & 0xFFFFFFFF);
+        uint32_t* p = (uint32_t*)_stream;
+        p[0]        = HostToNet32(host_value >> 32);
+        p[1]        = HostToNet32(host_value & 0xFFFFFFFF);
         _stream += 8;
         return *this;
     }
@@ -73,14 +74,14 @@ public:
     explicit RawUnpacker(const void* stream) : _stream((const char*)stream) {}
     ~RawUnpacker() {}
 
-    RawUnpacker& unpack32(uint32_t & host_value) {
+    RawUnpacker& unpack32(uint32_t& host_value) {
         host_value = NetToHost32(*(const uint32_t*)_stream);
         _stream += 4;
         return *this;
     }
 
-    RawUnpacker& unpack64(uint64_t & host_value) {
-        const uint32_t *p = (const uint32_t*)_stream;
+    RawUnpacker& unpack64(uint64_t& host_value) {
+        const uint32_t* p = (const uint32_t*)_stream;
         host_value = (((uint64_t)NetToHost32(p[0])) << 32) | NetToHost32(p[1]);
         _stream += 8;
         return *this;

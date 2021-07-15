@@ -20,7 +20,7 @@
 #ifndef BUTIL_READER_WRITER_H
 #define BUTIL_READER_WRITER_H
 
-#include <sys/uio.h>                             // iovec
+#include <sys/uio.h>  // iovec
 
 namespace butil {
 
@@ -41,10 +41,9 @@ class IWriter {
 public:
     virtual ~IWriter() {}
 
-    // Semantics of parameters and return value are same as writev(2) except that
-    // there's no `fd'.
-    // WriteV is required to submit data gathered by multiple appends in one 
-    // run and enable the possibility of atomic writes.
+    // Semantics of parameters and return value are same as writev(2) except
+    // that there's no `fd'. WriteV is required to submit data gathered by
+    // multiple appends in one run and enable the possibility of atomic writes.
     virtual ssize_t WriteV(const iovec* iov, int iovcnt) = 0;
 };
 

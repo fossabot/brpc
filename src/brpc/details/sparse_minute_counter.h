@@ -15,10 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_SPARSE_MINUTE_COUNTER_H
 #define BRPC_SPARSE_MINUTE_COUNTER_H
-
 
 #include "butil/containers/bounded_queue.h"
 
@@ -33,13 +31,15 @@ namespace brpc {
 //   by throughput of the server. To make use of the fact, this utility stores
 //   per-second values in a sparse array tagged with timestamps. The array
 //   is resized on-demand to save memory.
-template <typename T> class SparseMinuteCounter {
+template <typename T>
+class SparseMinuteCounter {
     struct Item {
         int64_t timestamp_ms;
         T value;
         Item() : timestamp_ms(0) {}
         Item(int64_t ts, const T& v) : timestamp_ms(ts), value(v) {}
     };
+
 public:
     SparseMinuteCounter() : _q(NULL) {}
     ~SparseMinuteCounter() { DestroyQueue(_q); }
@@ -47,7 +47,7 @@ public:
     // Add `value' into this counter at timestamp `now_ms'
     // Returns true when old value is popped and set into *popped.
     bool Add(int64_t now_ms, const T& value, T* popped);
-    
+
     // Try to pop value before one minute.
     // Returns true when old value is popped and set into *popped.
     bool TryPop(int64_t now_ms, T* popped);
@@ -65,12 +65,11 @@ private:
 
 template <typename T>
 bool SparseMinuteCounter<T>::Add(int64_t now_ms, const T& val, T* popped) {
-    if (_q) { // more common
+    if (_q) {  // more common
         Item new_item(now_ms, val);
         if (_q->full()) {
             const Item* const oldest = _q->top();
-            if (now_ms < oldest->timestamp_ms + 60000 &&
-                _q->capacity() < 60) {
+            if (now_ms < oldest->timestamp_ms + 60000 && _q->capacity() < 60) {
                 Resize();
                 _q->push(new_item);
                 return false;
@@ -89,19 +88,20 @@ bool SparseMinuteCounter<T>::Add(int64_t now_ms, const T& val, T* popped) {
         // This strategy may not allocate _q at all.
         if (_first_item.timestamp_ms == 0) {
             _first_item.timestamp_ms = std::max(now_ms, (int64_t)1);
-            _first_item.value = val;
+            _first_item.value        = val;
             return false;
         }
         const int64_t delta = now_ms - _first_item.timestamp_ms;
         if (delta >= 60000) {
-            *popped = _first_item.value;
+            *popped                  = _first_item.value;
             _first_item.timestamp_ms = std::max(now_ms, (int64_t)1);
-            _first_item.value = val;
+            _first_item.value        = val;
             return true;
         }
         // Predict initial capacity of _q according to interval between
         // now_ms and last timestamp.
-        int64_t initial_cap = (delta <= 1000 ? 30 : (60000 + delta - 1) / delta);
+        int64_t initial_cap =
+            (delta <= 1000 ? 30 : (60000 + delta - 1) / delta);
         if (initial_cap < 4) {
             initial_cap = 4;
         }
@@ -113,12 +113,12 @@ bool SparseMinuteCounter<T>::Add(int64_t now_ms, const T& val, T* popped) {
 }
 
 template <typename T>
-typename SparseMinuteCounter<T>::Q*
-SparseMinuteCounter<T>::CreateQueue(uint32_t cap) {
-    const size_t memsize =
-        sizeof(Q) + sizeof(Item) * cap;
-    char* mem = (char*)malloc(memsize); // intended crash on ENOMEM
-    return new (mem) Q(mem + sizeof(Q), sizeof(Item) * cap, butil::NOT_OWN_STORAGE);
+typename SparseMinuteCounter<T>::Q* SparseMinuteCounter<T>::CreateQueue(
+    uint32_t cap) {
+    const size_t memsize = sizeof(Q) + sizeof(Item) * cap;
+    char* mem            = (char*)malloc(memsize);  // intended crash on ENOMEM
+    return new (mem)
+        Q(mem + sizeof(Q), sizeof(Item) * cap, butil::NOT_OWN_STORAGE);
 }
 
 template <typename T>
@@ -133,7 +133,7 @@ template <typename T>
 void SparseMinuteCounter<T>::Resize() {
     CHECK_LT(_q->capacity(), (size_t)60);
     uint32_t new_cap = std::min(2 * (uint32_t)_q->capacity(), 60u);
-    Q* new_q = CreateQueue(new_cap);
+    Q* new_q         = CreateQueue(new_cap);
     for (size_t i = 0; i < _q->size(); ++i) {
         new_q->push(*_q->top(i));
     }
@@ -157,12 +157,11 @@ bool SparseMinuteCounter<T>::TryPop(int64_t now_ms, T* popped) {
             return false;
         }
         _first_item.timestamp_ms = 0;
-        *popped = _first_item.value;
+        *popped                  = _first_item.value;
         return true;
     }
 }
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_SPARSE_MINUTE_COUNTER_H

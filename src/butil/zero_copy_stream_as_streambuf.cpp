@@ -17,8 +17,8 @@
 
 // Date: Thu Nov 22 13:57:56 CST 2012
 
-#include "butil/macros.h"
 #include "butil/zero_copy_stream_as_streambuf.h"
+#include "butil/macros.h"
 
 namespace butil {
 
@@ -30,7 +30,7 @@ int ZeroCopyStreamAsStreamBuf::overflow(int ch) {
         return ch;
     }
     void* block = NULL;
-    int size = 0;
+    int size    = 0;
     if (_zero_copy_stream->Next(&block, &size)) {
         setp((char*)block, (char*)block + size);
         // if size == 0, this function will call overflow again.
@@ -46,9 +46,7 @@ int ZeroCopyStreamAsStreamBuf::sync() {
     return 0;
 }
 
-ZeroCopyStreamAsStreamBuf::~ZeroCopyStreamAsStreamBuf() {
-    shrink();
-}
+ZeroCopyStreamAsStreamBuf::~ZeroCopyStreamAsStreamBuf() { shrink(); }
 
 void ZeroCopyStreamAsStreamBuf::shrink() {
     if (pbase() != NULL) {
@@ -58,14 +56,12 @@ void ZeroCopyStreamAsStreamBuf::shrink() {
 }
 
 std::streampos ZeroCopyStreamAsStreamBuf::seekoff(
-    std::streamoff off,
-    std::ios_base::seekdir way,
+    std::streamoff off, std::ios_base::seekdir way,
     std::ios_base::openmode which) {
     if (off == 0 && way == std::ios_base::cur) {
         return _zero_copy_stream->ByteCount() - (epptr() - pptr());
     }
     return (std::streampos)(std::streamoff)-1;
 }
-
 
 }  // namespace butil

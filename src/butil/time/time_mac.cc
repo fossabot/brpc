@@ -22,74 +22,73 @@ namespace {
 
 uint64_t ComputeCurrentTicks() {
 #if defined(OS_IOS)
-  // On iOS mach_absolute_time stops while the device is sleeping. Instead use
-  // now - KERN_BOOTTIME to get a time difference that is not impacted by clock
-  // changes. KERN_BOOTTIME will be updated by the system whenever the system
-  // clock change.
-  struct timeval boottime;
-  int mib[2] = {CTL_KERN, KERN_BOOTTIME};
-  size_t size = sizeof(boottime);
-  int kr = sysctl(mib, arraysize(mib), &boottime, &size, NULL, 0);
-  DCHECK_EQ(KERN_SUCCESS, kr);
-  butil::TimeDelta time_difference = butil::Time::Now() -
-      (butil::Time::FromTimeT(boottime.tv_sec) +
-       butil::TimeDelta::FromMicroseconds(boottime.tv_usec));
-  return time_difference.InMicroseconds();
+    // On iOS mach_absolute_time stops while the device is sleeping. Instead use
+    // now - KERN_BOOTTIME to get a time difference that is not impacted by
+    // clock changes. KERN_BOOTTIME will be updated by the system whenever the
+    // system clock change.
+    struct timeval boottime;
+    int mib[2]  = {CTL_KERN, KERN_BOOTTIME};
+    size_t size = sizeof(boottime);
+    int kr      = sysctl(mib, arraysize(mib), &boottime, &size, NULL, 0);
+    DCHECK_EQ(KERN_SUCCESS, kr);
+    butil::TimeDelta time_difference =
+        butil::Time::Now() -
+        (butil::Time::FromTimeT(boottime.tv_sec) +
+         butil::TimeDelta::FromMicroseconds(boottime.tv_usec));
+    return time_difference.InMicroseconds();
 #else
-  uint64_t absolute_micro;
+    uint64_t absolute_micro;
 
-  static mach_timebase_info_data_t timebase_info;
-  if (timebase_info.denom == 0) {
-    // Zero-initialization of statics guarantees that denom will be 0 before
-    // calling mach_timebase_info.  mach_timebase_info will never set denom to
-    // 0 as that would be invalid, so the zero-check can be used to determine
-    // whether mach_timebase_info has already been called.  This is
-    // recommended by Apple's QA1398.
-    kern_return_t kr = mach_timebase_info(&timebase_info);
-    DCHECK(kr == KERN_SUCCESS) << "Fail to call mach_timebase_info";
-  }
+    static mach_timebase_info_data_t timebase_info;
+    if (timebase_info.denom == 0) {
+        // Zero-initialization of statics guarantees that denom will be 0 before
+        // calling mach_timebase_info.  mach_timebase_info will never set denom
+        // to 0 as that would be invalid, so the zero-check can be used to
+        // determine whether mach_timebase_info has already been called.  This
+        // is recommended by Apple's QA1398.
+        kern_return_t kr = mach_timebase_info(&timebase_info);
+        DCHECK(kr == KERN_SUCCESS) << "Fail to call mach_timebase_info";
+    }
 
-  // mach_absolute_time is it when it comes to ticks on the Mac.  Other calls
-  // with less precision (such as TickCount) just call through to
-  // mach_absolute_time.
+    // mach_absolute_time is it when it comes to ticks on the Mac.  Other calls
+    // with less precision (such as TickCount) just call through to
+    // mach_absolute_time.
 
-  // timebase_info converts absolute time tick units into nanoseconds.  Convert
-  // to microseconds up front to stave off overflows.
-  absolute_micro =
-      mach_absolute_time() / butil::Time::kNanosecondsPerMicrosecond *
-      timebase_info.numer / timebase_info.denom;
+    // timebase_info converts absolute time tick units into nanoseconds. Convert
+    // to microseconds up front to stave off overflows.
+    absolute_micro = mach_absolute_time() /
+                     butil::Time::kNanosecondsPerMicrosecond *
+                     timebase_info.numer / timebase_info.denom;
 
-  // Don't bother with the rollover handling that the Windows version does.
-  // With numer and denom = 1 (the expected case), the 64-bit absolute time
-  // reported in nanoseconds is enough to last nearly 585 years.
-  return absolute_micro;
+    // Don't bother with the rollover handling that the Windows version does.
+    // With numer and denom = 1 (the expected case), the 64-bit absolute time
+    // reported in nanoseconds is enough to last nearly 585 years.
+    return absolute_micro;
 #endif  // defined(OS_IOS)
 }
 
 uint64_t ComputeThreadTicks() {
 #if defined(OS_IOS)
-  NOTREACHED();
-  return 0;
-#else
-  butil::mac::ScopedMachSendRight thread(mach_thread_self());
-  mach_msg_type_number_t thread_info_count = THREAD_BASIC_INFO_COUNT;
-  thread_basic_info_data_t thread_info_data;
-
-  if (thread.get() == MACH_PORT_NULL) {
-    DLOG(ERROR) << "Failed to get mach_thread_self()";
+    NOTREACHED();
     return 0;
-  }
+#else
+    butil::mac::ScopedMachSendRight thread(mach_thread_self());
+    mach_msg_type_number_t thread_info_count = THREAD_BASIC_INFO_COUNT;
+    thread_basic_info_data_t thread_info_data;
 
-  kern_return_t kr = thread_info(
-      thread.get(),
-      THREAD_BASIC_INFO,
-      reinterpret_cast<thread_info_t>(&thread_info_data),
-      &thread_info_count);
-  DCHECK(kr == KERN_SUCCESS) << "Fail to call thread_info";
+    if (thread.get() == MACH_PORT_NULL) {
+        DLOG(ERROR) << "Failed to get mach_thread_self()";
+        return 0;
+    }
 
-  return (thread_info_data.user_time.seconds *
-              butil::Time::kMicrosecondsPerSecond) +
-         thread_info_data.user_time.microseconds;
+    kern_return_t kr = thread_info(
+        thread.get(), THREAD_BASIC_INFO,
+        reinterpret_cast<thread_info_t>(&thread_info_data), &thread_info_count);
+    DCHECK(kr == KERN_SUCCESS) << "Fail to call thread_info";
+
+    return (thread_info_data.user_time.seconds *
+            butil::Time::kMicrosecondsPerSecond) +
+           thread_info_data.user_time.microseconds;
 #endif  // defined(OS_IOS)
 }
 
@@ -125,116 +124,102 @@ const int64_t Time::kWindowsEpochDeltaMicroseconds =
 const int64_t Time::kTimeTToMicrosecondsOffset = kWindowsEpochDeltaMicroseconds;
 
 // static
-Time Time::Now() {
-  return FromCFAbsoluteTime(CFAbsoluteTimeGetCurrent());
-}
+Time Time::Now() { return FromCFAbsoluteTime(CFAbsoluteTimeGetCurrent()); }
 
 // static
 Time Time::FromCFAbsoluteTime(CFAbsoluteTime t) {
-  COMPILE_ASSERT(std::numeric_limits<CFAbsoluteTime>::has_infinity,
-                 numeric_limits_infinity_is_undefined_when_not_has_infinity);
-  if (t == 0)
-    return Time();  // Consider 0 as a null Time.
-  if (t == std::numeric_limits<CFAbsoluteTime>::infinity())
-    return Max();
-  return Time(static_cast<int64_t>(
-      (t + kCFAbsoluteTimeIntervalSince1970) * kMicrosecondsPerSecond) +
-      kWindowsEpochDeltaMicroseconds);
+    COMPILE_ASSERT(std::numeric_limits<CFAbsoluteTime>::has_infinity,
+                   numeric_limits_infinity_is_undefined_when_not_has_infinity);
+    if (t == 0) return Time();  // Consider 0 as a null Time.
+    if (t == std::numeric_limits<CFAbsoluteTime>::infinity()) return Max();
+    return Time(static_cast<int64_t>((t + kCFAbsoluteTimeIntervalSince1970) *
+                                     kMicrosecondsPerSecond) +
+                kWindowsEpochDeltaMicroseconds);
 }
 
 CFAbsoluteTime Time::ToCFAbsoluteTime() const {
-  COMPILE_ASSERT(std::numeric_limits<CFAbsoluteTime>::has_infinity,
-                 numeric_limits_infinity_is_undefined_when_not_has_infinity);
-  if (is_null())
-    return 0;  // Consider 0 as a null Time.
-  if (is_max())
-    return std::numeric_limits<CFAbsoluteTime>::infinity();
-  return (static_cast<CFAbsoluteTime>(us_ - kWindowsEpochDeltaMicroseconds) /
-      kMicrosecondsPerSecond) - kCFAbsoluteTimeIntervalSince1970;
+    COMPILE_ASSERT(std::numeric_limits<CFAbsoluteTime>::has_infinity,
+                   numeric_limits_infinity_is_undefined_when_not_has_infinity);
+    if (is_null()) return 0;  // Consider 0 as a null Time.
+    if (is_max()) return std::numeric_limits<CFAbsoluteTime>::infinity();
+    return (static_cast<CFAbsoluteTime>(us_ - kWindowsEpochDeltaMicroseconds) /
+            kMicrosecondsPerSecond) -
+           kCFAbsoluteTimeIntervalSince1970;
 }
 
 // static
 Time Time::NowFromSystemTime() {
-  // Just use Now() because Now() returns the system time.
-  return Now();
+    // Just use Now() because Now() returns the system time.
+    return Now();
 }
 
 // static
 Time Time::FromExploded(bool is_local, const Exploded& exploded) {
-  CFGregorianDate date;
-  date.second = exploded.second +
-      exploded.millisecond / static_cast<double>(kMillisecondsPerSecond);
-  date.minute = exploded.minute;
-  date.hour = exploded.hour;
-  date.day = exploded.day_of_month;
-  date.month = exploded.month;
-  date.year = exploded.year;
+    CFGregorianDate date;
+    date.second =
+        exploded.second +
+        exploded.millisecond / static_cast<double>(kMillisecondsPerSecond);
+    date.minute = exploded.minute;
+    date.hour   = exploded.hour;
+    date.day    = exploded.day_of_month;
+    date.month  = exploded.month;
+    date.year   = exploded.year;
 
-  butil::ScopedCFTypeRef<CFTimeZoneRef> time_zone(
-      is_local ? CFTimeZoneCopySystem() : NULL);
-  CFAbsoluteTime seconds = CFGregorianDateGetAbsoluteTime(date, time_zone) +
-      kCFAbsoluteTimeIntervalSince1970;
-  return Time(static_cast<int64_t>(seconds * kMicrosecondsPerSecond) +
-      kWindowsEpochDeltaMicroseconds);
+    butil::ScopedCFTypeRef<CFTimeZoneRef> time_zone(
+        is_local ? CFTimeZoneCopySystem() : NULL);
+    CFAbsoluteTime seconds = CFGregorianDateGetAbsoluteTime(date, time_zone) +
+                             kCFAbsoluteTimeIntervalSince1970;
+    return Time(static_cast<int64_t>(seconds * kMicrosecondsPerSecond) +
+                kWindowsEpochDeltaMicroseconds);
 }
 
 void Time::Explode(bool is_local, Exploded* exploded) const {
-  // Avoid rounding issues, by only putting the integral number of seconds
-  // (rounded towards -infinity) into a |CFAbsoluteTime| (which is a |double|).
-  int64_t microsecond = us_ % kMicrosecondsPerSecond;
-  if (microsecond < 0)
-    microsecond += kMicrosecondsPerSecond;
-  CFAbsoluteTime seconds = ((us_ - microsecond) / kMicrosecondsPerSecond) -
-                           kWindowsEpochDeltaSeconds -
-                           kCFAbsoluteTimeIntervalSince1970;
+    // Avoid rounding issues, by only putting the integral number of seconds
+    // (rounded towards -infinity) into a |CFAbsoluteTime| (which is a
+    // |double|).
+    int64_t microsecond = us_ % kMicrosecondsPerSecond;
+    if (microsecond < 0) microsecond += kMicrosecondsPerSecond;
+    CFAbsoluteTime seconds = ((us_ - microsecond) / kMicrosecondsPerSecond) -
+                             kWindowsEpochDeltaSeconds -
+                             kCFAbsoluteTimeIntervalSince1970;
 
-  butil::ScopedCFTypeRef<CFTimeZoneRef> time_zone(
-      is_local ? CFTimeZoneCopySystem() : NULL);
-  CFGregorianDate date = CFAbsoluteTimeGetGregorianDate(seconds, time_zone);
-  // 1 = Monday, ..., 7 = Sunday.
-  int cf_day_of_week = CFAbsoluteTimeGetDayOfWeek(seconds, time_zone);
+    butil::ScopedCFTypeRef<CFTimeZoneRef> time_zone(
+        is_local ? CFTimeZoneCopySystem() : NULL);
+    CFGregorianDate date = CFAbsoluteTimeGetGregorianDate(seconds, time_zone);
+    // 1 = Monday, ..., 7 = Sunday.
+    int cf_day_of_week = CFAbsoluteTimeGetDayOfWeek(seconds, time_zone);
 
-  exploded->year = date.year;
-  exploded->month = date.month;
-  exploded->day_of_week = cf_day_of_week % 7;
-  exploded->day_of_month = date.day;
-  exploded->hour = date.hour;
-  exploded->minute = date.minute;
-  // Make sure seconds are rounded down towards -infinity.
-  exploded->second = floor(date.second);
-  // Calculate milliseconds ourselves, since we rounded the |seconds|, making
-  // sure to round towards -infinity.
-  exploded->millisecond =
-      (microsecond >= 0) ? microsecond / kMicrosecondsPerMillisecond :
-                           (microsecond - kMicrosecondsPerMillisecond + 1) /
-                               kMicrosecondsPerMillisecond;
+    exploded->year         = date.year;
+    exploded->month        = date.month;
+    exploded->day_of_week  = cf_day_of_week % 7;
+    exploded->day_of_month = date.day;
+    exploded->hour         = date.hour;
+    exploded->minute       = date.minute;
+    // Make sure seconds are rounded down towards -infinity.
+    exploded->second = floor(date.second);
+    // Calculate milliseconds ourselves, since we rounded the |seconds|, making
+    // sure to round towards -infinity.
+    exploded->millisecond =
+        (microsecond >= 0) ? microsecond / kMicrosecondsPerMillisecond
+                           : (microsecond - kMicrosecondsPerMillisecond + 1) /
+                                 kMicrosecondsPerMillisecond;
 }
 
 // TimeTicks ------------------------------------------------------------------
 
 // static
-TimeTicks TimeTicks::Now() {
-  return TimeTicks(ComputeCurrentTicks());
-}
+TimeTicks TimeTicks::Now() { return TimeTicks(ComputeCurrentTicks()); }
 
 // static
-TimeTicks TimeTicks::HighResNow() {
-  return Now();
-}
+TimeTicks TimeTicks::HighResNow() { return Now(); }
 
 // static
-bool TimeTicks::IsHighResNowFastAndReliable() {
-  return true;
-}
+bool TimeTicks::IsHighResNowFastAndReliable() { return true; }
 
 // static
-TimeTicks TimeTicks::ThreadNow() {
-  return TimeTicks(ComputeThreadTicks());
-}
+TimeTicks TimeTicks::ThreadNow() { return TimeTicks(ComputeThreadTicks()); }
 
 // static
-TimeTicks TimeTicks::NowFromSystemTraceTime() {
-  return HighResNow();
-}
+TimeTicks TimeTicks::NowFromSystemTraceTime() { return HighResNow(); }
 
 }  // namespace butil

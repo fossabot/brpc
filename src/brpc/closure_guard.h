@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_CLOSURE_GUARD_H
 #define BRPC_CLOSURE_GUARD_H
 
 #include <google/protobuf/service.h>
 #include "butil/macros.h"
-
 
 namespace brpc {
 
@@ -32,7 +30,7 @@ public:
 
     // Constructed with a closure which will be Run() inside dtor.
     explicit ClosureGuard(google::protobuf::Closure* done) : _done(done) {}
-    
+
     // Run internal closure if it's not NULL.
     ~ClosureGuard() {
         if (_done) {
@@ -51,7 +49,7 @@ public:
     // Return and set internal closure to NULL.
     google::protobuf::Closure* release() {
         google::protobuf::Closure* const prev_done = _done;
-        _done = NULL;
+        _done                                      = NULL;
         return prev_done;
     }
 
@@ -60,15 +58,14 @@ public:
 
     // Exchange closure with another guard.
     void swap(ClosureGuard& other) { std::swap(_done, other._done); }
-    
+
 private:
     // Copying this object makes no sense.
     DISALLOW_COPY_AND_ASSIGN(ClosureGuard);
-    
+
     google::protobuf::Closure* _done;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_CLOSURE_GUARD_H

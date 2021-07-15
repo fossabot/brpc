@@ -15,21 +15,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "brpc/controller.h"           // Controller
-#include "brpc/server.h"               // Server
-#include "brpc/closure_guard.h"        // ClosureGuard
 #include "brpc/builtin/version_service.h"
-
+#include "brpc/closure_guard.h"  // ClosureGuard
+#include "brpc/controller.h"     // Controller
+#include "brpc/server.h"         // Server
 
 namespace brpc {
 
-void VersionService::default_method(::google::protobuf::RpcController* controller,
-                                    const ::brpc::VersionRequest*,
-                                    ::brpc::VersionResponse*,
-                                    ::google::protobuf::Closure* done) {
+void VersionService::default_method(
+    ::google::protobuf::RpcController* controller,
+    const ::brpc::VersionRequest*, ::brpc::VersionResponse*,
+    ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = (Controller *)controller;
+    Controller* cntl = (Controller*)controller;
     cntl->http_response().set_content_type("text/plain");
     if (_server->version().empty()) {
         cntl->response_attachment().append("unknown");
@@ -38,4 +36,4 @@ void VersionService::default_method(::google::protobuf::RpcController* controlle
     }
 }
 
-} // namespace brpc
+}  // namespace brpc

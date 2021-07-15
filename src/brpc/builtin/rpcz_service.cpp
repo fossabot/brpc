@@ -15,22 +15,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <ostream>
-#include <iomanip>
+#include "brpc/builtin/rpcz_service.h"
 #include <gflags/gflags.h>
+#include <iomanip>
+#include <ostream>
+#include "brpc/builtin/common.h"
+#include "brpc/closure_guard.h"  // ClosureGuard
+#include "brpc/controller.h"     // Controller
+#include "brpc/errno.pb.h"
+#include "brpc/server.h"
+#include "brpc/span.h"
+#include "butil/macros.h"
 #include "butil/string_printf.h"
 #include "butil/string_splitter.h"
-#include "butil/macros.h"
 #include "butil/time.h"
-#include "brpc/closure_guard.h"        // ClosureGuard
-#include "brpc/controller.h"           // Controller
-#include "brpc/builtin/common.h"
-#include "brpc/server.h"
-#include "brpc/errno.pb.h"
-#include "brpc/span.h"
-#include "brpc/builtin/rpcz_service.h"
-
 
 namespace brpc {
 
@@ -57,14 +55,13 @@ inline std::ostream& operator<<(std::ostream& os, const Hex& h) {
 }
 
 void RpczService::enable(::google::protobuf::RpcController* cntl_base,
-                         const ::brpc::RpczRequest*,
-                         ::brpc::RpczResponse*,
+                         const ::brpc::RpczRequest*, ::brpc::RpczResponse*,
                          ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
+    Controller* cntl    = static_cast<Controller*>(cntl_base);
     const bool use_html = UseHTML(cntl->http_request());
-    cntl->http_response().set_content_type(
-        use_html ? "text/html" : "text/plain");
+    cntl->http_response().set_content_type(use_html ? "text/html"
+                                                    : "text/plain");
     if (!GFLAGS_NS::SetCommandLineOption("enable_rpcz", "true").empty()) {
         if (use_html) {
             // Redirect to /rpcz
@@ -86,14 +83,13 @@ void RpczService::enable(::google::protobuf::RpcController* cntl_base,
 }
 
 void RpczService::disable(::google::protobuf::RpcController* cntl_base,
-                          const ::brpc::RpczRequest*,
-                          ::brpc::RpczResponse*,
+                          const ::brpc::RpczRequest*, ::brpc::RpczResponse*,
                           ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
+    Controller* cntl    = static_cast<Controller*>(cntl_base);
     const bool use_html = UseHTML(cntl->http_request());
-    cntl->http_response().set_content_type(
-        use_html ? "text/html" : "text/plain");
+    cntl->http_response().set_content_type(use_html ? "text/html"
+                                                    : "text/plain");
     if (!GFLAGS_NS::SetCommandLineOption("enable_rpcz", "false").empty()) {
         if (use_html) {
             // Redirect to /rpcz
@@ -115,33 +111,30 @@ void RpczService::disable(::google::protobuf::RpcController* cntl_base,
 }
 
 void RpczService::hex_log_id(::google::protobuf::RpcController* cntl_base,
-                             const ::brpc::RpczRequest*,
-                             ::brpc::RpczResponse*,
+                             const ::brpc::RpczRequest*, ::brpc::RpczResponse*,
                              ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
+    Controller* cntl = static_cast<Controller*>(cntl_base);
     cntl->http_response().set_content_type("text/plain");
     FLAGS_rpcz_hex_log_id = true;
     cntl->response_attachment().append("log_id is hexadecimal");
 }
 
 void RpczService::dec_log_id(::google::protobuf::RpcController* cntl_base,
-                             const ::brpc::RpczRequest*,
-                             ::brpc::RpczResponse*,
+                             const ::brpc::RpczRequest*, ::brpc::RpczResponse*,
                              ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
+    Controller* cntl = static_cast<Controller*>(cntl_base);
     cntl->http_response().set_content_type("text/plain");
     FLAGS_rpcz_hex_log_id = false;
     cntl->response_attachment().append("log_id is decimal");
 }
 
 void RpczService::stats(::google::protobuf::RpcController* cntl_base,
-                        const ::brpc::RpczRequest*,
-                        ::brpc::RpczResponse*,
+                        const ::brpc::RpczRequest*, ::brpc::RpczResponse*,
                         ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
+    Controller* cntl = static_cast<Controller*>(cntl_base);
     cntl->http_response().set_content_type("text/plain");
 
     if (!FLAGS_enable_rpcz && !has_span_db()) {
@@ -169,7 +162,7 @@ inline void PrintRealTime(std::ostream& os, int64_t tm) {
 static void PrintElapse(std::ostream& os, int64_t cur_time,
                         int64_t* last_time) {
     const int64_t elp = cur_time - *last_time;
-    *last_time = cur_time;
+    *last_time        = cur_time;
     if (elp < 0) {
         os << std::fixed << std::setw(11) << std::setprecision(6)
            << elp / 1000000.0;
@@ -183,12 +176,12 @@ static void PrintElapse(std::ostream& os, int64_t cur_time,
     }
 }
 
-static void PrintAnnotations(
-    std::ostream& os, int64_t cur_time, int64_t* last_time,
-    SpanInfoExtractor** extractors, int num_extr) {
+static void PrintAnnotations(std::ostream& os, int64_t cur_time,
+                             int64_t* last_time, SpanInfoExtractor** extractors,
+                             int num_extr) {
     int64_t anno_time;
     std::string a;
-    // TODO: Going through all extractors is not strictly correct because 
+    // TODO: Going through all extractors is not strictly correct because
     // later extractors may have earlier annotations.
     for (int i = 0; i < num_extr; ++i) {
         while (extractors[i]->PopAnnotation(cur_time, &anno_time, &a)) {
@@ -202,9 +195,10 @@ static void PrintAnnotations(
     }
 }
 
-static bool PrintAnnotationsAndRealTimeSpan(
-    std::ostream& os, int64_t cur_time, int64_t* last_time,
-    SpanInfoExtractor** extr, int num_extr) {
+static bool PrintAnnotationsAndRealTimeSpan(std::ostream& os, int64_t cur_time,
+                                            int64_t* last_time,
+                                            SpanInfoExtractor** extr,
+                                            int num_extr) {
     if (cur_time == 0) {
         // the field was not set.
         return false;
@@ -216,8 +210,8 @@ static bool PrintAnnotationsAndRealTimeSpan(
 }
 
 inline int64_t GetStartRealTime(const RpczSpan& span) {
-    return span.type() == SPAN_TYPE_SERVER ?
-        span.received_real_us() : span.start_send_real_us();
+    return span.type() == SPAN_TYPE_SERVER ? span.received_real_us()
+                                           : span.start_send_real_us();
 }
 
 struct CompareByStartRealTime {
@@ -227,11 +221,12 @@ struct CompareByStartRealTime {
 };
 
 static butil::ip_t loopback_ip = butil::IP_ANY;
-static int ALLOW_UNUSED init_loopback_ip_dummy = butil::str2ip("127.0.0.1", &loopback_ip);
+static int ALLOW_UNUSED init_loopback_ip_dummy =
+    butil::str2ip("127.0.0.1", &loopback_ip);
 
-static void PrintClientSpan(
-    std::ostream& os, const RpczSpan& span,
-    int64_t* last_time, SpanInfoExtractor* server_extr, bool use_html) {
+static void PrintClientSpan(std::ostream& os, const RpczSpan& span,
+                            int64_t* last_time, SpanInfoExtractor* server_extr,
+                            bool use_html) {
     SpanInfoExtractor client_extr(span.info().c_str());
     int num_extr = 0;
     SpanInfoExtractor* extr[2];
@@ -242,27 +237,27 @@ static void PrintClientSpan(
     // start_send_us is always set for client spans.
     CHECK(PrintAnnotationsAndRealTimeSpan(os, span.start_send_real_us(),
                                           last_time, extr, num_extr));
-    const Protocol* protocol = FindProtocol(span.protocol());
+    const Protocol* protocol  = FindProtocol(span.protocol());
     const char* protocol_name = (protocol ? protocol->name : "Unknown");
-    const butil::EndPoint remote_side(butil::int2ip(span.remote_ip()), span.remote_port());
+    const butil::EndPoint remote_side(butil::int2ip(span.remote_ip()),
+                                      span.remote_port());
     butil::EndPoint abs_remote_side = remote_side;
     if (abs_remote_side.ip == loopback_ip) {
         abs_remote_side.ip = butil::my_ip();
     }
-    os << " Requesting " << span.full_method_name() << '@' << remote_side
-       << ' ' << protocol_name << ' ' << LOG_ID_STR << '=';
+    os << " Requesting " << span.full_method_name() << '@' << remote_side << ' '
+       << protocol_name << ' ' << LOG_ID_STR << '=';
     if (FLAGS_rpcz_hex_log_id) {
         os << Hex(span.log_id());
     } else {
         os << span.log_id();
     }
-    os << " call_id=" << span.base_cid()
-       << ' ' << TRACE_ID_STR << '=' << Hex(span.trace_id())
-       << ' ' << SPAN_ID_STR << '=';
+    os << " call_id=" << span.base_cid() << ' ' << TRACE_ID_STR << '='
+       << Hex(span.trace_id()) << ' ' << SPAN_ID_STR << '=';
     if (use_html) {
-        os << "<a href=\"http://" << abs_remote_side
-           << "/rpcz?" << TRACE_ID_STR << '=' << Hex(span.trace_id())
-           << '&' << SPAN_ID_STR << '=' << Hex(span.span_id()) << "\">";
+        os << "<a href=\"http://" << abs_remote_side << "/rpcz?" << TRACE_ID_STR
+           << '=' << Hex(span.trace_id()) << '&' << SPAN_ID_STR << '='
+           << Hex(span.span_id()) << "\">";
     }
     os << Hex(span.span_id());
     if (use_html) {
@@ -270,12 +265,12 @@ static void PrintClientSpan(
     }
     os << std::endl;
 
-    if (PrintAnnotationsAndRealTimeSpan(os, span.sent_real_us(),
-                                        last_time, extr, num_extr)) {
+    if (PrintAnnotationsAndRealTimeSpan(os, span.sent_real_us(), last_time,
+                                        extr, num_extr)) {
         os << " Requested(" << span.request_size() << ") [1]" << std::endl;
     }
-    if (PrintAnnotationsAndRealTimeSpan(os, span.received_real_us(),
-                                        last_time, extr, num_extr)) {
+    if (PrintAnnotationsAndRealTimeSpan(os, span.received_real_us(), last_time,
+                                        extr, num_extr)) {
         os << " Received response(" << span.response_size() << ")";
         if (span.base_cid() != 0 && span.ending_cid() != 0) {
             int64_t ver = span.ending_cid() - span.base_cid();
@@ -293,32 +288,31 @@ static void PrintClientSpan(
         os << " Processing the response in a new bthread" << std::endl;
     }
 
-    if (PrintAnnotationsAndRealTimeSpan(
-            os, span.start_callback_real_us(),
-            last_time, extr, num_extr)) {
-        os << (span.async() ? " Enter user's done" : " Back to user's callsite") << std::endl;
+    if (PrintAnnotationsAndRealTimeSpan(os, span.start_callback_real_us(),
+                                        last_time, extr, num_extr)) {
+        os << (span.async() ? " Enter user's done" : " Back to user's callsite")
+           << std::endl;
     }
 
-    PrintAnnotations(os, std::numeric_limits<int64_t>::max(),
-                     last_time, extr, num_extr);
+    PrintAnnotations(os, std::numeric_limits<int64_t>::max(), last_time, extr,
+                     num_extr);
 }
 
-static void PrintClientSpan(std::ostream& os,const RpczSpan& span,
+static void PrintClientSpan(std::ostream& os, const RpczSpan& span,
                             bool use_html) {
     int64_t last_time = span.start_send_real_us();
     PrintClientSpan(os, span, &last_time, NULL, use_html);
 }
 
-
 static void PrintServerSpan(std::ostream& os, const RpczSpan& span,
                             bool use_html) {
     SpanInfoExtractor server_extr(span.info().c_str());
-    SpanInfoExtractor* extr[1] = { &server_extr };
-    int64_t last_time = span.received_real_us();
-    const butil::EndPoint remote_side(
-        butil::int2ip(span.remote_ip()), span.remote_port());
+    SpanInfoExtractor* extr[1] = {&server_extr};
+    int64_t last_time          = span.received_real_us();
+    const butil::EndPoint remote_side(butil::int2ip(span.remote_ip()),
+                                      span.remote_port());
     PrintRealDateTime(os, last_time);
-    const Protocol* protocol = FindProtocol(span.protocol());
+    const Protocol* protocol  = FindProtocol(span.protocol());
     const char* protocol_name = (protocol ? protocol->name : "Unknown");
     os << " Received request(" << span.request_size() << ") from "
        << remote_side << ' ' << protocol_name << ' ' << LOG_ID_STR << '=';
@@ -329,50 +323,46 @@ static void PrintServerSpan(std::ostream& os, const RpczSpan& span,
     }
     // TODO: We can't hyperlink parent_span now because there's no generic
     // way to get the port of upstream server yet.
-    os << ' ' << TRACE_ID_STR << '=' << Hex(span.trace_id())
-       << ' ' << SPAN_ID_STR << '=' << Hex(span.span_id());
+    os << ' ' << TRACE_ID_STR << '=' << Hex(span.trace_id()) << ' '
+       << SPAN_ID_STR << '=' << Hex(span.span_id());
     if (span.parent_span_id() != 0) {
         os << " parent_span=" << Hex(span.parent_span_id());
     }
     os << std::endl;
-    if (PrintAnnotationsAndRealTimeSpan(
-            os, span.start_parse_real_us(),
-            &last_time, extr, ARRAY_SIZE(extr))) {
+    if (PrintAnnotationsAndRealTimeSpan(os, span.start_parse_real_us(),
+                                        &last_time, extr, ARRAY_SIZE(extr))) {
         os << " Processing the request in a new bthread" << std::endl;
     }
 
     bool entered_user_method = false;
-    if (PrintAnnotationsAndRealTimeSpan(
-            os, span.start_callback_real_us(),
-            &last_time, extr, ARRAY_SIZE(extr))) {
+    if (PrintAnnotationsAndRealTimeSpan(os, span.start_callback_real_us(),
+                                        &last_time, extr, ARRAY_SIZE(extr))) {
         entered_user_method = true;
         os << " Enter " << span.full_method_name() << std::endl;
     }
 
     const int nclient = span.client_spans_size();
     for (int i = 0; i < nclient; ++i) {
-        PrintClientSpan(os, span.client_spans(i), &last_time,
-                        &server_extr, use_html);
+        PrintClientSpan(os, span.client_spans(i), &last_time, &server_extr,
+                        use_html);
     }
 
-    if (PrintAnnotationsAndRealTimeSpan(
-            os, span.start_send_real_us(),
-            &last_time, extr, ARRAY_SIZE(extr))) {
+    if (PrintAnnotationsAndRealTimeSpan(os, span.start_send_real_us(),
+                                        &last_time, extr, ARRAY_SIZE(extr))) {
         if (entered_user_method) {
             os << " Leave " << span.full_method_name() << std::endl;
         } else {
             os << " Responding" << std::endl;
         }
     }
-    
-    if (PrintAnnotationsAndRealTimeSpan(
-            os, span.sent_real_us(),
-            &last_time, extr, ARRAY_SIZE(extr))) {
+
+    if (PrintAnnotationsAndRealTimeSpan(os, span.sent_real_us(), &last_time,
+                                        extr, ARRAY_SIZE(extr))) {
         os << " Responded(" << span.response_size() << ')' << std::endl;
     }
 
-    PrintAnnotations(os, std::numeric_limits<int64_t>::max(),
-                     &last_time, extr, ARRAY_SIZE(extr));
+    PrintAnnotations(os, std::numeric_limits<int64_t>::max(), &last_time, extr,
+                     ARRAY_SIZE(extr));
 }
 
 class RpczSpanFilter : public SpanFilter {
@@ -384,8 +374,7 @@ public:
         , _log_id(0)
         , _check_log_id(false)
         , _check_error_code(false)
-        , _error_code(0)
-    {}
+        , _error_code(0) {}
 
     void CheckLatency(int64_t min_latency) { _min_latency = min_latency; }
 
@@ -399,20 +388,20 @@ public:
 
     void CheckLogId(uint64_t log_id) {
         _check_log_id = true;
-        _log_id = log_id;
+        _log_id       = log_id;
     }
 
     void CheckErrorCode(int error_code) {
         _check_error_code = true;
-        _error_code = error_code;
+        _error_code       = error_code;
     }
-    
+
     bool Keep(const BriefSpan& span) {
         return span.latency_us() >= _min_latency &&
-            span.request_size() >= _min_request_size &&
-            span.response_size() >= _min_response_size &&
-            (!_check_log_id || span.log_id() == _log_id) &&
-            (!_check_error_code || span.error_code() == _error_code);
+               span.request_size() >= _min_request_size &&
+               span.response_size() >= _min_response_size &&
+               (!_check_log_id || span.log_id() == _log_id) &&
+               (!_check_error_code || span.error_code() == _error_code);
     }
 
 private:
@@ -439,7 +428,7 @@ static int64_t ParseDateTime(const std::string& time_str) {
         if (endptr == NULL) {
             return -1;
         }
-    } 
+    }
     if (*endptr == '.') {
         char* endptr2;
         microseconds = strtol(endptr + 1, &endptr2, 10);
@@ -455,7 +444,7 @@ static bool ParseUint64(const std::string* str, uint64_t* val) {
         return false;
     }
     const char* p = str->c_str();
-    char* endptr = NULL;
+    char* endptr  = NULL;
     if (p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) {
         *val = strtoull(p + 2, &endptr, 16);
         return (*endptr == '\0');
@@ -477,37 +466,38 @@ void RpczService::default_method(::google::protobuf::RpcController* cntl_base,
                                  ::brpc::RpczResponse*,
                                  ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
-    uint64_t trace_id = 0;
+    Controller* cntl    = static_cast<Controller*>(cntl_base);
+    uint64_t trace_id   = 0;
     const bool use_html = UseHTML(cntl->http_request());
-    cntl->http_response().set_content_type(
-        use_html ? "text/html" : "text/plain");
+    cntl->http_response().set_content_type(use_html ? "text/html"
+                                                    : "text/plain");
 
     butil::IOBufBuilder os;
     if (use_html) {
         os << "<!DOCTYPE html><html><head>\n"
-           << "<script language=\"javascript\" type=\"text/javascript\" src=\"/js/jquery_min\"></script>\n"
-           << TabsHead()
-           << "</head><body>";
+           << "<script language=\"javascript\" type=\"text/javascript\" "
+              "src=\"/js/jquery_min\"></script>\n"
+           << TabsHead() << "</head><body>";
         cntl->server()->PrintTabsBody(os, "rpcz");
     }
 
     if (!FLAGS_enable_rpcz && !has_span_db()) {
         if (use_html) {
             os << "<input type='button' "
-                "onclick='location.href=\"/rpcz/enable\";' value='enable' />"
-                " rpcz to track recent RPC calls with small overhead, "
-                "you can turn it off at any time.";
+                  "onclick='location.href=\"/rpcz/enable\";' value='enable' />"
+                  " rpcz to track recent RPC calls with small overhead, "
+                  "you can turn it off at any time.";
         } else {
-            os << "rpcz is not enabled yet. You can turn on/off rpcz by accessing "
-                "/rpcz/enable and /rpcz/disable respectively.";
+            os << "rpcz is not enabled yet. You can turn on/off rpcz by "
+                  "accessing "
+                  "/rpcz/enable and /rpcz/disable respectively.";
         }
         os.move_to(cntl->response_attachment());
         return;
     }
     butil::EndPoint my_addr(butil::my_ip(),
-                           cntl->server()->listen_address().port);
-    
+                            cntl->server()->listen_address().port);
+
     const std::string* trace_id_str =
         cntl->http_request().uri().GetQuery(TRACE_ID_STR);
     if (trace_id_str) {
@@ -589,23 +579,24 @@ void RpczService::default_method(::google::protobuf::RpcController* cntl_base,
 
         // Set up SpanFilter.
         RpczSpanFilter filter;
-        const std::string* min_latency_str = 
+        const std::string* min_latency_str =
             cntl->http_request().uri().GetQuery(MIN_LATENCY_STR);
         if (min_latency_str) {
             char* endptr;
             filter.CheckLatency(strtoll(min_latency_str->c_str(), &endptr, 10));
         }
-        const std::string* min_reqsize_str = 
+        const std::string* min_reqsize_str =
             cntl->http_request().uri().GetQuery(MIN_REQUEST_SIZE_STR);
         if (min_reqsize_str) {
             char* endptr;
             filter.CheckRequest(strtol(min_reqsize_str->c_str(), &endptr, 10));
         }
-        const std::string* min_respsize_str = 
+        const std::string* min_respsize_str =
             cntl->http_request().uri().GetQuery(MIN_RESPONSE_SIZE_STR);
         if (min_respsize_str) {
             char* endptr;
-            filter.CheckResponse(strtol(min_respsize_str->c_str(), &endptr, 10));
+            filter.CheckResponse(
+                strtol(min_respsize_str->c_str(), &endptr, 10));
         }
         uint64_t log_id = 0;
         if (ParseUint64(cntl->http_request().uri().GetQuery(LOG_ID_STR),
@@ -618,7 +609,7 @@ void RpczService::default_method(::google::protobuf::RpcController* cntl_base,
             char* endptr;
             filter.CheckErrorCode(strtol(error_code_str->c_str(), &endptr, 10));
         }
-        
+
         max_count = std::max(std::min(max_count, 10000), 1);
         std::deque<BriefSpan> spans;
         ListSpans(start_tm, max_count, &spans, &filter);
@@ -631,18 +622,20 @@ void RpczService::default_method(::google::protobuf::RpcController* cntl_base,
         if (use_html) {
             const char* action = (FLAGS_enable_rpcz ? "disable" : "enable");
             os << "<div><input type='button' onclick='location.href=\"/rpcz/"
-               << action << "\";' value='" << action << "' /></div>" "<pre>\n";
+               << action << "\";' value='" << action
+               << "' /></div>"
+                  "<pre>\n";
         }
         for (size_t i = 0; i < spans.size(); ++i) {
-            BriefSpan& span = spans[i];
+            BriefSpan& span   = spans[i];
             int64_t last_time = span.start_real_us();
             PrintRealDateTime(os, last_time);
             PrintElapse(os, span.latency_us() + last_time, &last_time);
-            os << ' ' << (span.type() == SPAN_TYPE_SERVER ? 'S' : 'C')
-               << ' ' << TRACE_ID_STR << '=';
+            os << ' ' << (span.type() == SPAN_TYPE_SERVER ? 'S' : 'C') << ' '
+               << TRACE_ID_STR << '=';
             if (use_html) {
-                os << "<a href=\"/rpcz?" << TRACE_ID_STR
-                   << '=' << Hex(span.trace_id()) << "\">";
+                os << "<a href=\"/rpcz?" << TRACE_ID_STR << '='
+                   << Hex(span.trace_id()) << "\">";
             }
             os << Hex(span.trace_id());
             if (use_html) {
@@ -651,9 +644,9 @@ void RpczService::default_method(::google::protobuf::RpcController* cntl_base,
 
             os << ' ' << SPAN_ID_STR << '=';
             if (use_html) {
-                os << "<a href=\"/rpcz?" << TRACE_ID_STR << '=' 
-                   << Hex(span.trace_id())
-                   << '&' << SPAN_ID_STR << '=' << Hex(span.span_id()) << "\">";
+                os << "<a href=\"/rpcz?" << TRACE_ID_STR << '='
+                   << Hex(span.trace_id()) << '&' << SPAN_ID_STR << '='
+                   << Hex(span.span_id()) << "\">";
             }
             os << Hex(span.span_id());
             if (use_html) {
@@ -667,7 +660,7 @@ void RpczService::default_method(::google::protobuf::RpcController* cntl_base,
             }
             os << ' ' << span.full_method_name() << '(' << span.request_size()
                << ")=" << span.response_size();
-            
+
             if (span.error_code() == 0) {
                 os << " [OK]";
             } else {
@@ -683,9 +676,9 @@ void RpczService::default_method(::google::protobuf::RpcController* cntl_base,
 }
 
 void RpczService::GetTabInfo(TabInfoList* info_list) const {
-    TabInfo* info = info_list->add();
-    info->path = "/rpcz";
+    TabInfo* info  = info_list->add();
+    info->path     = "/rpcz";
     info->tab_name = "rpcz";
 }
 
-} // namespace brpc
+}  // namespace brpc

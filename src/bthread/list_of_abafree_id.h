@@ -22,24 +22,25 @@
 #ifndef BTHREAD_LIST_OF_ABAFREE_ID_H
 #define BTHREAD_LIST_OF_ABAFREE_ID_H
 
-#include <vector>
 #include <deque>
+#include <vector>
 
 namespace bthread {
 
 // A container for storing identifiers that may be invalidated.
 
 // [Basic Idea]
-// identifiers are remembered for error notifications. While insertions are 
-// easy, removals are hard to be done in O(1) time. More importantly, 
+// identifiers are remembered for error notifications. While insertions are
+// easy, removals are hard to be done in O(1) time. More importantly,
 // insertions are often done in one thread, while removals come from many
-// threads simultaneously. Think about the usage in brpc::Socket, most 
+// threads simultaneously. Think about the usage in brpc::Socket, most
 // bthread_id_t are inserted by one thread (the thread calling non-contended
-// Write or the KeepWrite thread), but removals are from many threads 
+// Write or the KeepWrite thread), but removals are from many threads
 // processing responses simultaneously.
 
 // [The approach]
-// Don't remove old identifiers eagerly, replace them when new ones are inserted.
+// Don't remove old identifiers eagerly, replace them when new ones are
+// inserted.
 
 // IdTraits MUST have {
 //   // #identifiers in each block
@@ -59,18 +60,19 @@ namespace bthread {
 
 // This container is NOT thread-safe right now, and shouldn't be
 // an issue in current usages throughout brpc.
-template <typename Id, typename IdTraits> 
+template <typename Id, typename IdTraits>
 class ListOfABAFreeId {
 public:
     ListOfABAFreeId();
     ~ListOfABAFreeId();
-    
+
     // Add an identifier into the list.
     int add(Id id);
-    
+
     // Apply fn(id) to all identifiers.
-    template <typename Fn> void apply(const Fn& fn);
-    
+    template <typename Fn>
+    void apply(const Fn& fn);
+
     // Put #entries of each level into `counts'
     // Returns #levels.
     size_t get_sizes(size_t* counts, size_t n);
@@ -90,22 +92,20 @@ private:
 
 // [impl.]
 
-template <typename Id, typename IdTraits> 
+template <typename Id, typename IdTraits>
 ListOfABAFreeId<Id, IdTraits>::ListOfABAFreeId()
-    : _cur_block(&_head_block)
-    , _cur_index(0)
-    , _nblock(1) {
+    : _cur_block(&_head_block), _cur_index(0), _nblock(1) {
     for (size_t i = 0; i < IdTraits::BLOCK_SIZE; ++i) {
         _head_block.ids[i] = IdTraits::ID_INIT;
     }
     _head_block.next = NULL;
 }
 
-template <typename Id, typename IdTraits> 
+template <typename Id, typename IdTraits>
 ListOfABAFreeId<Id, IdTraits>::~ListOfABAFreeId() {
     _cur_block = NULL;
     _cur_index = 0;
-    _nblock = 0;
+    _nblock    = 0;
     for (IdBlock* p = _head_block.next; p != NULL;) {
         IdBlock* saved_next = p->next;
         delete p;
@@ -114,7 +114,7 @@ ListOfABAFreeId<Id, IdTraits>::~ListOfABAFreeId() {
     _head_block.next = NULL;
 }
 
-template <typename Id, typename IdTraits> 
+template <typename Id, typename IdTraits>
 inline void ListOfABAFreeId<Id, IdTraits>::forward_index() {
     if (++_cur_index >= IdTraits::BLOCK_SIZE) {
         _cur_index = 0;
@@ -126,7 +126,7 @@ inline void ListOfABAFreeId<Id, IdTraits>::forward_index() {
     }
 }
 
-template <typename Id, typename IdTraits> 
+template <typename Id, typename IdTraits>
 int ListOfABAFreeId<Id, IdTraits>::add(Id id) {
     // Scan for at most 4 positions, if any of them is empty, use the position.
     Id* saved_pos[4];
@@ -164,10 +164,10 @@ int ListOfABAFreeId<Id, IdTraits>::add(Id id) {
         new_block->ids[i] = IdTraits::ID_INIT;
     }
     for (size_t i = _cur_index; i < IdTraits::BLOCK_SIZE; ++i) {
-        new_block->ids[i] = _cur_block->ids[i];
+        new_block->ids[i]  = _cur_block->ids[i];
         _cur_block->ids[i] = IdTraits::ID_INIT;
     }
-    new_block->next = _cur_block->next;
+    new_block->next  = _cur_block->next;
     _cur_block->next = new_block;
     // Scatter the conflict identifiers.
     //  [..xxxx....] -> [......yyyy] -> [..........]
@@ -176,12 +176,12 @@ int ListOfABAFreeId<Id, IdTraits>::add(Id id) {
     //  [..x.x.x.x.] -> [......yyyy] -> [..........]
     //    block A        new block      block B
     _cur_block->ids[_cur_index] = *saved_pos[2];
-    *saved_pos[2] = *saved_pos[1];
-    *saved_pos[1] = IdTraits::ID_INIT;
+    *saved_pos[2]               = *saved_pos[1];
+    *saved_pos[1]               = IdTraits::ID_INIT;
     forward_index();
     forward_index();
     _cur_block->ids[_cur_index] = *saved_pos[3];
-    *saved_pos[3] = IdTraits::ID_INIT;
+    *saved_pos[3]               = IdTraits::ID_INIT;
     forward_index();
     _cur_block->ids[_cur_index] = id;
     forward_index();

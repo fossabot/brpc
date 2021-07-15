@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "butil/logging.h"
-#include "bthread/bthread.h"   // INVALID_BTHREAD_ID before bthread r32748
 #include "brpc/progressive_attachment.h"
-#include "brpc/socket.h"
 #include "brpc/errno.pb.h"
-
+#include "brpc/socket.h"
+#include "bthread/bthread.h"  // INVALID_BTHREAD_ID before bthread r32748
+#include "butil/logging.h"
 
 namespace brpc {
 
@@ -30,7 +28,7 @@ DECLARE_int64(socket_max_unwritten_bytes);
 
 const int ProgressiveAttachment::RPC_RUNNING = 0;
 const int ProgressiveAttachment::RPC_SUCCEED = 1;
-const int ProgressiveAttachment::RPC_FAILED = 2;
+const int ProgressiveAttachment::RPC_FAILED  = 2;
 
 ProgressiveAttachment::ProgressiveAttachment(SocketUniquePtr& movable_httpsock,
                                              bool before_http_1_1)
@@ -68,13 +66,13 @@ ProgressiveAttachment::~ProgressiveAttachment() {
     }
 }
 
-static char s_hex_map[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8',
-                            '9', 'A', 'B', 'C', 'D', 'E', 'F' };
-inline char ToHex(uint32_t size/*0-15*/) { return s_hex_map[size]; }
+static char s_hex_map[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                           '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+inline char ToHex(uint32_t size /*0-15*/) { return s_hex_map[size]; }
 
 inline void AppendChunkHead(butil::IOBuf* buf, uint32_t size) {
     char tmp[32];
-    int i = (int)sizeof(tmp);
+    int i    = (int)sizeof(tmp);
     tmp[--i] = '\n';
     tmp[--i] = '\r';
     if (size == 0) {
@@ -82,8 +80,8 @@ inline void AppendChunkHead(butil::IOBuf* buf, uint32_t size) {
     } else {
         for (--i; i >= 0; --i) {
             const uint32_t new_size = (size >> 4);
-            tmp[i] = ToHex(size - (new_size << 4));
-            size = new_size;
+            tmp[i]                  = ToHex(size - (new_size << 4));
+            size                    = new_size;
             if (size == 0) {
                 --i;
                 break;
@@ -98,7 +96,7 @@ inline void AppendAsChunk(butil::IOBuf* chunk_buf, const butil::IOBuf& data,
     if (!before_http_1_1) {
         AppendChunkHead(chunk_buf, data.size());
         chunk_buf->append(data);
-        chunk_buf->append("\r\n", 2);   
+        chunk_buf->append("\r\n", 2);
     } else {
         chunk_buf->append(data);
     }
@@ -109,7 +107,7 @@ inline void AppendAsChunk(butil::IOBuf* chunk_buf, const void* data,
     if (!before_http_1_1) {
         AppendChunkHead(chunk_buf, length);
         chunk_buf->append(data, length);
-        chunk_buf->append("\r\n", 2);   
+        chunk_buf->append("\r\n", 2);
     } else {
         chunk_buf->append(data, length);
     }
@@ -119,7 +117,7 @@ int ProgressiveAttachment::Write(const butil::IOBuf& data) {
     if (data.empty()) {
         LOG_EVERY_SECOND(WARNING)
             << "Write an empty chunk. To suppress this warning, check emptiness"
-            " of the chunk before calling ProgressiveAttachment.Write()";
+               " of the chunk before calling ProgressiveAttachment.Write()";
         return 0;
     }
 
@@ -153,7 +151,7 @@ int ProgressiveAttachment::Write(const void* data, size_t n) {
     if (data == NULL || n == 0) {
         LOG_EVERY_SECOND(WARNING)
             << "Write an empty chunk. To suppress this warning, check emptiness"
-            " of the chunk before calling ProgressiveAttachment.Write()";
+               " of the chunk before calling ProgressiveAttachment.Write()";
         return 0;
     }
     int rpc_state = _rpc_state.load(butil::memory_order_acquire);
@@ -196,16 +194,16 @@ void ProgressiveAttachment::MarkRPCAsDone(bool rpc_failed) {
     // * If the iteration repeats too many times, _pause_from_mark_rpc_as_done
     //   is set to true to make Write() fails with EOVERCROWDED temporarily to
     //   stop _saved_buf from growing.
-    const int MAX_TRY = 3;
-    int ntry = 0;
+    const int MAX_TRY    = 3;
+    int ntry             = 0;
     bool permanent_error = false;
     do {
         std::unique_lock<butil::Mutex> mu(_mutex);
         if (_saved_buf.empty() || permanent_error || rpc_failed) {
             butil::IOBuf tmp;
-            tmp.swap(_saved_buf); // Clear _saved_buf outside lock.
+            tmp.swap(_saved_buf);  // Clear _saved_buf outside lock.
             _pause_from_mark_rpc_as_done = false;
-            _rpc_state.store((rpc_failed? RPC_FAILED: RPC_SUCCEED),
+            _rpc_state.store((rpc_failed ? RPC_FAILED : RPC_SUCCEED),
                              butil::memory_order_release);
             mu.unlock();
             return;
@@ -257,5 +255,5 @@ void ProgressiveAttachment::NotifyOnStopped(google::protobuf::Closure* done) {
     }
     _httpsock->NotifyOnFailed(_notify_id);
 }
-    
-} // namespace brpc
+
+}  // namespace brpc

@@ -15,14 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#ifndef BRPC_HPACK_H
+#define BRPC_HPACK_H
 
-#ifndef  BRPC_HPACK_H
-#define  BRPC_HPACK_H
-
-#include "butil/iobuf.h"                             // butil::IOBuf
-#include "butil/strings/string_piece.h"              // butil::StringPiece
-#include "brpc/http2.h"
 #include "brpc/describable.h"
+#include "brpc/http2.h"
+#include "butil/iobuf.h"                 // butil::IOBuf
+#include "butil/strings/string_piece.h"  // butil::StringPiece
 
 namespace brpc {
 
@@ -46,7 +45,6 @@ enum HeaderIndexPolicy {
 
 // Options to encode a header
 struct HPackOptions {
-
     // How to index this header field.
     // Default: HPACK_INDEX_HEADER
     HeaderIndexPolicy index_policy;
@@ -66,8 +64,7 @@ struct HPackOptions {
 inline HPackOptions::HPackOptions()
     : index_policy(HPACK_INDEX_HEADER)
     , encode_name(false)
-    , encode_value(false)
-{}
+    , encode_value(false) {}
 
 class IndexTable;
 
@@ -79,7 +76,7 @@ class IndexTable;
 //      characters that are compared in a case-insensitive fashion.  However,
 //      header field names *MUST* be converted to lowercase prior to their
 //      encoding in HTTP/2.  A request or response containing uppercase
-//      header field names MUST be treated as malformed 
+//      header field names MUST be treated as malformed
 // Not supported methods:
 //  - Resize dynamic table.
 class HPacker : public Describable {
@@ -105,8 +102,9 @@ public:
     // Returns true on success.
     void Encode(butil::IOBufAppender* out, const Header& header,
                 const HPackOptions& options);
-    void Encode(butil::IOBufAppender* out, const Header& header)
-    { return Encode(out, header, HPackOptions()); }
+    void Encode(butil::IOBufAppender* out, const Header& header) {
+        return Encode(out, header, HPackOptions());
+    }
 
     // Try to decode at most one Header from source and erase corresponding
     // buffer.
@@ -121,14 +119,14 @@ public:
     ssize_t Decode(butil::IOBufBytesIterator& source, Header* h);
 
     void Describe(std::ostream& os, const DescribeOptions&) const;
-    
+
 private:
     DISALLOW_COPY_AND_ASSIGN(HPacker);
     int FindHeaderFromIndexTable(const Header& h) const;
     int FindNameFromIndexTable(const std::string& name) const;
     const Header* HeaderAt(int index) const;
-    ssize_t DecodeWithKnownPrefix(
-            butil::IOBufBytesIterator& iter, Header* h, uint8_t prefix_size) const;
+    ssize_t DecodeWithKnownPrefix(butil::IOBufBytesIterator& iter, Header* h,
+                                  uint8_t prefix_size) const;
 
     IndexTable* _encode_table;
     IndexTable* _decode_table;
@@ -146,7 +144,6 @@ inline ssize_t HPacker::Decode(butil::IOBuf* source, Header* h) {
     return nc;
 }
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif  //BRPC_HPACK_H
+#endif  // BRPC_HPACK_H

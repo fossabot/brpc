@@ -19,16 +19,16 @@
 
 // Date: 2015/10/27 17:39:48
 
-#ifndef  BTHREAD_EXECUTION_QUEUE_INL_H
-#define  BTHREAD_EXECUTION_QUEUE_INL_H
+#ifndef BTHREAD_EXECUTION_QUEUE_INL_H
+#define BTHREAD_EXECUTION_QUEUE_INL_H
 
-#include "butil/atomicops.h"             // butil::atomic
-#include "butil/macros.h"                // BAIDU_CACHELINE_ALIGNMENT
-#include "butil/memory/scoped_ptr.h"     // butil::scoped_ptr
-#include "butil/logging.h"               // LOG
-#include "butil/time.h"                  // butil::cpuwide_time_ns
-#include "bvar/bvar.h"                  // bvar::Adder
-#include "bthread/butex.h"              // butex_construct
+#include "bthread/butex.h"            // butex_construct
+#include "butil/atomicops.h"          // butil::atomic
+#include "butil/logging.h"            // LOG
+#include "butil/macros.h"             // BAIDU_CACHELINE_ALIGNMENT
+#include "butil/memory/scoped_ptr.h"  // butil::scoped_ptr
+#include "butil/time.h"               // butil::cpuwide_time_ns
+#include "bvar/bvar.h"                // bvar::Adder
 
 namespace bthread {
 
@@ -37,11 +37,7 @@ struct ExecutionQueueId {
     uint64_t value;
 };
 
-enum TaskStatus {
-    UNEXECUTED = 0,
-    EXECUTING = 1,
-    EXECUTED = 2
-};
+enum TaskStatus { UNEXECUTED = 0, EXECUTING = 1, EXECUTED = 2 };
 
 struct TaskNode;
 class ExecutionQueueBase;
@@ -52,12 +48,11 @@ struct BAIDU_CACHELINE_ALIGNMENT TaskNode {
         : version(0)
         , status(UNEXECUTED)
         , stop_task(false)
-        , iterated(false) 
+        , iterated(false)
         , high_priority(false)
-        , in_place(false) 
+        , in_place(false)
         , next(UNCONNECTED)
-        , q(NULL)
-    {}
+        , q(NULL) {}
     ~TaskNode() {}
     int cancel(int64_t expected_version) {
         BAIDU_SCOPED_LOCK(mutex);
@@ -105,39 +100,42 @@ struct BAIDU_CACHELINE_ALIGNMENT TaskNode {
         std::unique_lock<butil::Mutex> lck(mutex);
         ++version;
         const int saved_status = status;
-        status = UNEXECUTED;
+        status                 = UNEXECUTED;
         lck.unlock();
         CHECK_NE(saved_status, UNEXECUTED);
-        LOG_IF(WARNING, saved_status == EXECUTING) 
-                << "Return a executing node, did you return before "
-                   "iterator reached the end?";
+        LOG_IF(WARNING, saved_status == EXECUTING)
+            << "Return a executing node, did you return before "
+               "iterator reached the end?";
     }
 
     static TaskNode* const UNCONNECTED;
 };
 
 // Specialize TaskNodeAllocator for types with different sizes
-template <size_t size, bool small_object> struct TaskAllocatorBase {
-};
+template <size_t size, bool small_object>
+struct TaskAllocatorBase {};
 
 template <size_t size>
 struct TaskAllocatorBase<size, true> {
-    inline static void* allocate(TaskNode* node)
-    { return node->static_task_mem; }
-    inline static void* get_allocated_mem(TaskNode* node)
-    { return node->static_task_mem; }
+    inline static void* allocate(TaskNode* node) {
+        return node->static_task_mem;
+    }
+    inline static void* get_allocated_mem(TaskNode* node) {
+        return node->static_task_mem;
+    }
     inline static void deallocate(TaskNode*) {}
 };
 
-template<size_t size>
+template <size_t size>
 struct TaskAllocatorBase<size, false> {
     inline static void* allocate(TaskNode* node) {
         node->dynamic_task_mem = (char*)malloc(size);
         return node->dynamic_task_mem;
     }
 
-    inline static void* get_allocated_mem(TaskNode* node)
-    { return node->dynamic_task_mem; }
+    inline static void* get_allocated_mem(TaskNode* node) {
+        return node->dynamic_task_mem;
+    }
 
     inline static void deallocate(TaskNode* node) {
         free(node->dynamic_task_mem);
@@ -145,16 +143,16 @@ struct TaskAllocatorBase<size, false> {
 };
 
 template <typename T>
-struct TaskAllocator : public TaskAllocatorBase<
-               sizeof(T), sizeof(T) <= sizeof(TaskNode().static_task_mem)>
-{};
+struct TaskAllocator
+    : public TaskAllocatorBase<
+          sizeof(T), sizeof(T) <= sizeof(TaskNode().static_task_mem)> {};
 
 class TaskIteratorBase;
 
 class BAIDU_CACHELINE_ALIGNMENT ExecutionQueueBase {
-DISALLOW_COPY_AND_ASSIGN(ExecutionQueueBase);
-struct Forbidden {};
-friend class TaskIteratorBase;
+    DISALLOW_COPY_AND_ASSIGN(ExecutionQueueBase);
+    struct Forbidden {};
+    friend class TaskIteratorBase;
     struct Dereferencer {
         void operator()(ExecutionQueueBase* queue) {
             if (queue != NULL) {
@@ -162,31 +160,29 @@ friend class TaskIteratorBase;
             }
         }
     };
+
 public:
     // User cannot create ExecutionQueue fron construct
     ExecutionQueueBase(Forbidden)
         : _head(NULL)
         , _versioned_ref(0)  // join() depends on even version
-        , _high_priority_tasks(0)
-    {
+        , _high_priority_tasks(0) {
         _join_butex = butex_create_checked<butil::atomic<int> >();
         _join_butex->store(0, butil::memory_order_relaxed);
     }
 
-    ~ExecutionQueueBase() {
-        butex_destroy(_join_butex);
-    }
+    ~ExecutionQueueBase() { butex_destroy(_join_butex); }
 
     bool stopped() const { return _stopped.load(butil::memory_order_acquire); }
     int stop();
     static int join(uint64_t id);
+
 protected:
     typedef int (*execute_func_t)(void*, void*, TaskIteratorBase&);
-    typedef scoped_ptr<ExecutionQueueBase, Dereferencer>  scoped_ptr_t;
+    typedef scoped_ptr<ExecutionQueueBase, Dereferencer> scoped_ptr_t;
     int dereference();
     static int create(uint64_t* id, const ExecutionQueueOptions* options,
-                      execute_func_t execute_func,
-                      clear_task_mem clear_func,
+                      execute_func_t execute_func, clear_task_mem clear_func,
                       void* meta, void* type_specific_function);
     static scoped_ptr_t address(uint64_t id) WARN_UNUSED_RESULT;
     void start_execute(TaskNode* node);
@@ -194,12 +190,9 @@ protected:
     void return_task_node(TaskNode* node);
 
 private:
-
     bool _more_tasks(TaskNode* old_head, TaskNode** new_tail,
                      bool has_uniterated);
-    void _release_additional_reference() {
-        dereference();
-    }
+    void _release_additional_reference() { dereference(); }
     void _on_recycle();
     int _execute(TaskNode* head, bool high_priority, int* niterated);
     static void* _execute_tasks(void* arg);
@@ -218,10 +211,10 @@ private:
 
     static inline int64_t _make_vref(uint32_t version, int32_t ref) {
         // 1: Intended conversion to uint32_t, nref=-1 is 00000000FFFFFFFF
-        return (((uint64_t)version) << 32) | (uint32_t/*1*/)ref;
+        return (((uint64_t)version) << 32) | (uint32_t /*1*/)ref;
     }
 
-    // Don't change the order of _head, _versioned_ref and _stopped unless you 
+    // Don't change the order of _head, _versioned_ref and _stopped unless you
     // see improvement of performance in test
     butil::atomic<TaskNode*> BAIDU_CACHELINE_ALIGNMENT _head;
     butil::atomic<uint64_t> BAIDU_CACHELINE_ALIGNMENT _versioned_ref;
@@ -238,12 +231,13 @@ private:
 
 template <typename T>
 class ExecutionQueue : public ExecutionQueueBase {
-struct Forbidden {};
-friend class TaskIterator<T>;
-    typedef ExecutionQueueBase                                  Base;
+    struct Forbidden {};
+    friend class TaskIterator<T>;
+    typedef ExecutionQueueBase Base;
     ExecutionQueue();
+
 public:
-    typedef ExecutionQueue<T>                                   self_type;
+    typedef ExecutionQueue<T> self_type;
     struct Dereferencer {
         void operator()(self_type* queue) {
             if (queue != NULL) {
@@ -251,11 +245,11 @@ public:
             }
         }
     };
-    typedef scoped_ptr<self_type, Dereferencer>                 scoped_ptr_t;
-    typedef bthread::ExecutionQueueId<T>                        id_t;
-    typedef TaskIterator<T>                                     iterator;
+    typedef scoped_ptr<self_type, Dereferencer> scoped_ptr_t;
+    typedef bthread::ExecutionQueueId<T> id_t;
+    typedef TaskIterator<T> iterator;
     typedef int (*execute_func_t)(void*, iterator&);
-    typedef TaskAllocator<T>                                    allocator;
+    typedef TaskAllocator<T> allocator;
     BAIDU_CASSERT(sizeof(execute_func_t) == sizeof(void*),
                   sizeof_function_must_be_equal_to_sizeof_voidptr);
 
@@ -273,13 +267,13 @@ public:
 
     inline static int create(id_t* id, const ExecutionQueueOptions* options,
                              execute_func_t execute_func, void* meta) {
-        return Base::create(&id->value, options, execute_task, 
-                            clear_task_mem, meta, (void*)execute_func);
+        return Base::create(&id->value, options, execute_task, clear_task_mem,
+                            meta, (void*)execute_func);
     }
 
     inline static scoped_ptr_t address(id_t id) WARN_UNUSED_RESULT {
         Base::scoped_ptr_t ptr = Base::address(id.value);
-        Base* b = ptr.release();
+        Base* b                = ptr.release();
         scoped_ptr_t ret((self_type*)b);
         return ret.Pass();
     }
@@ -309,9 +303,9 @@ public:
             opt = *options;
         }
         node->high_priority = opt.high_priority;
-        node->in_place = opt.in_place_if_possible;
+        node->in_place      = opt.in_place_if_possible;
         if (handle) {
-            handle->node = node;
+            handle->node    = node;
             handle->version = node->version;
         }
         start_execute(node);
@@ -320,44 +314,41 @@ public:
 };
 
 inline ExecutionQueueOptions::ExecutionQueueOptions()
-    : bthread_attr(BTHREAD_ATTR_NORMAL), executor(NULL)
-{}
+    : bthread_attr(BTHREAD_ATTR_NORMAL), executor(NULL) {}
 
 template <typename T>
-inline int execution_queue_start(
-        ExecutionQueueId<T>* id, 
-        const ExecutionQueueOptions* options,
-        int (*execute)(void* meta, TaskIterator<T>&),
-        void* meta) {
-   return ExecutionQueue<T>::create(id, options, execute, meta);
+inline int execution_queue_start(ExecutionQueueId<T>* id,
+                                 const ExecutionQueueOptions* options,
+                                 int (*execute)(void* meta, TaskIterator<T>&),
+                                 void* meta) {
+    return ExecutionQueue<T>::create(id, options, execute, meta);
 }
 
 template <typename T>
-typename ExecutionQueue<T>::scoped_ptr_t 
-execution_queue_address(ExecutionQueueId<T> id) {
+typename ExecutionQueue<T>::scoped_ptr_t execution_queue_address(
+    ExecutionQueueId<T> id) {
     return ExecutionQueue<T>::address(id);
 }
 
 template <typename T>
-inline int execution_queue_execute(ExecutionQueueId<T> id, 
-                       typename butil::add_const_reference<T>::type task) {
+inline int execution_queue_execute(
+    ExecutionQueueId<T> id, typename butil::add_const_reference<T>::type task) {
     return execution_queue_execute(id, task, NULL);
 }
 
 template <typename T>
-inline int execution_queue_execute(ExecutionQueueId<T> id, 
-                       typename butil::add_const_reference<T>::type task,
-                       const TaskOptions* options) {
+inline int execution_queue_execute(
+    ExecutionQueueId<T> id, typename butil::add_const_reference<T>::type task,
+    const TaskOptions* options) {
     return execution_queue_execute(id, task, options, NULL);
 }
 
 template <typename T>
-inline int execution_queue_execute(ExecutionQueueId<T> id, 
-                       typename butil::add_const_reference<T>::type task,
-                       const TaskOptions* options,
-                       TaskHandle* handle) {
-    typename ExecutionQueue<T>::scoped_ptr_t 
-        ptr = ExecutionQueue<T>::address(id);
+inline int execution_queue_execute(
+    ExecutionQueueId<T> id, typename butil::add_const_reference<T>::type task,
+    const TaskOptions* options, TaskHandle* handle) {
+    typename ExecutionQueue<T>::scoped_ptr_t ptr =
+        ExecutionQueue<T>::address(id);
     if (ptr != NULL) {
         return ptr->execute(task, options, handle);
     } else {
@@ -367,8 +358,8 @@ inline int execution_queue_execute(ExecutionQueueId<T> id,
 
 template <typename T>
 inline int execution_queue_stop(ExecutionQueueId<T> id) {
-    typename ExecutionQueue<T>::scoped_ptr_t 
-        ptr = ExecutionQueue<T>::address(id);
+    typename ExecutionQueue<T>::scoped_ptr_t ptr =
+        ExecutionQueue<T>::address(id);
     if (ptr != NULL) {
         return ptr->stop();
     } else {
@@ -382,25 +373,21 @@ inline int execution_queue_join(ExecutionQueueId<T> id) {
 }
 
 inline TaskOptions::TaskOptions()
-    : high_priority(false)
-    , in_place_if_possible(false)
-{}
+    : high_priority(false), in_place_if_possible(false) {}
 
 inline TaskOptions::TaskOptions(bool high_priority, bool in_place_if_possible)
     : high_priority(high_priority)
-    , in_place_if_possible(in_place_if_possible)
-{}
+    , in_place_if_possible(in_place_if_possible) {}
 
 //--------------------- TaskIterator ------------------------
 
 inline TaskIteratorBase::operator bool() const {
-    return !_is_stopped && !_should_break && _cur_node != NULL 
-           && !_cur_node->stop_task;
+    return !_is_stopped && !_should_break && _cur_node != NULL &&
+           !_cur_node->stop_task;
 }
 
 template <typename T>
-inline typename TaskIterator<T>::reference
-TaskIterator<T>::operator*() const {
+inline typename TaskIterator<T>::reference TaskIterator<T>::operator*() const {
     T* const ptr = (T* const)TaskAllocator<T>::get_allocated_mem(cur_node());
     return *ptr;
 }
@@ -416,10 +403,7 @@ void TaskIterator<T>::operator++(int) {
     operator++();
 }
 
-inline TaskHandle::TaskHandle()
-    : node(NULL)
-    , version(0)
-{}
+inline TaskHandle::TaskHandle() : node(NULL), version(0) {}
 
 inline int execution_queue_cancel(const TaskHandle& h) {
     if (h.node == NULL) {
@@ -429,21 +413,20 @@ inline int execution_queue_cancel(const TaskHandle& h) {
 }
 
 // ---------------------ExecutionQueueBase--------------------
-inline bool ExecutionQueueBase::_more_tasks(
-        TaskNode* old_head, TaskNode** new_tail, 
-        bool has_uniterated) {
-
+inline bool ExecutionQueueBase::_more_tasks(TaskNode* old_head,
+                                            TaskNode** new_tail,
+                                            bool has_uniterated) {
     CHECK(old_head->next == NULL);
     // Try to set _head to NULL to mark that the execute is done.
-    TaskNode* new_head = old_head;
-    TaskNode* desired = NULL;
+    TaskNode* new_head       = old_head;
+    TaskNode* desired        = NULL;
     bool return_when_no_more = false;
     if (has_uniterated) {
-        desired = old_head;
+        desired             = old_head;
         return_when_no_more = true;
     }
-    if (_head.compare_exchange_strong(
-                new_head, desired, butil::memory_order_acquire)) {
+    if (_head.compare_exchange_strong(new_head, desired,
+                                      butil::memory_order_acquire)) {
         // No one added new tasks.
         return return_when_no_more;
     }
@@ -464,9 +447,9 @@ inline bool ExecutionQueueBase::_more_tasks(
             sched_yield();
         }
         TaskNode* const saved_next = p->next;
-        p->next = tail;
-        tail = p;
-        p = saved_next;
+        p->next                    = tail;
+        tail                       = p;
+        p                          = saved_next;
         CHECK(p != NULL);
     } while (p != old_head);
 
@@ -476,8 +459,8 @@ inline bool ExecutionQueueBase::_more_tasks(
 }
 
 inline int ExecutionQueueBase::dereference() {
-    const uint64_t vref = _versioned_ref.fetch_sub(
-            1, butil::memory_order_release);
+    const uint64_t vref =
+        _versioned_ref.fetch_sub(1, butil::memory_order_release);
     const int32_t nref = _ref_of_vref(vref);
     // We need make the fast path as fast as possible, don't put any extra
     // code before this point
@@ -486,7 +469,7 @@ inline int ExecutionQueueBase::dereference() {
     }
     const uint64_t id = _this_id;
     if (__builtin_expect(nref == 1, 1)) {
-        const uint32_t ver = _version_of_vref(vref);
+        const uint32_t ver    = _version_of_vref(vref);
         const uint32_t id_ver = _version_of_id(id);
         // Besides first successful stop() adds 1 to version, one of
         // those dereferencing nref from 1->0 adds another 1 to version.
@@ -514,9 +497,8 @@ inline int ExecutionQueueBase::dereference() {
             //            returned by (5) of address().
             uint64_t expected_vref = vref - 1;
             if (_versioned_ref.compare_exchange_strong(
-                        expected_vref, _make_vref(id_ver + 2, 0),
-                        butil::memory_order_acquire,
-                        butil::memory_order_relaxed)) {
+                    expected_vref, _make_vref(id_ver + 2, 0),
+                    butil::memory_order_acquire, butil::memory_order_relaxed)) {
                 _on_recycle();
                 // We don't return m immediatly when the reference count
                 // reaches 0 as there might be in processing tasks. Instead
@@ -535,4 +517,4 @@ inline int ExecutionQueueBase::dereference() {
 
 }  // namespace bthread
 
-#endif  //BTHREAD_EXECUTION_QUEUE_INL_H
+#endif  // BTHREAD_EXECUTION_QUEUE_INL_H

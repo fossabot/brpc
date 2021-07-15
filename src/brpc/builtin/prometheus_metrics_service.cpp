@@ -15,22 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <vector>
+#include "brpc/builtin/prometheus_metrics_service.h"
 #include <iomanip>
 #include <map>
-#include "brpc/controller.h"                // Controller
-#include "brpc/server.h"                    // Server
-#include "brpc/closure_guard.h"             // ClosureGuard
-#include "brpc/builtin/prometheus_metrics_service.h"
+#include <vector>
 #include "brpc/builtin/common.h"
+#include "brpc/closure_guard.h"  // ClosureGuard
+#include "brpc/controller.h"     // Controller
+#include "brpc/server.h"         // Server
 #include "bvar/bvar.h"
 
 namespace bvar {
 DECLARE_int32(bvar_latency_p1);
 DECLARE_int32(bvar_latency_p2);
 DECLARE_int32(bvar_latency_p3);
-}
+}  // namespace bvar
 
 namespace brpc {
 
@@ -48,9 +47,7 @@ class PrometheusMetricsDumper : public bvar::Dumper {
 public:
     explicit PrometheusMetricsDumper(butil::IOBufBuilder* os,
                                      const std::string& server_prefix)
-        : _os(os)
-        , _server_prefix(server_prefix) {
-    }
+        : _os(os), _server_prefix(server_prefix) {}
 
     bool dump(const std::string& name, const butil::StringPiece& desc) override;
 
@@ -72,8 +69,8 @@ private:
 
         bool IsComplete() const { return !metric_name.empty(); }
     };
-    const SummaryItems* ProcessLatencyRecorderSuffix(const butil::StringPiece& name,
-                                                     const butil::StringPiece& desc);
+    const SummaryItems* ProcessLatencyRecorderSuffix(
+        const butil::StringPiece& name, const butil::StringPiece& desc);
 
 private:
     butil::IOBufBuilder* _os;
@@ -99,14 +96,15 @@ bool PrometheusMetricsDumper::dump(const std::string& name,
 }
 
 const PrometheusMetricsDumper::SummaryItems*
-PrometheusMetricsDumper::ProcessLatencyRecorderSuffix(const butil::StringPiece& name,
-                                                      const butil::StringPiece& desc) {
+PrometheusMetricsDumper::ProcessLatencyRecorderSuffix(
+    const butil::StringPiece& name, const butil::StringPiece& desc) {
     static std::string latency_names[] = {
         butil::string_printf("_latency_%d", (int)bvar::FLAGS_bvar_latency_p1),
         butil::string_printf("_latency_%d", (int)bvar::FLAGS_bvar_latency_p2),
         butil::string_printf("_latency_%d", (int)bvar::FLAGS_bvar_latency_p3),
-        "_latency_999", "_latency_9999", "_max_latency"
-    };
+        "_latency_999",
+        "_latency_9999",
+        "_max_latency"};
     CHECK(NPERCENTILES == arraysize(latency_names));
     const std::string desc_str = desc.as_string();
     butil::StringPiece metric_name(name);
@@ -115,12 +113,12 @@ PrometheusMetricsDumper::ProcessLatencyRecorderSuffix(const butil::StringPiece& 
             continue;
         }
         metric_name.remove_suffix(latency_names[i].size());
-        SummaryItems* si = &_m[metric_name.as_string()];
+        SummaryItems* si           = &_m[metric_name.as_string()];
         si->latency_percentiles[i] = desc_str;
         if (i == NPERCENTILES - 1) {
-            // '_max_latency' is the last suffix name that appear in the sorted bvar
-            // list, which means all related percentiles have been gathered and we are
-            // ready to output a Summary.
+            // '_max_latency' is the last suffix name that appear in the sorted
+            // bvar list, which means all related percentiles have been gathered
+            // and we are ready to output a Summary.
             si->metric_name = metric_name.as_string();
         }
         return si;
@@ -129,21 +127,20 @@ PrometheusMetricsDumper::ProcessLatencyRecorderSuffix(const butil::StringPiece& 
     if (metric_name.ends_with("_latency")) {
         metric_name.remove_suffix(8);
         SummaryItems* si = &_m[metric_name.as_string()];
-        si->latency_avg = strtoll(desc_str.data(), NULL, 10);
+        si->latency_avg  = strtoll(desc_str.data(), NULL, 10);
         return si;
     }
     if (metric_name.ends_with("_count")) {
         metric_name.remove_suffix(6);
         SummaryItems* si = &_m[metric_name.as_string()];
-        si->count = strtoll(desc_str.data(), NULL, 10);
+        si->count        = strtoll(desc_str.data(), NULL, 10);
         return si;
     }
     return NULL;
 }
 
 bool PrometheusMetricsDumper::DumpLatencyRecorderSuffix(
-    const butil::StringPiece& name,
-    const butil::StringPiece& desc) {
+    const butil::StringPiece& name, const butil::StringPiece& desc) {
     if (!name.starts_with(_server_prefix)) {
         return false;
     }
@@ -169,9 +166,10 @@ bool PrometheusMetricsDumper::DumpLatencyRecorderSuffix(
          << si->latency_percentiles[3] << '\n'
          << si->metric_name << "{quantile=\"0.9999\"} "
          << si->latency_percentiles[4] << '\n'
-         << si->metric_name << "{quantile=\"1\"} "
-         << si->latency_percentiles[5] << '\n'
-         << si->metric_name << "_sum "
+         << si->metric_name << "{quantile=\"1\"} " << si->latency_percentiles[5]
+         << '\n'
+         << si->metric_name
+         << "_sum "
          // There is no sum of latency in bvar output, just use
          // average * count as approximation
          << si->latency_avg * si->count << '\n'
@@ -179,12 +177,11 @@ bool PrometheusMetricsDumper::DumpLatencyRecorderSuffix(
     return true;
 }
 
-void PrometheusMetricsService::default_method(::google::protobuf::RpcController* cntl_base,
-                                              const ::brpc::MetricsRequest*,
-                                              ::brpc::MetricsResponse*,
-                                              ::google::protobuf::Closure* done) {
+void PrometheusMetricsService::default_method(
+    ::google::protobuf::RpcController* cntl_base, const ::brpc::MetricsRequest*,
+    ::brpc::MetricsResponse*, ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
+    Controller* cntl = static_cast<Controller*>(cntl_base);
     cntl->http_response().set_content_type("text/plain");
     if (DumpPrometheusMetricsToIOBuf(&cntl->response_attachment()) != 0) {
         cntl->SetFailed("Fail to dump metrics");
@@ -203,4 +200,4 @@ int DumpPrometheusMetricsToIOBuf(butil::IOBuf* output) {
     return 0;
 }
 
-} // namespace brpc
+}  // namespace brpc

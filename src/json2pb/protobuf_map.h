@@ -22,10 +22,10 @@
 
 namespace json2pb {
 
-const char* const KEY_NAME = "key";
+const char* const KEY_NAME   = "key";
 const char* const VALUE_NAME = "value";
-const int KEY_INDEX = 0;
-const int VALUE_INDEX = 1;
+const int KEY_INDEX          = 0;
+const int VALUE_INDEX        = 1;
 
 // Map inside protobuf is officially supported in proto3 using
 // statement like: map<string, string> my_map = N;
@@ -35,7 +35,7 @@ const int VALUE_INDEX = 1;
 //     required string value = 2;         // MUST be the second
 // }
 // repeated MapFieldEntry my_map = N;
-// 
+//
 // Natually, when converting this map to json, it should be like:
 // { "my_map": {"key1": value1, "key2": value2 } }
 // instead of:
@@ -47,6 +47,6 @@ const int VALUE_INDEX = 1;
 // Check whether `field' is a map type field and is convertable
 bool IsProtobufMap(const google::protobuf::FieldDescriptor* field);
 
-} // namespace json2pb
+}  // namespace json2pb
 
-#endif // BRPC_JSON2PB_JSON_PROTOBUF_MAP_H
+#endif  // BRPC_JSON2PB_JSON_PROTOBUF_MAP_H

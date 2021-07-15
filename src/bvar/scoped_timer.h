@@ -17,8 +17,8 @@
 
 // Date: Fri Jul 14 11:29:21 CST 2017
 
-#ifndef  BVAR_SCOPED_TIMER_H
-#define  BVAR_SCOPED_TIMER_H
+#ifndef BVAR_SCOPED_TIMER_H
+#define BVAR_SCOPED_TIMER_H
 
 #include "butil/time.h"
 
@@ -36,16 +36,14 @@
 // can wrap the bvar within PerSecond and make it viewable from /vars
 //   bvar::PerSecond<bvar::Adder<int64_t> > g_function1_spent_second(
 //     "function1_spent_second", &g_function1_spent);
-namespace bvar{
+namespace bvar {
 template <typename T>
 class ScopedTimer {
 public:
     explicit ScopedTimer(T& bvar)
         : _start_time(butil::cpuwide_time_us()), _bvar(&bvar) {}
 
-    ~ScopedTimer() {
-        *_bvar << (butil::cpuwide_time_us() - _start_time);
-    }
+    ~ScopedTimer() { *_bvar << (butil::cpuwide_time_us() - _start_time); }
 
     void reset() { _start_time = butil::cpuwide_time_us(); }
 
@@ -54,6 +52,6 @@ private:
     int64_t _start_time;
     T* _bvar;
 };
-} // namespace bvar
+}  // namespace bvar
 
-#endif  //BVAR_SCOPED_TIMER_H
+#endif  // BVAR_SCOPED_TIMER_H

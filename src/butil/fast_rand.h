@@ -20,8 +20,8 @@
 #ifndef BUTIL_FAST_RAND_H
 #define BUTIL_FAST_RAND_H
 
-#include <cstddef>
 #include <stdint.h>
+#include <cstddef>
 #include <string>
 
 namespace butil {
@@ -46,14 +46,16 @@ uint64_t fast_rand(FastRandSeed*);
 // Returns 0 when range is 0.
 // Cost: ~30ns
 // Note that this can be used as an adapter for std::random_shuffle():
-//   std::random_shuffle(myvector.begin(), myvector.end(), butil::fast_rand_less_than);
+//   std::random_shuffle(myvector.begin(), myvector.end(),
+//   butil::fast_rand_less_than);
 uint64_t fast_rand_less_than(uint64_t range);
 
 // Generate a 64-bit random number inside [min, max] (inclusive!)
 // from thread-local seed.
 // NOTE: this function needs to be a template to be overloadable properly.
 // Cost: ~30ns
-template <typename T> T fast_rand_in(T min, T max) {
+template <typename T>
+T fast_rand_in(T min, T max) {
     extern int64_t fast_rand_in_64(int64_t min, int64_t max);
     extern uint64_t fast_rand_in_u64(uint64_t min, uint64_t max);
     if ((T)-1 < 0) {
@@ -68,11 +70,11 @@ template <typename T> T fast_rand_in(T min, T max) {
 double fast_rand_double();
 
 // Fills |output_length| bytes of |output| with random data.
-void fast_rand_bytes(void *output, size_t output_length);
+void fast_rand_bytes(void* output, size_t output_length);
 
 // Generate a random printable string of |length| bytes
 std::string fast_rand_printable(size_t length);
 
-}
+}  // namespace butil
 
 #endif  // BUTIL_FAST_RAND_H

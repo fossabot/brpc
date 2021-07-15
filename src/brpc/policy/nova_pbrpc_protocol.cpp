@@ -15,25 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <google/protobuf/descriptor.h>         // MethodDescriptor
-#include <google/protobuf/message.h>            // Message
 #include <gflags/gflags.h>
+#include <google/protobuf/descriptor.h>  // MethodDescriptor
+#include <google/protobuf/message.h>     // Message
 
+#include "butil/iobuf.h"  // butil::IOBuf
 #include "butil/time.h"
-#include "butil/iobuf.h"                        // butil::IOBuf
 
-#include "brpc/controller.h"               // Controller
-#include "brpc/socket.h"                   // Socket
-#include "brpc/server.h"                   // Server
-#include "brpc/details/server_private_accessor.h"
-#include "brpc/span.h"
-#include "brpc/errno.pb.h"                 // EREQUEST, ERESPONSE
+#include "brpc/compress.h"
+#include "brpc/controller.h"  // Controller
 #include "brpc/details/controller_private_accessor.h"
+#include "brpc/details/server_private_accessor.h"
+#include "brpc/errno.pb.h"  // EREQUEST, ERESPONSE
 #include "brpc/policy/most_common_message.h"
 #include "brpc/policy/nova_pbrpc_protocol.h"
-#include "brpc/compress.h"
-
+#include "brpc/server.h"  // Server
+#include "brpc/socket.h"  // Socket
+#include "brpc/span.h"
 
 namespace brpc {
 namespace policy {
@@ -45,22 +43,25 @@ namespace policy {
 //  - Can not send feedback on failure.
 //  - There should be only one user service in server because there's no service
 //    information in the request, |reserved| field in nshead is the method index
-//  - |id|, |version| and |provider| in head are undefined, |magic_num| should be
+//  - |id|, |version| and |provider| in head are undefined, |magic_num| should
+//  be
 //    NSHEAD_MAGIC in both request and response
 static const unsigned short NOVA_SNAPPY_COMPRESS_FLAG = 0x1u;
 
-void NovaServiceAdaptor::ParseNsheadMeta(
-    const Server& svr, const NsheadMessage& request, Controller* cntl,
-    NsheadMeta* out_meta) const {
+void NovaServiceAdaptor::ParseNsheadMeta(const Server& svr,
+                                         const NsheadMessage& request,
+                                         Controller* cntl,
+                                         NsheadMeta* out_meta) const {
     google::protobuf::Service* service = svr.first_service();
     if (!service) {
         cntl->SetFailed(ENOSERVICE, "No first_service in this server");
         return;
     }
-    const int method_index = request.head.reserved;
+    const int method_index                        = request.head.reserved;
     const google::protobuf::ServiceDescriptor* sd = service->GetDescriptor();
     if (method_index < 0 || method_index >= sd->method_count()) {
-        cntl->SetFailed(ENOMETHOD, "Fail to find method by index=%d", method_index);
+        cntl->SetFailed(ENOMETHOD, "Fail to find method by index=%d",
+                        method_index);
         return;
     }
     const google::protobuf::MethodDescriptor* method = sd->method(method_index);
@@ -71,11 +72,12 @@ void NovaServiceAdaptor::ParseNsheadMeta(
 }
 
 void NovaServiceAdaptor::ParseRequestFromIOBuf(
-    const NsheadMeta& meta, const NsheadMessage& raw_req,
-    Controller* cntl, google::protobuf::Message* pb_req) const {
+    const NsheadMeta& meta, const NsheadMessage& raw_req, Controller* cntl,
+    google::protobuf::Message* pb_req) const {
     CompressType type = meta.compress_type();
     if (!ParseFromCompressedData(raw_req.body, pb_req, type)) {
-        cntl->SetFailed(EREQUEST, "Fail to parse request message, "
+        cntl->SetFailed(EREQUEST,
+                        "Fail to parse request message, "
                         "CompressType=%s, request_size=%" PRIu64,
                         CompressTypeToCStr(type),
                         (uint64_t)raw_req.body.length());
@@ -100,26 +102,28 @@ void NovaServiceAdaptor::SerializeResponseToIOBuf(
         type = COMPRESS_TYPE_NONE;
     }
     if (!SerializeAsCompressedData(*pb_res, &raw_res->body, type)) {
-        cntl->CloseConnection("Close connection due to failure of serialization");
+        cntl->CloseConnection(
+            "Close connection due to failure of serialization");
         return;
     }
 }
 
 void ProcessNovaResponse(InputMessageBase* msg_base) {
     const int64_t start_parse_us = butil::cpuwide_time_us();
-    DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
+    DestroyingPtr<MostCommonMessage> msg(
+        static_cast<MostCommonMessage*>(msg_base));
     Socket* socket = msg->socket();
-    
+
     // Fetch correlation id that we saved before in `PackNovaRequest'
-    const bthread_id_t cid = { static_cast<uint64_t>(socket->correlation_id()) };
-    Controller* cntl = NULL;
-    const int rc = bthread_id_lock(cid, (void**)&cntl);
+    const bthread_id_t cid = {static_cast<uint64_t>(socket->correlation_id())};
+    Controller* cntl       = NULL;
+    const int rc           = bthread_id_lock(cid, (void**)&cntl);
     if (rc != 0) {
         LOG_IF(ERROR, rc != EINVAL && rc != EPERM)
             << "Fail to lock correlation_id=" << cid << ": " << berror(rc);
         return;
     }
-    
+
     ControllerPrivateAccessor accessor(cntl);
     Span* span = accessor.span();
     if (span) {
@@ -131,16 +135,17 @@ void ProcessNovaResponse(InputMessageBase* msg_base) {
     const int saved_error = cntl->ErrorCode();
     // Fetch compress flag from nshead
     char buf[sizeof(nshead_t)];
-    const char *p = (const char *)msg->meta.fetch(buf, sizeof(buf));
+    const char* p = (const char*)msg->meta.fetch(buf, sizeof(buf));
     if (NULL == p) {
         LOG(WARNING) << "Fail to fetch nshead from client="
                      << socket->remote_side();
         return;
     }
-    const nshead_t *nshead = (const nshead_t *)p;
-    CompressType type = (nshead->version & NOVA_SNAPPY_COMPRESS_FLAG ?
-                         COMPRESS_TYPE_SNAPPY : COMPRESS_TYPE_NONE);
-    if (!ParseFromCompressedData(msg->payload, cntl->response(), type)) { 
+    const nshead_t* nshead = (const nshead_t*)p;
+    CompressType type =
+        (nshead->version & NOVA_SNAPPY_COMPRESS_FLAG ? COMPRESS_TYPE_SNAPPY
+                                                     : COMPRESS_TYPE_NONE);
+    if (!ParseFromCompressedData(msg->payload, cntl->response(), type)) {
         cntl->SetFailed(ERESPONSE, "Fail to parse response message");
     } else {
         cntl->set_response_compress_type(type);
@@ -149,25 +154,25 @@ void ProcessNovaResponse(InputMessageBase* msg_base) {
     // error code if it version check of `cid' fails
     msg.reset();  // optional, just release resourse ASAP
     accessor.OnResponse(cid, saved_error);
-} 
+}
 
 void SerializeNovaRequest(butil::IOBuf* buf, Controller* cntl,
                           const google::protobuf::Message* request) {
     CompressType type = cntl->request_compress_type();
     if (type != COMPRESS_TYPE_NONE && type != COMPRESS_TYPE_SNAPPY) {
-        cntl->SetFailed(EREQUEST, "nova_pbrpc protocol doesn't support "
-                        "compress_type=%d", type);
+        cntl->SetFailed(EREQUEST,
+                        "nova_pbrpc protocol doesn't support "
+                        "compress_type=%d",
+                        type);
         return;
     }
     return SerializeRequestDefault(buf, cntl, request);
 }
 
-void PackNovaRequest(butil::IOBuf* buf,
-                     SocketMessage**,
+void PackNovaRequest(butil::IOBuf* buf, SocketMessage**,
                      uint64_t correlation_id,
                      const google::protobuf::MethodDescriptor* method,
-                     Controller* controller,
-                     const butil::IOBuf& request,
+                     Controller* controller, const butil::IOBuf& request,
                      const Authenticator* /*not supported*/) {
     ControllerPrivateAccessor accessor(controller);
     if (controller->connection_type() == CONNECTION_TYPE_SINGLE) {
@@ -177,13 +182,13 @@ void PackNovaRequest(butil::IOBuf* buf,
     // Store `correlation_id' into Socket since nova_pbrpc protocol
     // doesn't contain this field
     accessor.get_sending_socket()->set_correlation_id(correlation_id);
-        
+
     nshead_t nshead;
     memset(&nshead, 0, sizeof(nshead_t));
-    nshead.log_id = controller->log_id();
+    nshead.log_id    = controller->log_id();
     nshead.magic_num = NSHEAD_MAGICNUM;
-    nshead.reserved = method->index();
-    nshead.body_len = request.size();
+    nshead.reserved  = method->index();
+    nshead.body_len  = request.size();
     // Set compress flag
     if (controller->request_compress_type() == COMPRESS_TYPE_SNAPPY) {
         nshead.version = NOVA_SNAPPY_COMPRESS_FLAG;
@@ -200,4 +205,4 @@ void PackNovaRequest(butil::IOBuf* buf,
 }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc

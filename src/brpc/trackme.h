@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_TRACKME_H
 #define BRPC_TRACKME_H
 
-// [Internal] RPC users are not supposed to call functions below. 
+// [Internal] RPC users are not supposed to call functions below.
 
 #include "butil/endpoint.h"
-
 
 namespace brpc {
 
@@ -34,7 +32,6 @@ void SetTrackMeAddress(butil::EndPoint pt);
 // TrackMeRequest to -trackme_server every TRACKME_INTERVAL seconds.
 void TrackMe();
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_TRACKME_H
+#endif  // BRPC_TRACKME_H

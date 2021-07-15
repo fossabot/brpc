@@ -17,18 +17,16 @@
 
 // Date: Sun Aug  9 12:26:03 CST 2015
 
-#include <stdlib.h>
-#include <gflags/gflags.h>
 #include "bvar/gflag.h"
+#include <gflags/gflags.h>
+#include <stdlib.h>
 
 namespace bvar {
 
-GFlag::GFlag(const butil::StringPiece& gflag_name) {
-    expose(gflag_name);
-}
+GFlag::GFlag(const butil::StringPiece& gflag_name) { expose(gflag_name); }
 
 GFlag::GFlag(const butil::StringPiece& prefix,
-      const butil::StringPiece& gflag_name)
+             const butil::StringPiece& gflag_name)
     : _gflag_name(gflag_name.data(), gflag_name.size()) {
     expose_as(prefix, gflag_name);
 }
@@ -85,7 +83,8 @@ std::string GFlag::get_value() const {
 }
 
 bool GFlag::set_value(const char* value) {
-    return !GFLAGS_NS::SetCommandLineOption(gflag_name().c_str(), value).empty();
+    return !GFLAGS_NS::SetCommandLineOption(gflag_name().c_str(), value)
+                .empty();
 }
 
 }  // namespace bvar

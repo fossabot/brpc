@@ -15,22 +15,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
+#include <gflags/gflags.h>  // GetAllFlags
 #include <ostream>
-#include <vector>                           // std::vector
 #include <set>
-#include <gflags/gflags.h>                  // GetAllFlags
-                                            // CommandLineFlagInfo
+#include <vector>  // std::vector
+                   // CommandLineFlagInfo
 #include "butil/string_printf.h"
 #include "butil/string_splitter.h"
 
-#include "brpc/closure_guard.h"        // ClosureGuard
-#include "brpc/controller.h"           // Controller
-#include "brpc/errno.pb.h"
-#include "brpc/server.h"
 #include "brpc/builtin/common.h"
 #include "brpc/builtin/flags_service.h"
-
+#include "brpc/closure_guard.h"  // ClosureGuard
+#include "brpc/controller.h"     // Controller
+#include "brpc/errno.pb.h"
+#include "brpc/server.h"
 
 namespace brpc {
 
@@ -54,16 +52,25 @@ static std::string HtmlReplace(const std::string& s) {
         }
         b.append(s.data() + last_pos, new_pos - last_pos);
         switch (s[new_pos]) {
-        case '<' : b.append("&lt;"); break;
-        case '>' : b.append("&gt;"); break;
-        case '&' : b.append("&amp;"); break;
-        default: b.push_back(s[new_pos]); break;
+        case '<':
+            b.append("&lt;");
+            break;
+        case '>':
+            b.append("&gt;");
+            break;
+        case '&':
+            b.append("&amp;");
+            break;
+        default:
+            b.push_back(s[new_pos]);
+            break;
         }
         last_pos = new_pos + 1;
     }
 }
 
-static void PrintFlag(std::ostream& os, const GFLAGS_NS::CommandLineFlagInfo& flag,
+static void PrintFlag(std::ostream& os,
+                      const GFLAGS_NS::CommandLineFlagInfo& flag,
                       bool use_html) {
     if (use_html) {
         os << "<tr><td>";
@@ -82,16 +89,16 @@ static void PrintFlag(std::ostream& os, const GFLAGS_NS::CommandLineFlagInfo& fl
         os << "<span style='color:#FF0000'>";
     }
     if (!flag.current_value.empty()) {
-        os << (use_html ? HtmlReplace(flag.current_value)
-               : flag.current_value);
+        os << (use_html ? HtmlReplace(flag.current_value) : flag.current_value);
     } else {
         os << (use_html ? "&nbsp;" : " ");
     }
     if (!flag.is_default) {
         if (flag.default_value != flag.current_value) {
-            os << " (default:" << (use_html ?
-                                   HtmlReplace(flag.default_value) :
-                                   flag.default_value) << ')';
+            os << " (default:"
+               << (use_html ? HtmlReplace(flag.default_value)
+                            : flag.default_value)
+               << ')';
         }
         if (use_html) {
             os << "</span>";
@@ -116,8 +123,9 @@ void FlagsService::set_value_page(Controller* cntl,
     butil::IOBufBuilder os;
     const bool is_string = (info.type == "string");
     os << "<!DOCTYPE html><html><body>"
-        "<form action='' method='get'>"
-        " Set `" << name << "' from ";
+          "<form action='' method='get'>"
+          " Set `"
+       << name << "' from ";
     if (is_string) {
         os << '"';
     }
@@ -126,9 +134,9 @@ void FlagsService::set_value_page(Controller* cntl,
         os << '"';
     }
     os << " to <input name='setvalue' value=''>"
-        "  <button>go</button>"
-        "</form>"
-        "</body></html>";
+          "  <button>go</button>"
+          "</form>"
+          "</body></html>";
     os.move_to(cntl->response_attachment());
 }
 
@@ -137,14 +145,14 @@ void FlagsService::default_method(::google::protobuf::RpcController* cntl_base,
                                   ::brpc::FlagsResponse*,
                                   ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
+    Controller* cntl = static_cast<Controller*>(cntl_base);
     const std::string* value_str =
         cntl->http_request().uri().GetQuery(SETVALUE_STR);
     const std::string& constraint = cntl->http_request().unresolved_path();
 
     const bool use_html = UseHTML(cntl->http_request());
-    cntl->http_response().set_content_type(
-        use_html ? "text/html" : "text/plain");
+    cntl->http_response().set_content_type(use_html ? "text/html"
+                                                    : "text/plain");
 
     if (value_str != NULL) {
         // reload value if ?setvalue=VALUE is present.
@@ -165,15 +173,17 @@ void FlagsService::default_method(::google::protobuf::RpcController* cntl_base,
             return;
         }
         if (FLAGS_immutable_flags) {
-            cntl->SetFailed(EPERM, "Cannot modify `%s' because -immutable_flags is on",
+            cntl->SetFailed(EPERM,
+                            "Cannot modify `%s' because -immutable_flags is on",
                             constraint.c_str());
             return;
         }
         if (GFLAGS_NS::SetCommandLineOption(constraint.c_str(),
-                                         value_str->c_str()).empty()) {
-            cntl->SetFailed(EPERM, "Fail to set `%s' to %s",
-                            constraint.c_str(),
-                            (value_str->empty() ? "empty string" : value_str->c_str()));
+                                            value_str->c_str())
+                .empty()) {
+            cntl->SetFailed(
+                EPERM, "Fail to set `%s' to %s", constraint.c_str(),
+                (value_str->empty() ? "empty string" : value_str->c_str()));
             return;
         }
         butil::IOBufBuilder os;
@@ -189,7 +199,8 @@ void FlagsService::default_method(::google::protobuf::RpcController* cntl_base,
     std::vector<std::string> wildcards;
     std::set<std::string> exact;
     if (!constraint.empty()) {
-        for (butil::StringMultiSplitter sp(constraint.c_str(), ",;"); sp != NULL; ++sp) {
+        for (butil::StringMultiSplitter sp(constraint.c_str(), ",;");
+             sp != NULL; ++sp) {
             std::string name(sp.field(), sp.length());
             if (name.find_first_of("$*") != std::string::npos) {
                 wildcards.push_back(name);
@@ -202,13 +213,15 @@ void FlagsService::default_method(::google::protobuf::RpcController* cntl_base,
     // Print header of the table
     butil::IOBufBuilder os;
     if (use_html) {
-        os << "<!DOCTYPE html><html><head>\n" << gridtable_style()
-           << "<script language=\"javascript\" type=\"text/javascript\" src=\"/js/jquery_min\"></script>\n"
-           << TabsHead()
-           << "</head><body>";
+        os << "<!DOCTYPE html><html><head>\n"
+           << gridtable_style()
+           << "<script language=\"javascript\" type=\"text/javascript\" "
+              "src=\"/js/jquery_min\"></script>\n"
+           << TabsHead() << "</head><body>";
         cntl->server()->PrintTabsBody(os, "flags");
-        os << "<table class=\"gridtable\" border=\"1\"><tr><th>Name</th><th>Value</th>"
-            "<th>Description</th><th>Defined At</th></tr>\n";
+        os << "<table class=\"gridtable\" "
+              "border=\"1\"><tr><th>Name</th><th>Value</th>"
+              "<th>Description</th><th>Defined At</th></tr>\n";
     } else {
         os << "Name | Value | Description | Defined At\n"
               "---------------------------------------\n";
@@ -230,10 +243,10 @@ void FlagsService::default_method(::google::protobuf::RpcController* cntl_base,
         std::vector<GFLAGS_NS::CommandLineFlagInfo> flag_list;
         flag_list.reserve(128);
         GFLAGS_NS::GetAllFlags(&flag_list);
-        for (std::vector<GFLAGS_NS::CommandLineFlagInfo>::iterator
-                 it = flag_list.begin(); it != flag_list.end(); ++it) {
-            if (!constraint.empty() &&
-                exact.find(it->name) == exact.end() &&
+        for (std::vector<GFLAGS_NS::CommandLineFlagInfo>::iterator it =
+                 flag_list.begin();
+             it != flag_list.end(); ++it) {
+            if (!constraint.empty() && exact.find(it->name) == exact.end() &&
                 !MatchAnyWildcard(it->name, wildcards)) {
                 continue;
             }
@@ -249,9 +262,9 @@ void FlagsService::default_method(::google::protobuf::RpcController* cntl_base,
 }
 
 void FlagsService::GetTabInfo(TabInfoList* info_list) const {
-    TabInfo* info = info_list->add();
-    info->path = "/flags";
+    TabInfo* info  = info_list->add();
+    info->path     = "/flags";
     info->tab_name = "flags";
 }
 
-} // namespace brpc
+}  // namespace brpc

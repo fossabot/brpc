@@ -17,8 +17,8 @@
 #ifndef BUTIL_RECORDIO_H
 #define BUTIL_RECORDIO_H
 
-#include "butil/iobuf.h"
 #include <memory>
+#include "butil/iobuf.h"
 
 namespace butil {
 
@@ -53,7 +53,8 @@ public:
     // tests presence by scaning all fields, which may perform badly when metas
     // are a lot.
     butil::IOBuf* MutableMeta(const char* name, bool null_on_found = false);
-    butil::IOBuf* MutableMeta(const std::string& name, bool null_on_found = false);
+    butil::IOBuf* MutableMeta(const std::string& name,
+                              bool null_on_found = false);
 
     // Remove meta with the name. The impl. may scan all fields.
     // Returns true on erased, false on absent.
@@ -94,7 +95,8 @@ public:
     explicit RecordReader(IReader* reader);
 
     // Returns true on success and |out| is overwritten by the record.
-    // False otherwise and last_error() is the error which is treated as permanent.
+    // False otherwise and last_error() is the error which is treated as
+    // permanent.
     bool ReadNext(Record* out);
 
     // 0 means no error.
@@ -138,6 +140,6 @@ private:
     IWriter* _writer;
 };
 
-} // namespace butil
+}  // namespace butil
 
 #endif  // BUTIL_RECORDIO_H

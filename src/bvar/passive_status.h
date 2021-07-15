@@ -17,11 +17,11 @@
 
 // Date 2014/09/22 11:57:43
 
-#ifndef  BVAR_PASSIVE_STATUS_H
-#define  BVAR_PASSIVE_STATUS_H
+#ifndef BVAR_PASSIVE_STATUS_H
+#define BVAR_PASSIVE_STATUS_H
 
-#include "bvar/variable.h"
 #include "bvar/reducer.h"
+#include "bvar/variable.h"
 
 namespace bvar {
 
@@ -43,22 +43,21 @@ class PassiveStatus : public Variable {
 public:
     typedef Tp value_type;
     typedef detail::ReducerSampler<PassiveStatus, Tp, detail::AddTo<Tp>,
-                                   detail::MinusFrom<Tp> > sampler_type;
+                                   detail::MinusFrom<Tp> >
+        sampler_type;
     struct PlaceHolderOp {
         void operator()(Tp&, const Tp&) const {}
     };
-    static const bool ADDITIVE = (butil::is_integral<Tp>::value ||
-                                  butil::is_floating_point<Tp>::value ||
-                                  is_vector<Tp>::value);
+    static const bool ADDITIVE =
+        (butil::is_integral<Tp>::value || butil::is_floating_point<Tp>::value ||
+         is_vector<Tp>::value);
     class SeriesSampler : public detail::Sampler {
     public:
-        typedef typename butil::conditional<
-        ADDITIVE, detail::AddTo<Tp>, PlaceHolderOp>::type Op;
+        typedef typename butil::conditional<ADDITIVE, detail::AddTo<Tp>,
+                                            PlaceHolderOp>::type Op;
         explicit SeriesSampler(PassiveStatus* owner)
             : _owner(owner), _vector_names(NULL), _series(Op()) {}
-        ~SeriesSampler() {
-            delete _vector_names;
-        }
+        ~SeriesSampler() { delete _vector_names; }
         void take_sample() override { _series.append(_owner->get_value()); }
         void describe(std::ostream& os) { _series.describe(os, _vector_names); }
         void set_vector_names(const std::string& names) {
@@ -67,6 +66,7 @@ public:
             }
             *_vector_names = names;
         }
+
     private:
         PassiveStatus* _owner;
         std::string* _vector_names;
@@ -76,31 +76,19 @@ public:
 public:
     // NOTE: You must be very careful about lifetime of `arg' which should be
     // valid during lifetime of PassiveStatus.
-    PassiveStatus(const butil::StringPiece& name,
-                  Tp (*getfn)(void*), void* arg)
-        : _getfn(getfn)
-        , _arg(arg)
-        , _sampler(NULL)
-        , _series_sampler(NULL) {
+    PassiveStatus(const butil::StringPiece& name, Tp (*getfn)(void*), void* arg)
+        : _getfn(getfn), _arg(arg), _sampler(NULL), _series_sampler(NULL) {
         expose(name);
     }
-    
+
     PassiveStatus(const butil::StringPiece& prefix,
-                  const butil::StringPiece& name,
-                  Tp (*getfn)(void*), void* arg)
-        : _getfn(getfn)
-        , _arg(arg)
-        , _sampler(NULL)
-        , _series_sampler(NULL) {
+                  const butil::StringPiece& name, Tp (*getfn)(void*), void* arg)
+        : _getfn(getfn), _arg(arg), _sampler(NULL), _series_sampler(NULL) {
         expose_as(prefix, name);
     }
-    
-    PassiveStatus(Tp (*getfn)(void*), void* arg) 
-        : _getfn(getfn)
-        , _arg(arg)
-        , _sampler(NULL)
-        , _series_sampler(NULL) {
-    }
+
+    PassiveStatus(Tp (*getfn)(void*), void* arg)
+        : _getfn(getfn), _arg(arg), _sampler(NULL), _series_sampler(NULL) {}
 
     ~PassiveStatus() {
         hide();
@@ -113,7 +101,7 @@ public:
             _series_sampler = NULL;
         }
     }
-    
+
     int set_vector_names(const std::string& names) {
         if (_series_sampler) {
             _series_sampler->set_vector_names(names);
@@ -135,11 +123,9 @@ public:
         }
     }
 #endif
-    
-    Tp get_value() const {
-        return (_getfn ? _getfn(_arg) : Tp());
-    }
-    
+
+    Tp get_value() const { return (_getfn ? _getfn(_arg) : Tp()); }
+
     sampler_type* get_sampler() {
         if (NULL == _sampler) {
             _sampler = new sampler_type(this);
@@ -151,7 +137,8 @@ public:
     detail::AddTo<Tp> op() const { return detail::AddTo<Tp>(); }
     detail::MinusFrom<Tp> inv_op() const { return detail::MinusFrom<Tp>(); }
 
-    int describe_series(std::ostream& os, const SeriesOptions& options) const override {
+    int describe_series(std::ostream& os,
+                        const SeriesOptions& options) const override {
         if (_series_sampler == NULL) {
             return 1;
         }
@@ -171,9 +158,7 @@ protected:
                     const butil::StringPiece& name,
                     DisplayFilter display_filter) override {
         const int rc = Variable::expose_impl(prefix, name, display_filter);
-        if (ADDITIVE &&
-            rc == 0 &&
-            _series_sampler == NULL &&
+        if (ADDITIVE && rc == 0 && _series_sampler == NULL &&
             FLAGS_save_series) {
             _series_sampler = new SeriesSampler(this);
             _series_sampler->schedule();
@@ -188,9 +173,10 @@ private:
     SeriesSampler* _series_sampler;
 };
 
-// ccover g++ may complain about ADDITIVE is undefined unless it's 
+// ccover g++ may complain about ADDITIVE is undefined unless it's
 // explicitly declared here.
-template <typename Tp> const bool PassiveStatus<Tp>::ADDITIVE;
+template <typename Tp>
+const bool PassiveStatus<Tp>::ADDITIVE;
 
 // Specialize std::string for using std::ostream& as a more friendly
 // interface for user's callback.
@@ -212,12 +198,10 @@ public:
         expose_as(prefix, name);
     }
 
-    PassiveStatus(void (*print)(std::ostream&, void*), void* arg) 
+    PassiveStatus(void (*print)(std::ostream&, void*), void* arg)
         : _print(print), _arg(arg) {}
 
-    ~PassiveStatus() {
-        hide();
-    }
+    ~PassiveStatus() { hide(); }
 
     void describe(std::ostream& os, bool quote_string) const override {
         if (quote_string) {
@@ -245,13 +229,13 @@ private:
 template <typename Tp>
 class BasicPassiveStatus : public PassiveStatus<Tp> {
 public:
-    BasicPassiveStatus(const butil::StringPiece& name,
-                       Tp (*getfn)(void*), void* arg)
+    BasicPassiveStatus(const butil::StringPiece& name, Tp (*getfn)(void*),
+                       void* arg)
         : PassiveStatus<Tp>(name, getfn, arg) {}
-    
+
     BasicPassiveStatus(const butil::StringPiece& prefix,
-                       const butil::StringPiece& name,
-                       Tp (*getfn)(void*), void* arg)
+                       const butil::StringPiece& name, Tp (*getfn)(void*),
+                       void* arg)
         : PassiveStatus<Tp>(prefix, name, getfn, arg) {}
 
     BasicPassiveStatus(Tp (*getfn)(void*), void* arg)
@@ -264,7 +248,7 @@ public:
     BasicPassiveStatus(const butil::StringPiece& name,
                        void (*print)(std::ostream&, void*), void* arg)
         : PassiveStatus<std::string>(name, print, arg) {}
-    
+
     BasicPassiveStatus(const butil::StringPiece& prefix,
                        const butil::StringPiece& name,
                        void (*print)(std::ostream&, void*), void* arg)
@@ -274,7 +258,6 @@ public:
         : PassiveStatus<std::string>(print, arg) {}
 };
 
-
 }  // namespace bvar
 
-#endif  //BVAR_PASSIVE_STATUS_H
+#endif  // BVAR_PASSIVE_STATUS_H

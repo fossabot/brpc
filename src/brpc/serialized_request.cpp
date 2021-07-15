@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #include "brpc/serialized_request.h"
 #include "butil/logging.h"
 
 namespace brpc {
 
-SerializedRequest::SerializedRequest()
-    : ::google::protobuf::Message() {
+SerializedRequest::SerializedRequest() : ::google::protobuf::Message() {
     SharedCtor();
 }
 
@@ -32,15 +30,11 @@ SerializedRequest::SerializedRequest(const SerializedRequest& from)
     MergeFrom(from);
 }
 
-void SerializedRequest::SharedCtor() {
-}
+void SerializedRequest::SharedCtor() {}
 
-SerializedRequest::~SerializedRequest() {
-    SharedDtor();
-}
+SerializedRequest::~SerializedRequest() { SharedDtor(); }
 
-void SerializedRequest::SharedDtor() {
-}
+void SerializedRequest::SharedDtor() {}
 
 void SerializedRequest::SetCachedSize(int /*size*/) const {
     CHECK(false) << "You're not supposed to call " << __FUNCTION__;
@@ -53,9 +47,7 @@ SerializedRequest* SerializedRequest::New() const {
     return new SerializedRequest;
 }
 
-void SerializedRequest::Clear() {
-    _serialized.clear();
-}
+void SerializedRequest::Clear() { _serialized.clear(); }
 
 bool SerializedRequest::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream*) {
@@ -74,9 +66,7 @@ void SerializedRequest::SerializeWithCachedSizes(
     return target;
 }
 
-int SerializedRequest::ByteSize() const {
-    return (int)_serialized.size();
-}
+int SerializedRequest::ByteSize() const { return (int)_serialized.size(); }
 
 void SerializedRequest::MergeFrom(const ::google::protobuf::Message&) {
     CHECK(false) << "You're not supposed to call " << __FUNCTION__;
@@ -88,7 +78,8 @@ void SerializedRequest::MergeFrom(const SerializedRequest&) {
 
 void SerializedRequest::CopyFrom(const ::google::protobuf::Message& from) {
     if (&from == this) return;
-    const SerializedRequest* source = dynamic_cast<const SerializedRequest*>(&from);
+    const SerializedRequest* source =
+        dynamic_cast<const SerializedRequest*>(&from);
     if (source == NULL) {
         CHECK(false) << "SerializedRequest can only CopyFrom SerializedRequest";
     } else {
@@ -119,4 +110,4 @@ void SerializedRequest::Swap(SerializedRequest* other) {
     return metadata;
 }
 
-} // namespace brpc
+}  // namespace brpc

@@ -22,24 +22,24 @@
 #ifndef BUTIL_ENDPOINT_H
 #define BUTIL_ENDPOINT_H
 
-#include <netinet/in.h>                          // in_addr
-#include <iostream>                              // std::ostream
-#include "butil/containers/hash_tables.h"         // hashing functions
+#include <netinet/in.h>                    // in_addr
+#include <iostream>                        // std::ostream
+#include "butil/containers/hash_tables.h"  // hashing functions
 
 namespace butil {
 
 // Type of an IP address
 typedef struct in_addr ip_t;
 
-static const ip_t IP_ANY = { INADDR_ANY };
-static const ip_t IP_NONE = { INADDR_NONE };
+static const ip_t IP_ANY  = {INADDR_ANY};
+static const ip_t IP_NONE = {INADDR_NONE};
 
 // Convert |ip| to an integral
 inline in_addr_t ip2int(ip_t ip) { return ip.s_addr; }
 
 // Convert integral |ip_value| to an IP
 inline ip_t int2ip(in_addr_t ip_value) {
-    const ip_t ip = { ip_value };
+    const ip_t ip = {ip_value};
     return ip;
 }
 
@@ -85,7 +85,7 @@ struct EndPoint {
     EndPoint(ip_t ip2, int port2) : ip(ip2), port(port2) {}
     explicit EndPoint(const sockaddr_in& in)
         : ip(in.sin_addr), port(ntohs(in.sin_port)) {}
-    
+
     ip_t ip;
     int port;
 };
@@ -95,8 +95,8 @@ struct EndPointStr {
     char _buf[INET_ADDRSTRLEN + 16];
 };
 
-// Convert EndPoint to c-style string. Notice that you can serialize 
-// EndPoint to std::ostream directly. Use this function when you don't 
+// Convert EndPoint to c-style string. Notice that you can serialize
+// EndPoint to std::ostream directly. Use this function when you don't
 // have streaming log.
 // Example: printf("point=%s\n", endpoint2str(point).c_str());
 EndPointStr endpoint2str(const EndPoint&);
@@ -113,7 +113,8 @@ int hostname2endpoint(const char* name_str, int port, EndPoint* point);
 
 // Convert `endpoint' to `hostname'.
 // Returns 0 on success, -1 otherwise and errno is set.
-int endpoint2hostname(const EndPoint& point, char* hostname, size_t hostname_len);
+int endpoint2hostname(const EndPoint& point, char* hostname,
+                      size_t hostname_len);
 int endpoint2hostname(const EndPoint& point, std::string* host);
 
 // Create a TCP socket and connect it to `server'. Write port of this side
@@ -128,10 +129,10 @@ int tcp_connect(EndPoint server, int* self_port);
 int tcp_listen(EndPoint ip_and_port);
 
 // Get the local end of a socket connection
-int get_local_side(int fd, EndPoint *out);
+int get_local_side(int fd, EndPoint* out);
 
 // Get the other end of a socket connection
-int get_remote_side(int fd, EndPoint *out);
+int get_remote_side(int fd, EndPoint* out);
 
 }  // namespace butil
 
@@ -140,14 +141,12 @@ int get_remote_side(int fd, EndPoint *out);
 inline bool operator<(butil::ip_t lhs, butil::ip_t rhs) {
     return butil::ip2int(lhs) < butil::ip2int(rhs);
 }
-inline bool operator>(butil::ip_t lhs, butil::ip_t rhs) {
-    return rhs < lhs;
-}
+inline bool operator>(butil::ip_t lhs, butil::ip_t rhs) { return rhs < lhs; }
 inline bool operator>=(butil::ip_t lhs, butil::ip_t rhs) {
     return !(lhs < rhs);
 }
 inline bool operator<=(butil::ip_t lhs, butil::ip_t rhs) {
-    return !(rhs < lhs); 
+    return !(rhs < lhs);
 }
 inline bool operator==(butil::ip_t lhs, butil::ip_t rhs) {
     return butil::ip2int(lhs) == butil::ip2int(rhs);
@@ -168,21 +167,13 @@ namespace butil {
 inline bool operator<(EndPoint p1, EndPoint p2) {
     return (p1.ip != p2.ip) ? (p1.ip < p2.ip) : (p1.port < p2.port);
 }
-inline bool operator>(EndPoint p1, EndPoint p2) {
-    return p2 < p1;
-}
-inline bool operator<=(EndPoint p1, EndPoint p2) { 
-    return !(p2 < p1); 
-}
-inline bool operator>=(EndPoint p1, EndPoint p2) { 
-    return !(p1 < p2); 
-}
+inline bool operator>(EndPoint p1, EndPoint p2) { return p2 < p1; }
+inline bool operator<=(EndPoint p1, EndPoint p2) { return !(p2 < p1); }
+inline bool operator>=(EndPoint p1, EndPoint p2) { return !(p1 < p2); }
 inline bool operator==(EndPoint p1, EndPoint p2) {
     return p1.ip == p2.ip && p1.port == p2.port;
 }
-inline bool operator!=(EndPoint p1, EndPoint p2) {
-    return !(p1 == p2);
-}
+inline bool operator!=(EndPoint p1, EndPoint p2) { return !(p1 == p2); }
 
 inline std::ostream& operator<<(std::ostream& os, const EndPoint& ep) {
     return os << ep.ip << ':' << ep.port;
@@ -192,7 +183,6 @@ inline std::ostream& operator<<(std::ostream& os, const EndPointStr& ep_str) {
 }
 
 }  // namespace butil
-
 
 namespace BUTIL_HASH_NAMESPACE {
 
@@ -217,6 +207,6 @@ struct hash<butil::EndPoint> {
 #error define hash<EndPoint> for your compiler
 #endif  // COMPILER
 
-}
+}  // namespace BUTIL_HASH_NAMESPACE
 
 #endif  // BUTIL_ENDPOINT_H

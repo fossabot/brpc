@@ -20,7 +20,7 @@
 #ifndef BUTIL_SINGLE_THREADED_POOL_H
 #define BUTIL_SINGLE_THREADED_POOL_H
 
-#include <stdlib.h>   // malloc & free
+#include <stdlib.h>  // malloc & free
 
 namespace butil {
 
@@ -44,20 +44,21 @@ public:
     struct Block {
         static const size_t INUSE_SIZE =
             BLOCK_SIZE_IN - sizeof(void*) - sizeof(size_t);
-        static const size_t NITEM = (sizeof(Node) <= INUSE_SIZE ?
-                                     (INUSE_SIZE / sizeof(Node)) : MIN_NITEM);
+        static const size_t NITEM =
+            (sizeof(Node) <= INUSE_SIZE ? (INUSE_SIZE / sizeof(Node))
+                                        : MIN_NITEM);
         size_t nalloc;
         Block* next;
         Node nodes[NITEM];
     };
     static const size_t BLOCK_SIZE = sizeof(Block);
-    static const size_t NITEM = Block::NITEM;
-    static const size_t ITEM_SIZE = ITEM_SIZE_IN;
-    
+    static const size_t NITEM      = Block::NITEM;
+    static const size_t ITEM_SIZE  = ITEM_SIZE_IN;
+
     SingleThreadedPool() : _free_nodes(NULL), _blocks(NULL) {}
     ~SingleThreadedPool() { reset(); }
 
-    void swap(SingleThreadedPool & other) {
+    void swap(SingleThreadedPool& other) {
         std::swap(_free_nodes, other._free_nodes);
         std::swap(_blocks, other._blocks);
     }
@@ -67,7 +68,7 @@ public:
     void* get() {
         if (_free_nodes) {
             void* spaces = _free_nodes->spaces;
-            _free_nodes = _free_nodes->next;
+            _free_nodes  = _free_nodes->next;
             return spaces;
         }
         if (_blocks == NULL || _blocks->nalloc >= Block::NITEM) {
@@ -76,18 +77,18 @@ public:
                 return NULL;
             }
             new_block->nalloc = 0;
-            new_block->next = _blocks;
-            _blocks = new_block;
+            new_block->next   = _blocks;
+            _blocks           = new_block;
         }
         return _blocks->nodes[_blocks->nalloc++].spaces;
     }
-    
+
     // Return a space allocated by get() before.
     // Do nothing for NULL.
     void back(void* p) {
         if (NULL != p) {
-            Node* node = (Node*)((char*)p - offsetof(Node, spaces));
-            node->next = _free_nodes;
+            Node* node  = (Node*)((char*)p - offsetof(Node, spaces));
+            node->next  = _free_nodes;
             _free_nodes = node;
         }
     }
@@ -115,12 +116,11 @@ public:
     }
     size_t count_free() const {
         size_t n = 0;
-        for (Node* p = _free_nodes; p; p = p->next, ++n) {}
+        for (Node* p = _free_nodes; p; p = p->next, ++n) {
+        }
         return n;
     }
-    size_t count_active() const {
-        return count_allocated() - count_free();
-    }
+    size_t count_active() const { return count_allocated() - count_free(); }
 
 private:
     // You should not copy a pool.

@@ -15,12 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_RETRY_POLICY_H
 #define BRPC_RETRY_POLICY_H
 
 #include "brpc/controller.h"
-
 
 namespace brpc {
 
@@ -28,7 +26,7 @@ namespace brpc {
 class RetryPolicy {
 public:
     virtual ~RetryPolicy();
-    
+
     // Returns true if the RPC represented by `controller' should be retried.
     // [Example]
     // By default, HTTP errors are not retried, but you need to retry
@@ -42,14 +40,15 @@ public:
     //         return false;
     //       }
     //       if (cntl->ErrorCode() == brpc::EHTTP && // http errors
-    //           cntl->http_response().status_code() == brpc::HTTP_STATUS_FORBIDDEN) {
+    //           cntl->http_response().status_code() ==
+    //           brpc::HTTP_STATUS_FORBIDDEN) {
     //         return true;
     //       }
     //       // Leave other cases to default.
     //       return brpc::DefaultRetryPolicy()->DoRetry(cntl);
     //     }
     //   };
-    // 
+    //
     // You can retry unqualified responses even if the RPC was successful
     //   class MyRetryPolicy : public brpc::RetryPolicy {
     //   public:
@@ -73,7 +72,6 @@ public:
 // Get the RetryPolicy used by brpc.
 const RetryPolicy* DefaultRetryPolicy();
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_RETRY_POLICY_H

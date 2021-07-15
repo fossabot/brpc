@@ -28,21 +28,21 @@ namespace policy {
 // Couchbase Server 2.2 provide CRAM-MD5 support for SASL authentication,
 // but Couchbase Server prior to 2.2 using PLAIN SASL authentication.
 class CouchbaseAuthenticator : public Authenticator {
- public:
-  CouchbaseAuthenticator(const std::string& bucket_name,
-                         const std::string& bucket_password)
-      : bucket_name_(bucket_name), bucket_password_(bucket_password) {}
+public:
+    CouchbaseAuthenticator(const std::string& bucket_name,
+                           const std::string& bucket_password)
+        : bucket_name_(bucket_name), bucket_password_(bucket_password) {}
 
-  int GenerateCredential(std::string* auth_str) const;
+    int GenerateCredential(std::string* auth_str) const;
 
-  int VerifyCredential(const std::string&, const butil::EndPoint&,
-                       brpc::AuthContext*) const {
-    return 0;
-  }
+    int VerifyCredential(const std::string&, const butil::EndPoint&,
+                         brpc::AuthContext*) const {
+        return 0;
+    }
 
- private:
-  const std::string bucket_name_;
-  const std::string bucket_password_;
+private:
+    const std::string bucket_name_;
+    const std::string bucket_password_;
 };
 
 }  // namespace policy

@@ -20,17 +20,17 @@ BUTIL_EXPORT uint32_t SuperFastHash(const char* data, int len);
 // Computes a hash of a memory buffer |data| of a given |length|.
 // WARNING: This hash function should not be used for any cryptographic purpose.
 inline uint32_t Hash(const char* data, size_t length) {
-  if (length > static_cast<size_t>(std::numeric_limits<int>::max())) {
-    NOTREACHED();
-    return 0;
-  }
-  return SuperFastHash(data, static_cast<int>(length));
+    if (length > static_cast<size_t>(std::numeric_limits<int>::max())) {
+        NOTREACHED();
+        return 0;
+    }
+    return SuperFastHash(data, static_cast<int>(length));
 }
 
 // Computes a hash of a string |str|.
 // WARNING: This hash function should not be used for any cryptographic purpose.
 inline uint32_t Hash(const std::string& str) {
-  return Hash(str.data(), str.size());
+    return Hash(str.data(), str.size());
 }
 
 }  // namespace butil

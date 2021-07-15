@@ -19,18 +19,18 @@
 
 // Date: Tue Jul 10 17:40:58 CST 2012
 
-#include "butil/scoped_lock.h"             // BAIDU_SCOPED_LOCK
-#include "butil/errno.h"                   // berror
-#include "butil/logging.h"
-#include "butil/third_party/murmurhash3/murmurhash3.h"
-#include "bthread/sys_futex.h"            // futex_wake_private
-#include "bthread/interrupt_pthread.h"
-#include "bthread/processor.h"            // cpu_relax
-#include "bthread/task_group.h"           // TaskGroup
 #include "bthread/task_control.h"
-#include "bthread/timer_thread.h"         // global_timer_thread
 #include <gflags/gflags.h>
+#include "bthread/interrupt_pthread.h"
 #include "bthread/log.h"
+#include "bthread/processor.h"     // cpu_relax
+#include "bthread/sys_futex.h"     // futex_wake_private
+#include "bthread/task_group.h"    // TaskGroup
+#include "bthread/timer_thread.h"  // global_timer_thread
+#include "butil/errno.h"           // berror
+#include "butil/logging.h"
+#include "butil/scoped_lock.h"  // BAIDU_SCOPED_LOCK
+#include "butil/third_party/murmurhash3/murmurhash3.h"
 
 DEFINE_int32(task_group_delete_delay, 1,
              "delay deletion of TaskGroup for so many seconds");
@@ -56,13 +56,13 @@ void run_worker_startfn() {
 }
 
 void* TaskControl::worker_thread(void* arg) {
-    run_worker_startfn();    
+    run_worker_startfn();
 #ifdef BAIDU_INTERNAL
     logging::ComlogInitializer comlog_initializer;
 #endif
-    
+
     TaskControl* c = static_cast<TaskControl*>(arg);
-    TaskGroup* g = c->create_group();
+    TaskGroup* g   = c->create_group();
     TaskStatistics stat;
     if (NULL == g) {
         LOG(ERROR) << "Fail to create TaskGroup in pthread=" << pthread_self();
@@ -76,8 +76,9 @@ void* TaskControl::worker_thread(void* arg) {
     g->run_main_task();
 
     stat = g->main_stat();
-    BT_VLOG << "Destroying worker=" << pthread_self() << " bthread="
-            << g->main_tid() << " idle=" << stat.cputime_ns / 1000000.0
+    BT_VLOG << "Destroying worker=" << pthread_self()
+            << " bthread=" << g->main_tid()
+            << " idle=" << stat.cputime_ns / 1000000.0
             << "ms uptime=" << g->current_uptime_ns() / 1000000.0 << "ms";
     tls_task_group = NULL;
     g->destroy_self();
@@ -103,20 +104,20 @@ TaskGroup* TaskControl::create_group() {
     return g;
 }
 
-static void print_rq_sizes_in_the_tc(std::ostream &os, void *arg) {
-    TaskControl *tc = (TaskControl *)arg;
+static void print_rq_sizes_in_the_tc(std::ostream& os, void* arg) {
+    TaskControl* tc = (TaskControl*)arg;
     tc->print_rq_sizes(os);
 }
 
-static double get_cumulated_worker_time_from_this(void *arg) {
+static double get_cumulated_worker_time_from_this(void* arg) {
     return static_cast<TaskControl*>(arg)->get_cumulated_worker_time();
 }
 
-static int64_t get_cumulated_switch_count_from_this(void *arg) {
+static int64_t get_cumulated_switch_count_from_this(void* arg) {
     return static_cast<TaskControl*>(arg)->get_cumulated_switch_count();
 }
 
-static int64_t get_cumulated_signal_count_from_this(void *arg) {
+static int64_t get_cumulated_signal_count_from_this(void* arg) {
     return static_cast<TaskControl*>(arg)->get_cumulated_signal_count();
 }
 
@@ -128,8 +129,8 @@ TaskControl::TaskControl()
     , _concurrency(0)
     , _nworkers("bthread_worker_count")
     , _pending_time(NULL)
-      // Delay exposure of following two vars because they rely on TC which
-      // is not initialized yet.
+    // Delay exposure of following two vars because they rely on TC which
+    // is not initialized yet.
     , _cumulated_worker_time(get_cumulated_worker_time_from_this, this)
     , _worker_usage_second(&_cumulated_worker_time, 1)
     , _cumulated_switch_count(get_cumulated_switch_count_from_this, this)
@@ -137,8 +138,7 @@ TaskControl::TaskControl()
     , _cumulated_signal_count(get_cumulated_signal_count_from_this, this)
     , _signal_per_second(&_cumulated_signal_count)
     , _status(print_rq_sizes_in_the_tc, this)
-    , _nbthreads("bthread_count")
-{
+    , _nbthreads("bthread_count") {
     // calloc shall set memory to zero
     CHECK(_groups) << "Fail to create array of groups";
 }
@@ -159,12 +159,13 @@ int TaskControl::init(int concurrency) {
         LOG(ERROR) << "Fail to get global_timer_thread";
         return -1;
     }
-    
-    _workers.resize(_concurrency);   
+
+    _workers.resize(_concurrency);
     for (int i = 0; i < _concurrency; ++i) {
         const int rc = pthread_create(&_workers[i], NULL, worker_thread, this);
         if (rc) {
-            LOG(ERROR) << "Fail to create _workers[" << i << "], " << berror(rc);
+            LOG(ERROR) << "Fail to create _workers[" << i << "], "
+                       << berror(rc);
             return -1;
         }
     }
@@ -196,8 +197,8 @@ int TaskControl::add_workers(int num) {
         // Worker will add itself to _idle_workers, so we have to add
         // _concurrency before create a worker.
         _concurrency.fetch_add(1);
-        const int rc = pthread_create(
-                &_workers[i + old_concurency], NULL, worker_thread, this);
+        const int rc = pthread_create(&_workers[i + old_concurency], NULL,
+                                      worker_thread, this);
         if (rc) {
             LOG(WARNING) << "Fail to create _workers[" << i + old_concurency
                          << "], " << berror(rc);
@@ -230,7 +231,7 @@ void TaskControl::stop_and_join() {
     {
         BAIDU_SCOPED_LOCK(_modify_group_mutex);
         _stop = true;
-        _ngroup.exchange(0, butil::memory_order_relaxed); 
+        _ngroup.exchange(0, butil::memory_order_relaxed);
     }
     for (int i = 0; i < PARKING_LOT_NUM; ++i) {
         _pl[i].stop();
@@ -253,7 +254,7 @@ TaskControl::~TaskControl() {
     _switch_per_second.hide();
     _signal_per_second.hide();
     _status.hide();
-    
+
     stop_and_join();
 
     free(_groups);
@@ -280,9 +281,7 @@ int TaskControl::_add_group(TaskGroup* g) {
     return 0;
 }
 
-void TaskControl::delete_task_group(void* arg) {
-    delete(TaskGroup*)arg;
-}
+void TaskControl::delete_task_group(void* arg) { delete (TaskGroup*)arg; }
 
 int TaskControl::_destroy_group(TaskGroup* g) {
     if (NULL == g) {
@@ -306,7 +305,7 @@ int TaskControl::_destroy_group(TaskGroup* g) {
                 //  - If steal_task sees the newest _ngroup, it would not touch
                 //    _groups[ngroup -1]
                 //  - If steal_task sees old _ngroup and is still iterating on
-                //    _groups, it would not miss _groups[ngroup - 1] which was 
+                //    _groups, it would not miss _groups[ngroup - 1] which was
                 //    swapped to _groups[i]. Although adding new group would
                 //    overwrite it, since we do signal_task in _add_group(),
                 //    we think the pending tasks of _groups[ngroup - 1] would
@@ -327,7 +326,8 @@ int TaskControl::_destroy_group(TaskGroup* g) {
     if (erased) {
         get_global_timer_thread()->schedule(
             delete_task_group, g,
-            butil::microseconds_from_now(FLAGS_task_group_delete_delay * 1000000L));
+            butil::microseconds_from_now(FLAGS_task_group_delete_delay *
+                                         1000000L));
     }
     return 0;
 }
@@ -335,14 +335,14 @@ int TaskControl::_destroy_group(TaskGroup* g) {
 bool TaskControl::steal_task(bthread_t* tid, size_t* seed, size_t offset) {
     // 1: Acquiring fence is paired with releasing fence in _add_group to
     // avoid accessing uninitialized slot of _groups.
-    const size_t ngroup = _ngroup.load(butil::memory_order_acquire/*1*/);
+    const size_t ngroup = _ngroup.load(butil::memory_order_acquire /*1*/);
     if (0 == ngroup) {
         return false;
     }
 
     // NOTE: Don't return inside `for' iteration since we need to update |seed|
     bool stolen = false;
-    size_t s = *seed;
+    size_t s    = *seed;
     for (size_t i = 0; i < ngroup; ++i, s += offset) {
         TaskGroup* g = _groups[s % ngroup];
         // g is possibly NULL because of concurrent _destroy_group
@@ -367,8 +367,9 @@ void TaskControl::signal_task(int num_task) {
     }
     // TODO(gejun): Current algorithm does not guarantee enough threads will
     // be created to match caller's requests. But in another side, there's also
-    // many useless signalings according to current impl. Capping the concurrency
-    // is a good balance between performance and timeliness of scheduling.
+    // many useless signalings according to current impl. Capping the
+    // concurrency is a good balance between performance and timeliness of
+    // scheduling.
     if (num_task > 2) {
         num_task = 2;
     }
@@ -383,11 +384,14 @@ void TaskControl::signal_task(int num_task) {
         }
     }
     if (num_task > 0 &&
-        FLAGS_bthread_min_concurrency > 0 &&    // test min_concurrency for performance
-        _concurrency.load(butil::memory_order_relaxed) < FLAGS_bthread_concurrency) {
+        FLAGS_bthread_min_concurrency >
+            0 &&  // test min_concurrency for performance
+        _concurrency.load(butil::memory_order_relaxed) <
+            FLAGS_bthread_concurrency) {
         // TODO: Reduce this lock
         BAIDU_SCOPED_LOCK(g_task_control_mutex);
-        if (_concurrency.load(butil::memory_order_acquire) < FLAGS_bthread_concurrency) {
+        if (_concurrency.load(butil::memory_order_acquire) <
+            FLAGS_bthread_concurrency) {
             add_workers(1);
         }
     }

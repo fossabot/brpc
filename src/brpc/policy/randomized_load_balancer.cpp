@@ -15,11 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "butil/macros.h"
-#include "butil/fast_rand.h"
-#include "brpc/socket.h"
 #include "brpc/policy/randomized_load_balancer.h"
+#include "brpc/socket.h"
+#include "butil/fast_rand.h"
+#include "butil/macros.h"
 #include "butil/strings/string_number_conversions.h"
 
 namespace brpc {
@@ -49,8 +48,8 @@ bool RandomizedLoadBalancer::Add(Servers& bg, const ServerId& id) {
 bool RandomizedLoadBalancer::Remove(Servers& bg, const ServerId& id) {
     std::map<ServerId, size_t>::iterator it = bg.server_map.find(id);
     if (it != bg.server_map.end()) {
-        size_t index = it->second;
-        bg.server_list[index] = bg.server_list.back();
+        size_t index                         = it->second;
+        bg.server_list[index]                = bg.server_list.back();
         bg.server_map[bg.server_list[index]] = index;
         bg.server_list.pop_back();
         bg.server_map.erase(it);
@@ -59,8 +58,8 @@ bool RandomizedLoadBalancer::Remove(Servers& bg, const ServerId& id) {
     return false;
 }
 
-size_t RandomizedLoadBalancer::BatchAdd(
-    Servers& bg, const std::vector<ServerId>& servers) {
+size_t RandomizedLoadBalancer::BatchAdd(Servers& bg,
+                                        const std::vector<ServerId>& servers) {
     size_t count = 0;
     for (size_t i = 0; i < servers.size(); ++i) {
         count += !!Add(bg, servers[i]);
@@ -88,9 +87,8 @@ bool RandomizedLoadBalancer::RemoveServer(const ServerId& id) {
 size_t RandomizedLoadBalancer::AddServersInBatch(
     const std::vector<ServerId>& servers) {
     const size_t n = _db_servers.Modify(BatchAdd, servers);
-    LOG_IF(ERROR, n != servers.size())
-        << "Fail to AddServersInBatch, expected " << servers.size()
-        << " actually " << n;
+    LOG_IF(ERROR, n != servers.size()) << "Fail to AddServersInBatch, expected "
+                                       << servers.size() << " actually " << n;
     return n;
 }
 
@@ -112,19 +110,19 @@ int RandomizedLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
     if (n == 0) {
         return ENODATA;
     }
-    if (_cluster_recover_policy && _cluster_recover_policy->StopRecoverIfNecessary()) {
+    if (_cluster_recover_policy &&
+        _cluster_recover_policy->StopRecoverIfNecessary()) {
         if (_cluster_recover_policy->DoReject(s->server_list)) {
             return EREJECT;
         }
     }
     uint32_t stride = 0;
-    size_t offset = butil::fast_rand_less_than(n);
+    size_t offset   = butil::fast_rand_less_than(n);
     for (size_t i = 0; i < n; ++i) {
         const SocketId id = s->server_list[offset].id;
         if (((i + 1) == n  // always take last chance
-             || !ExcludedServers::IsExcluded(in.excluded, id))
-            && Socket::Address(id, out->ptr) == 0
-            && (*out->ptr)->IsAvailable()) {
+             || !ExcludedServers::IsExcluded(in.excluded, id)) &&
+            Socket::Address(id, out->ptr) == 0 && (*out->ptr)->IsAvailable()) {
             // We found an available server
             return 0;
         }
@@ -153,12 +151,10 @@ RandomizedLoadBalancer* RandomizedLoadBalancer::New(
     return lb;
 }
 
-void RandomizedLoadBalancer::Destroy() {
-    delete this;
-}
+void RandomizedLoadBalancer::Destroy() { delete this; }
 
-void RandomizedLoadBalancer::Describe(
-    std::ostream &os, const DescribeOptions& options) {
+void RandomizedLoadBalancer::Describe(std::ostream& os,
+                                      const DescribeOptions& options) {
     if (!options.verbose) {
         os << "random";
         return;
@@ -181,4 +177,4 @@ bool RandomizedLoadBalancer::SetParameters(const butil::StringPiece& params) {
 }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc

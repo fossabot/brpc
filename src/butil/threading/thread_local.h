@@ -65,67 +65,61 @@ namespace internal {
 // Helper functions that abstract the cross-platform APIs.  Do not use directly.
 struct BUTIL_EXPORT ThreadLocalPlatform {
 #if defined(OS_WIN)
-  typedef unsigned long SlotType;
+    typedef unsigned long SlotType;
 #elif defined(OS_ANDROID)
-  typedef ThreadLocalStorage::StaticSlot SlotType;
+    typedef ThreadLocalStorage::StaticSlot SlotType;
 #elif defined(OS_POSIX)
-  typedef pthread_key_t SlotType;
+    typedef pthread_key_t SlotType;
 #endif
 
-  static void AllocateSlot(SlotType* slot);
-  static void FreeSlot(SlotType slot);
-  static void* GetValueFromSlot(SlotType slot);
-  static void SetValueInSlot(SlotType slot, void* value);
+    static void AllocateSlot(SlotType* slot);
+    static void FreeSlot(SlotType slot);
+    static void* GetValueFromSlot(SlotType slot);
+    static void SetValueInSlot(SlotType slot, void* value);
 };
 
 }  // namespace internal
 
 template <typename Type>
 class ThreadLocalPointer {
- public:
-  ThreadLocalPointer() : slot_() {
-    internal::ThreadLocalPlatform::AllocateSlot(&slot_);
-  }
+public:
+    ThreadLocalPointer() : slot_() {
+        internal::ThreadLocalPlatform::AllocateSlot(&slot_);
+    }
 
-  ~ThreadLocalPointer() {
-    internal::ThreadLocalPlatform::FreeSlot(slot_);
-  }
+    ~ThreadLocalPointer() { internal::ThreadLocalPlatform::FreeSlot(slot_); }
 
-  Type* Get() {
-    return static_cast<Type*>(
-        internal::ThreadLocalPlatform::GetValueFromSlot(slot_));
-  }
+    Type* Get() {
+        return static_cast<Type*>(
+            internal::ThreadLocalPlatform::GetValueFromSlot(slot_));
+    }
 
-  void Set(Type* ptr) {
-    internal::ThreadLocalPlatform::SetValueInSlot(
-        slot_, const_cast<void*>(static_cast<const void*>(ptr)));
-  }
+    void Set(Type* ptr) {
+        internal::ThreadLocalPlatform::SetValueInSlot(
+            slot_, const_cast<void*>(static_cast<const void*>(ptr)));
+    }
 
- private:
-  typedef internal::ThreadLocalPlatform::SlotType SlotType;
+private:
+    typedef internal::ThreadLocalPlatform::SlotType SlotType;
 
-  SlotType slot_;
+    SlotType slot_;
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadLocalPointer<Type>);
+    DISALLOW_COPY_AND_ASSIGN(ThreadLocalPointer<Type>);
 };
 
 class ThreadLocalBoolean {
- public:
-  ThreadLocalBoolean() {}
-  ~ThreadLocalBoolean() {}
+public:
+    ThreadLocalBoolean() {}
+    ~ThreadLocalBoolean() {}
 
-  bool Get() {
-    return tlp_.Get() != NULL;
-  }
+    bool Get() { return tlp_.Get() != NULL; }
 
-  void Set(bool val) {
-    tlp_.Set(val ? this : NULL);
-  }
+    void Set(bool val) { tlp_.Set(val ? this : NULL); }
 
- private:
-  ThreadLocalPointer<void> tlp_;
+private:
+    ThreadLocalPointer<void> tlp_;
 
-  DISALLOW_COPY_AND_ASSIGN(ThreadLocalBoolean);
+    DISALLOW_COPY_AND_ASSIGN(ThreadLocalBoolean);
 };
 
 }  // namespace butil

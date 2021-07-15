@@ -39,6 +39,6 @@ struct EspHead {
 };
 #pragma pack(pop, r1)
 
-} // namespace brpc
+}  // namespace brpc
 
-#endif // BRPC_ESP_HEAD_H
+#endif  // BRPC_ESP_HEAD_H

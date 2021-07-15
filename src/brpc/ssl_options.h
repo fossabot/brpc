@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_SSL_OPTION_H
 #define BRPC_SSL_OPTION_H
 
@@ -37,7 +36,8 @@ struct CertInfo {
     std::string private_key;
 
     // Additional hostnames besides those inside the certificate. Wildcards
-    // are supported but it can only appear once at the beginning (i.e. *.xxx.com).
+    // are supported but it can only appear once at the beginning (i.e.
+    // *.xxx.com).
     std::vector<std::string> sni_filters;
 };
 
@@ -117,8 +117,8 @@ struct ServerSSLOptions {
 
     // Flag for SSL_MODE_RELEASE_BUFFERS. When set, release read/write buffers
     // when SSL connection is idle, which saves 34KB memory per connection.
-    // On the other hand, it introduces additional latency and reduces throughput
-    // Default: false
+    // On the other hand, it introduces additional latency and reduces
+    // throughput Default: false
     bool release_buffer;
 
     // Maximum lifetime for a session to be cached inside OpenSSL in seconds.
@@ -155,6 +155,6 @@ struct ServerSSLOptions {
 // Legacy name defined in server.h
 typedef ServerSSLOptions SSLOptions;
 
-} // namespace brpc
+}  // namespace brpc
 
-#endif // BRPC_SSL_OPTION_H
+#endif  // BRPC_SSL_OPTION_H

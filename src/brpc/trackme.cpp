@@ -15,19 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/types.h>
 #include <pwd.h>
-#include "butil/fast_rand.h"
-#include "brpc/log.h"
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include "brpc/channel.h"
-#include "brpc/trackme.pb.h"
+#include "brpc/log.h"
 #include "brpc/policy/hasher.h"
+#include "brpc/trackme.pb.h"
+#include "butil/fast_rand.h"
 #include "butil/files/scoped_file.h"
 
 namespace brpc {
@@ -41,7 +40,7 @@ DEFINE_string(trackme_server, "", "Where the TrackMe requests are sent to");
 
 static const int32_t TRACKME_MIN_INTERVAL = 30;
 static const int32_t TRACKME_MAX_INTERVAL = 600;
-static int32_t s_trackme_interval = TRACKME_MIN_INTERVAL;
+static int32_t s_trackme_interval         = TRACKME_MIN_INTERVAL;
 // Protecting global vars on trackme
 static pthread_mutex_t s_trackme_mutex = PTHREAD_MUTEX_INITIALIZER;
 // For contacting with trackme_server.
@@ -79,7 +78,7 @@ const int64_t g_rpc_version = 0;
 #endif
 
 int ReadJPaasHostPort(int container_port) {
-    const uid_t uid = getuid();
+    const uid_t uid   = getuid();
     struct passwd* pw = getpwuid(uid);
     if (pw == NULL) {
         RPC_VLOG << "Fail to get password file entry of uid=" << uid;
@@ -88,9 +87,9 @@ int ReadJPaasHostPort(int container_port) {
     char JPAAS_LOG_PATH[64];
     snprintf(JPAAS_LOG_PATH, sizeof(JPAAS_LOG_PATH),
              "%s/jpaas_run/logs/env.log", pw->pw_dir);
-    char* line = NULL;
+    char* line      = NULL;
     size_t line_len = 0;
-    ssize_t nr = 0;
+    ssize_t nr      = 0;
     butil::ScopedFILE fp(fopen(JPAAS_LOG_PATH, "r"));
     if (!fp) {
         RPC_VLOG << "Fail to open `" << JPAAS_LOG_PATH << '\'';
@@ -101,7 +100,7 @@ int ReadJPaasHostPort(int container_port) {
     const int prefix_len =
         snprintf(prefix, sizeof(prefix), "JPAAS_HOST_PORT_%d=", container_port);
     while ((nr = getline(&line, &line_len, fp.get())) != -1) {
-        if (line[nr - 1] == '\n') { // remove ending newline
+        if (line[nr - 1] == '\n') {  // remove ending newline
             --nr;
         }
         if (nr > prefix_len && memcmp(line, prefix, prefix_len) == 0) {
@@ -110,7 +109,8 @@ int ReadJPaasHostPort(int container_port) {
         }
     }
     free(line);
-    RPC_VLOG_IF(host_port < 0) << "No entry starting with `" << prefix << "' found";
+    RPC_VLOG_IF(host_port < 0)
+        << "No entry starting with `" << prefix << "' found";
     return host_port;
 }
 
@@ -132,11 +132,12 @@ void SetTrackMeAddress(butil::EndPoint pt) {
 
 static void HandleTrackMeResponse(Controller* cntl, TrackMeResponse* res) {
     if (cntl->Failed()) {
-        RPC_VLOG << "Fail to access " << FLAGS_trackme_server << ", " << cntl->ErrorText();
+        RPC_VLOG << "Fail to access " << FLAGS_trackme_server << ", "
+                 << cntl->ErrorText();
     } else {
         BugInfo cur_info;
-        cur_info.severity = res->severity();
-        cur_info.error_text = res->error_text();
+        cur_info.severity     = res->severity();
+        cur_info.error_text   = res->error_text();
         bool already_reported = false;
         {
             BAIDU_SCOPED_LOCK(s_trackme_mutex);
@@ -174,8 +175,8 @@ static void HandleTrackMeResponse(Controller* cntl, TrackMeResponse* res) {
             // have bugs. Make sure the reporting interval is not too short or
             // too long
             int32_t new_interval = res->new_interval();
-            new_interval = std::max(new_interval, TRACKME_MIN_INTERVAL);
-            new_interval = std::min(new_interval, TRACKME_MAX_INTERVAL);
+            new_interval         = std::max(new_interval, TRACKME_MIN_INTERVAL);
+            new_interval         = std::min(new_interval, TRACKME_MAX_INTERVAL);
             if (new_interval != s_trackme_interval) {
                 s_trackme_interval = new_interval;
                 RPC_VLOG << "Update s_trackme_interval to " << new_interval;
@@ -199,7 +200,8 @@ static void TrackMeNow(std::unique_lock<pthread_mutex_t>& mu) {
         ChannelOptions opt;
         // keep #connections on server-side low
         opt.connection_type = CONNECTION_TYPE_SHORT;
-        if (chan->Init(FLAGS_trackme_server.c_str(), "c_murmurhash", &opt) != 0) {
+        if (chan->Init(FLAGS_trackme_server.c_str(), "c_murmurhash", &opt) !=
+            0) {
             LOG(WARNING) << "Fail to connect to " << FLAGS_trackme_server;
             delete chan;
             return;
@@ -212,8 +214,9 @@ static void TrackMeNow(std::unique_lock<pthread_mutex_t>& mu) {
     req.set_rpc_version(g_rpc_version);
     req.set_server_addr(*s_trackme_addr);
     TrackMeResponse* res = new TrackMeResponse;
-    Controller* cntl = new Controller;
-    cntl->set_request_code(policy::MurmurHash32(s_trackme_addr->data(), s_trackme_addr->size()));
+    Controller* cntl     = new Controller;
+    cntl->set_request_code(
+        policy::MurmurHash32(s_trackme_addr->data(), s_trackme_addr->size()));
     google::protobuf::Closure* done =
         ::brpc::NewCallback(&HandleTrackMeResponse, cntl, res);
     stub.TrackMe(cntl, &req, res, done);
@@ -239,4 +242,4 @@ void TrackMe() {
     }
 }
 
-} // namespace brpc
+}  // namespace brpc

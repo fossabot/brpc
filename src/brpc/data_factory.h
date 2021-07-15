@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_DATA_FACTORY_H
 #define BRPC_DATA_FACTORY_H
 
@@ -37,14 +36,14 @@ public:
     // Implement this method to destroy data created by Create().
     virtual void DestroyData(void*) const = 0;
 
-    // Overwrite this method to reset the data before reuse. Nothing done by default.
-    // Returns
+    // Overwrite this method to reset the data before reuse. Nothing done by
+    // default. Returns
     //   true:  the data can be kept for future reuse
-    //   false: the data is improper to be reused and should be sent to 
+    //   false: the data is improper to be reused and should be sent to
     //          DestoryData() immediately after calling this method
     virtual bool ResetData(void*) const { return true; }
 };
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_DATA_FACTORY_H

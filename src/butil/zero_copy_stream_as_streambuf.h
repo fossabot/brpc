@@ -20,29 +20,29 @@
 #ifndef BUTIL_ZERO_COPY_STREAM_AS_STREAMBUF_H
 #define BUTIL_ZERO_COPY_STREAM_AS_STREAMBUF_H
 
-#include <streambuf>
 #include <google/protobuf/io/zero_copy_stream.h>
+#include <streambuf>
 
 namespace butil {
 
-// Wrap a ZeroCopyOutputStream into std::streambuf. Notice that before 
+// Wrap a ZeroCopyOutputStream into std::streambuf. Notice that before
 // destruction or shrink(), BackUp() of the stream are not called. In another
-// word, if the stream is wrapped from IOBuf, the IOBuf may be larger than 
+// word, if the stream is wrapped from IOBuf, the IOBuf may be larger than
 // appended data.
 class ZeroCopyStreamAsStreamBuf : public std::streambuf {
 public:
-    ZeroCopyStreamAsStreamBuf(google::protobuf::io::ZeroCopyOutputStream* stream)
+    ZeroCopyStreamAsStreamBuf(
+        google::protobuf::io::ZeroCopyOutputStream* stream)
         : _zero_copy_stream(stream) {}
     virtual ~ZeroCopyStreamAsStreamBuf();
 
     // BackUp() unused bytes. Automatically called in destructor.
     void shrink();
-    
+
 protected:
     int overflow(int ch) override;
     int sync() override;
-    std::streampos seekoff(std::streamoff off,
-                           std::ios_base::seekdir way,
+    std::streampos seekoff(std::streamoff off, std::ios_base::seekdir way,
                            std::ios_base::openmode which) override;
 
 private:

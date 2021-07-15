@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "butil/recordio.h"
 #include <gflags/gflags.h>
 #include "butil/logging.h"
-#include "butil/recordio.h"
 #include "butil/sys_byteorder.h"
 
 namespace butil {
@@ -63,15 +63,14 @@ static unsigned char const crc8_table[] = {
     0xdb, 0xe5, 0xa7, 0x99, 0x23, 0x1d, 0x5f, 0x61, 0x9f, 0xa1, 0xe3, 0xdd,
     0x67, 0x59, 0x1b, 0x25, 0x0a, 0x34, 0x76, 0x48, 0xf2, 0xcc, 0x8e, 0xb0,
     0xd0, 0xee, 0xac, 0x92, 0x28, 0x16, 0x54, 0x6a, 0x45, 0x7b, 0x39, 0x07,
-    0xbd, 0x83, 0xc1, 0xff
-};
+    0xbd, 0x83, 0xc1, 0xff};
 
 static uint8_t SizeChecksum(uint32_t input) {
     uint8_t crc = 0;
-    crc = crc8_table[crc ^ (input & 0xFF)];
-    crc = crc8_table[crc ^ ((input >> 8) & 0xFF)];
-    crc = crc8_table[crc ^ ((input >> 16) & 0xFF)];
-    crc = crc8_table[crc ^ ((input >> 24) & 0xFF)];
+    crc         = crc8_table[crc ^ (input & 0xFF)];
+    crc         = crc8_table[crc ^ ((input >> 8) & 0xFF)];
+    crc         = crc8_table[crc ^ ((input >> 16) & 0xFF)];
+    crc         = crc8_table[crc ^ ((input >> 24) & 0xFF)];
     return crc;
 }
 
@@ -151,11 +150,7 @@ size_t Record::ByteSize() const {
 }
 
 RecordReader::RecordReader(IReader* reader)
-    : _reader(reader)
-    , _cutter(&_portal)
-    , _ncut(0)
-    , _last_error(0) {
-}
+    : _reader(reader), _cutter(&_portal), _ncut(0), _last_error(0) {}
 
 bool RecordReader::ReadNext(Record* out) {
     const size_t MAX_READ = 1024 * 1024;
@@ -166,13 +161,14 @@ bool RecordReader::ReadNext(Record* out) {
             return true;
         } else if (rc < 0) {
             while (!CutUntilNextRecordCandidate()) {
-                const ssize_t nr = _portal.append_from_reader(_reader, MAX_READ);
+                const ssize_t nr =
+                    _portal.append_from_reader(_reader, MAX_READ);
                 if (nr <= 0) {
                     _last_error = (nr < 0 ? errno : END_OF_READER);
                     return false;
                 }
             }
-        } else { // rc == 0, not enough data to parse
+        } else {  // rc == 0, not enough data to parse
             const ssize_t nr = _portal.append_from_reader(_reader, MAX_READ);
             if (nr <= 0) {
                 _last_error = (nr < 0 ? errno : END_OF_READER);
@@ -203,10 +199,12 @@ bool RecordReader::CutUntilNextRecordCandidate() {
         const size_t m = nc + 1 - sizeof(magic);
         for (size_t i = 0; i < m; ++i) {
             void* dummy = buf + i;  // suppressing strict-aliasing warning
-            if (*(const uint32_t*)dummy == *(const uint32_t*)BRPC_RECORDIO_MAGIC) {
+            if (*(const uint32_t*)dummy ==
+                *(const uint32_t*)BRPC_RECORDIO_MAGIC) {
                 _cutter.pop_front(i);
                 _ncut += i;
-                LOG(INFO) << "Found record candidate after " << _ncut - old_ncut << " bytes";
+                LOG(INFO) << "Found record candidate after " << _ncut - old_ncut
+                          << " bytes";
                 return true;
             }
         }
@@ -230,17 +228,15 @@ int RecordReader::CutRecord(Record* rec) {
                    << ", offset=" << offset();
         return -1;
     }
-    uint32_t tmp = NetToHost32(*(const uint32_t*)(headbuf + 4));
+    uint32_t tmp           = NetToHost32(*(const uint32_t*)(headbuf + 4));
     const uint8_t checksum = SizeChecksum(tmp);
-    bool has_meta = (tmp & 0x80000000);
+    bool has_meta          = (tmp & 0x80000000);
     // NOTE: use size_t rather than uint32_t for sizes to avoid potential
     // addition overflows
     const size_t data_size = (tmp & 0x7FFFFFFF);
     if (checksum != headbuf[8]) {
-        LOG(ERROR) << "Unmatched checksum of 0x"
-                   << std::hex << tmp << std::dec
-                   << "(metabit=" << has_meta
-                   << " size=" << data_size
+        LOG(ERROR) << "Unmatched checksum of 0x" << std::hex << tmp << std::dec
+                   << "(metabit=" << has_meta << " size=" << data_size
                    << " offset=" << offset()
                    << "), expected=" << (unsigned)headbuf[8]
                    << " actual=" << (unsigned)checksum;
@@ -249,8 +245,7 @@ int RecordReader::CutRecord(Record* rec) {
     if (data_size > (size_t)FLAGS_recordio_max_record_size) {
         LOG(ERROR) << "data_size=" << data_size
                    << " is larger than -recordio_max_record_size="
-                   << FLAGS_recordio_max_record_size
-                   << ", offset=" << offset();
+                   << FLAGS_recordio_max_record_size << ", offset=" << offset();
         return -1;
     }
     if (_cutter.remaining_bytes() < data_size + sizeof(headbuf)) {
@@ -267,8 +262,8 @@ int RecordReader::CutRecord(Record* rec) {
         std::string name;
         _cutter.cutn(&name, name_size);
         _cutter.cutn(&tmp, 4);
-        tmp = NetToHost32(tmp);
-        has_meta = (tmp & 0x80000000);
+        tmp                    = NetToHost32(tmp);
+        has_meta               = (tmp & 0x80000000);
         const size_t meta_size = (tmp & 0x7FFFFFFF);
         _ncut += 5 + name_size;
         if (consumed_bytes + 5 + name_size + meta_size > data_size) {
@@ -277,7 +272,7 @@ int RecordReader::CutRecord(Record* rec) {
                        << ", offset=" << offset();
             return -1;
         }
-        butil::IOBuf* meta = rec->MutableMeta(name, true/*null_on_found*/);
+        butil::IOBuf* meta = rec->MutableMeta(name, true /*null_on_found*/);
         if (meta == NULL) {
             LOG(ERROR) << "Fail to add meta=" << name
                        << ", offset=" << offset();
@@ -288,21 +283,26 @@ int RecordReader::CutRecord(Record* rec) {
         consumed_bytes += 5 + name_size + meta_size;
     }
     const size_t previous_payload_size = rec->Payload().size();
-    const size_t cut_bytes = _cutter.cutn(rec->MutablePayload(), data_size - consumed_bytes);
+    const size_t cut_bytes =
+        _cutter.cutn(rec->MutablePayload(), data_size - consumed_bytes);
     const size_t after_payload_size = rec->Payload().size();
     if (cut_bytes != after_payload_size) {
-        LOG(ERROR) << "cut_bytes=" << cut_bytes << " does not match after_payload_size=" << after_payload_size << " previous_size=" << previous_payload_size << " data_size=" << data_size << " consumed_bytes=" << consumed_bytes;
+        LOG(ERROR) << "cut_bytes=" << cut_bytes
+                   << " does not match after_payload_size="
+                   << after_payload_size
+                   << " previous_size=" << previous_payload_size
+                   << " data_size=" << data_size
+                   << " consumed_bytes=" << consumed_bytes;
     }
     if (cut_bytes != data_size - consumed_bytes) {
-        LOG(ERROR) << "cut_bytes=" << cut_bytes << " does not match input=" << data_size - consumed_bytes;
+        LOG(ERROR) << "cut_bytes=" << cut_bytes
+                   << " does not match input=" << data_size - consumed_bytes;
     }
     _ncut += cut_bytes;
     return 1;
 }
 
-RecordWriter::RecordWriter(IWriter* writer)
-    :_writer(writer) {
-}
+RecordWriter::RecordWriter(IWriter* writer) : _writer(writer) {}
 
 int RecordWriter::WriteWithoutFlush(const Record& rec) {
     const size_t old_size = _buf.size();
@@ -317,13 +317,13 @@ int RecordWriter::WriteWithoutFlush(const Record& rec) {
         }
         char metabuf[s.name.size() + 5];
         char* p = metabuf;
-        *p = s.name.size();
+        *p      = s.name.size();
         ++p;
         memcpy(p, s.name.data(), s.name.size());
         p += s.name.size();
         if (s.data->size() > 0x7FFFFFFFULL) {
-            LOG(ERROR) << "Meta named `" << s.name << "' is too long, size="
-                       << s.data->size();
+            LOG(ERROR) << "Meta named `" << s.name
+                       << "' is too long, size=" << s.data->size();
             _buf.pop_back(_buf.size() - old_size);
             return -1;
         }
@@ -338,8 +338,8 @@ int RecordWriter::WriteWithoutFlush(const Record& rec) {
     if (!rec.Payload().empty()) {
         _buf.append(rec.Payload());
     }
-    void* dummy = headbuf;  // suppressing strict-aliasing warning
-    *(uint32_t*)dummy = *(const uint32_t*)BRPC_RECORDIO_MAGIC;
+    void* dummy            = headbuf;  // suppressing strict-aliasing warning
+    *(uint32_t*)dummy      = *(const uint32_t*)BRPC_RECORDIO_MAGIC;
     const size_t data_size = _buf.size() - old_size - sizeof(headbuf);
     if (data_size > 0x7FFFFFFFULL) {
         LOG(ERROR) << "data_size=" << data_size << " is too long";
@@ -351,7 +351,7 @@ int RecordWriter::WriteWithoutFlush(const Record& rec) {
         tmp |= 0x80000000;
     }
     *(uint32_t*)(headbuf + 4) = HostToNet32(tmp);
-    headbuf[8] = SizeChecksum(tmp);
+    headbuf[8]                = SizeChecksum(tmp);
     _buf.unsafe_assign(headarea, headbuf);
     return 0;
 }
@@ -384,5 +384,4 @@ int RecordWriter::Write(const Record& record) {
     return Flush();
 }
 
-
-} // namespace butil
+}  // namespace butil

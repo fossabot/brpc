@@ -21,12 +21,12 @@
 #endif
 
 #if defined(COMPILER_MSVC)
-#include <stdlib.h> // for _byteswap_*
+#include <stdlib.h>  // for _byteswap_*
 #elif defined(OS_MACOSX)
 // Mac OS X / Darwin features
-#include <libkern/OSByteOrder.h> // for OSSwapInt*
+#include <libkern/OSByteOrder.h>  // for OSSwapInt*
 #elif defined(OS_LINUX)
-#include <byteswap.h> // for bswap_*
+#include <byteswap.h>  // for bswap_*
 #endif
 
 namespace butil {
@@ -48,9 +48,7 @@ inline uint64_t ByteSwap(uint64_t x) { return bswap_64(x); }
 
 #else
 // Returns a value with all bytes in |x| swapped, i.e. reverses the endianness.
-inline uint16_t ByteSwap(uint16_t x) {
-  return (x << 8) | (x >> 8);
-}
+inline uint16_t ByteSwap(uint16_t x) { return (x << 8) | (x >> 8); }
 
 inline uint32_t ByteSwap(uint32_t x) {
     x = ((x & 0xff00ff00UL) >> 8) | ((x & 0x00ff00ffUL) << 8);
@@ -59,7 +57,8 @@ inline uint32_t ByteSwap(uint32_t x) {
 
 inline uint64_t ByteSwap(uint64_t x) {
     x = ((x & 0xff00ff00ff00ff00ULL) >> 8) | ((x & 0x00ff00ff00ff00ffULL) << 8);
-    x = ((x & 0xffff0000ffff0000ULL) >> 16) | ((x & 0x0000ffff0000ffffULL) << 16);
+    x = ((x & 0xffff0000ffff0000ULL) >> 16) |
+        ((x & 0x0000ffff0000ffffULL) << 16);
     return (x >> 32) | (x << 32);
 }
 #endif
@@ -68,23 +67,23 @@ inline uint64_t ByteSwap(uint64_t x) {
 // returns the result.
 inline uint16_t ByteSwapToLE16(uint16_t x) {
 #if defined(ARCH_CPU_LITTLE_ENDIAN)
-  return x;
+    return x;
 #else
-  return ByteSwap(x);
+    return ByteSwap(x);
 #endif
 }
 inline uint32_t ByteSwapToLE32(uint32_t x) {
 #if defined(ARCH_CPU_LITTLE_ENDIAN)
-  return x;
+    return x;
 #else
-  return ByteSwap(x);
+    return ByteSwap(x);
 #endif
 }
 inline uint64_t ByteSwapToLE64(uint64_t x) {
 #if defined(ARCH_CPU_LITTLE_ENDIAN)
-  return x;
+    return x;
 #else
-  return ByteSwap(x);
+    return ByteSwap(x);
 #endif
 }
 
@@ -92,23 +91,23 @@ inline uint64_t ByteSwapToLE64(uint64_t x) {
 // returns the result.
 inline uint16_t NetToHost16(uint16_t x) {
 #if defined(ARCH_CPU_LITTLE_ENDIAN)
-  return ByteSwap(x);
+    return ByteSwap(x);
 #else
-  return x;
+    return x;
 #endif
 }
 inline uint32_t NetToHost32(uint32_t x) {
 #if defined(ARCH_CPU_LITTLE_ENDIAN)
-  return ByteSwap(x);
+    return ByteSwap(x);
 #else
-  return x;
+    return x;
 #endif
 }
 inline uint64_t NetToHost64(uint64_t x) {
 #if defined(ARCH_CPU_LITTLE_ENDIAN)
-  return ByteSwap(x);
+    return ByteSwap(x);
 #else
-  return x;
+    return x;
 #endif
 }
 
@@ -116,23 +115,23 @@ inline uint64_t NetToHost64(uint64_t x) {
 // returns the result.
 inline uint16_t HostToNet16(uint16_t x) {
 #if defined(ARCH_CPU_LITTLE_ENDIAN)
-  return ByteSwap(x);
+    return ByteSwap(x);
 #else
-  return x;
+    return x;
 #endif
 }
 inline uint32_t HostToNet32(uint32_t x) {
 #if defined(ARCH_CPU_LITTLE_ENDIAN)
-  return ByteSwap(x);
+    return ByteSwap(x);
 #else
-  return x;
+    return x;
 #endif
 }
 inline uint64_t HostToNet64(uint64_t x) {
 #if defined(ARCH_CPU_LITTLE_ENDIAN)
-  return ByteSwap(x);
+    return ByteSwap(x);
 #else
-  return x;
+    return x;
 #endif
 }
 

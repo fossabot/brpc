@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
- 
+
 // Date: Fri Sep 10 13:34:25 CST 2010
 
 // Add customized errno.
@@ -23,8 +23,8 @@
 #define BUTIL_BAIDU_ERRNO_H
 
 #define __const__
-#include <errno.h>                           // errno
-#include "butil/macros.h"                     // BAIDU_CONCAT
+#include <errno.h>         // errno
+#include "butil/macros.h"  // BAIDU_CONCAT
 
 //-----------------------------------------
 // Use system errno before defining yours !
@@ -40,7 +40,7 @@
 // Then you can register description of the error by calling
 // BAIDU_REGISTER_ERRNO(the_error_number, its_description) in global scope of
 // a .cpp or .cc files which will be linked.
-// 
+//
 //     BAIDU_REGISTER_ERRNO(ESTOP, "the thread is stopping")
 //     BAIDU_REGISTER_ERRNO(EMYERROR, "my error")
 //
@@ -56,27 +56,31 @@
 //     printf("Something got wrong, %s\n", berror());  // YES
 //
 // When the error number is re-defined, a linking error will be reported:
-// 
+//
 //     "redefinition of `class BaiduErrnoHelper<30>'"
 //
 // Or the program aborts at runtime before entering main():
-// 
-//     "Fail to define EMYERROR(30) which is already defined as `Read-only file system', abort"
+//
+//     "Fail to define EMYERROR(30) which is already defined as `Read-only file
+//     system', abort"
 //
 
 namespace butil {
 // You should not call this function, use BAIDU_REGISTER_ERRNO instead.
 extern int DescribeCustomizedErrno(int, const char*, const char*);
-}
+}  // namespace butil
 
-template <int error_code> class BaiduErrnoHelper {};
+template <int error_code>
+class BaiduErrnoHelper {};
 
 #define BAIDU_REGISTER_ERRNO(error_code, description)                   \
-    const int ALLOW_UNUSED BAIDU_CONCAT(baidu_errno_dummy_, __LINE__) =              \
-        ::butil::DescribeCustomizedErrno((error_code), #error_code, (description)); \
-    template <> class BaiduErrnoHelper<(int)(error_code)> {};
+    const int ALLOW_UNUSED BAIDU_CONCAT(baidu_errno_dummy_, __LINE__) = \
+        ::butil::DescribeCustomizedErrno((error_code), #error_code,     \
+                                         (description));                \
+    template <>                                                         \
+    class BaiduErrnoHelper<(int)(error_code)> {};
 
 const char* berror(int error_code);
 const char* berror();
 
-#endif  //BUTIL_BAIDU_ERRNO_H
+#endif  // BUTIL_BAIDU_ERRNO_H

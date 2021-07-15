@@ -17,21 +17,21 @@
 
 // Date 2014/09/24 19:34:24
 
-#ifndef  BVAR_DETAIL__AGENT_GROUP_H
-#define  BVAR_DETAIL__AGENT_GROUP_H
+#ifndef BVAR_DETAIL__AGENT_GROUP_H
+#define BVAR_DETAIL__AGENT_GROUP_H
 
-#include <pthread.h>                        // pthread_mutex_*
-#include <stdlib.h>                         // abort
+#include <pthread.h>  // pthread_mutex_*
+#include <stdlib.h>   // abort
 
-#include <new>                              // std::nothrow
-#include <deque>                            // std::deque
-#include <vector>                           // std::vector
+#include <deque>   // std::deque
+#include <new>     // std::nothrow
+#include <vector>  // std::vector
 
-#include "butil/errno.h"                     // errno
-#include "butil/thread_local.h"              // thread_atexit
-#include "butil/macros.h"                    // BAIDU_CACHELINE_ALIGNMENT
-#include "butil/scoped_lock.h"
+#include "butil/errno.h"  // errno
 #include "butil/logging.h"
+#include "butil/macros.h"  // BAIDU_CACHELINE_ALIGNMENT
+#include "butil/scoped_lock.h"
+#include "butil/thread_local.h"  // thread_atexit
 
 namespace bvar {
 namespace detail {
@@ -49,7 +49,7 @@ typedef int AgentId;
 template <typename Agent>
 class AgentGroup {
 public:
-    typedef Agent   agent_type;
+    typedef Agent agent_type;
 
     // TODO: We should remove the template parameter and unify AgentGroup
     // of all bvar with a same one, to reuse the memory between different
@@ -80,8 +80,8 @@ public:
     // to touch an additional cacheline: the bitmap. Whereas in the first
     // method, bitmap and ThreadBlock* are in one cacheline.
     struct BAIDU_CACHELINE_ALIGNMENT ThreadBlock {
-        inline Agent* at(size_t offset) { return _agents + offset; };
-        
+        inline Agent *at(size_t offset) { return _agents + offset; };
+
     private:
         Agent _agents[ELEMENTS_PER_BLOCK];
     };
@@ -111,12 +111,12 @@ public:
 
     // Note: May return non-null for unexist id, see notes on ThreadBlock
     // We need this function to be as fast as possible.
-    inline static Agent* get_tls_agent(AgentId id) {
+    inline static Agent *get_tls_agent(AgentId id) {
         if (__builtin_expect(id >= 0, 1)) {
             if (_s_tls_blocks) {
                 const size_t block_id = (size_t)id / ELEMENTS_PER_BLOCK;
                 if (block_id < _s_tls_blocks->size()) {
-                    ThreadBlock* const tb = (*_s_tls_blocks)[block_id];
+                    ThreadBlock *const tb = (*_s_tls_blocks)[block_id];
                     if (tb) {
                         return tb->at(id - block_id * ELEMENTS_PER_BLOCK);
                     }
@@ -127,7 +127,7 @@ public:
     }
 
     // Note: May return non-null for unexist id, see notes on ThreadBlock
-    inline static Agent* get_or_create_tls_agent(AgentId id) {
+    inline static Agent *get_or_create_tls_agent(AgentId id) {
         if (__builtin_expect(id < 0, 0)) {
             CHECK(false) << "Invalid id=" << id;
             return NULL;
@@ -140,18 +140,18 @@ public:
             }
             butil::thread_atexit(_destroy_tls_blocks);
         }
-        const size_t block_id = (size_t)id / ELEMENTS_PER_BLOCK; 
+        const size_t block_id = (size_t)id / ELEMENTS_PER_BLOCK;
         if (block_id >= _s_tls_blocks->size()) {
             // The 32ul avoid pointless small resizes.
             _s_tls_blocks->resize(std::max(block_id + 1, 32ul));
         }
-        ThreadBlock* tb = (*_s_tls_blocks)[block_id];
+        ThreadBlock *tb = (*_s_tls_blocks)[block_id];
         if (tb == NULL) {
             ThreadBlock *new_block = new (std::nothrow) ThreadBlock;
             if (__builtin_expect(new_block == NULL, 0)) {
                 return NULL;
             }
-            tb = new_block;
+            tb                         = new_block;
             (*_s_tls_blocks)[block_id] = new_block;
         }
         return tb->at(id - block_id * ELEMENTS_PER_BLOCK);
@@ -179,26 +179,26 @@ private:
         return *_s_free_ids;
     }
 
-    static pthread_mutex_t                      _s_mutex;
-    static AgentId                              _s_agent_kinds;
-    static std::deque<AgentId>                  *_s_free_ids;
-    static __thread std::vector<ThreadBlock *>  *_s_tls_blocks;
+    static pthread_mutex_t _s_mutex;
+    static AgentId _s_agent_kinds;
+    static std::deque<AgentId> *_s_free_ids;
+    static __thread std::vector<ThreadBlock *> *_s_tls_blocks;
 };
 
 template <typename Agent>
 pthread_mutex_t AgentGroup<Agent>::_s_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 template <typename Agent>
-std::deque<AgentId>* AgentGroup<Agent>::_s_free_ids = NULL;
+std::deque<AgentId> *AgentGroup<Agent>::_s_free_ids = NULL;
 
 template <typename Agent>
 AgentId AgentGroup<Agent>::_s_agent_kinds = 0;
 
 template <typename Agent>
 __thread std::vector<typename AgentGroup<Agent>::ThreadBlock *>
-*AgentGroup<Agent>::_s_tls_blocks = NULL;
+    *AgentGroup<Agent>::_s_tls_blocks = NULL;
 
 }  // namespace detail
 }  // namespace bvar
 
-#endif  //BVAR_DETAIL__AGENT_GROUP_H
+#endif  // BVAR_DETAIL__AGENT_GROUP_H

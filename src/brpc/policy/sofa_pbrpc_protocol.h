@@ -15,19 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_SOFA_PBRPC_PROTOCOL_H
 #define BRPC_POLICY_SOFA_PBRPC_PROTOCOL_H
 
 #include "brpc/policy/sofa_pbrpc_meta.pb.h"
-#include "brpc/protocol.h"             
-
+#include "brpc/protocol.h"
 
 namespace brpc {
 namespace policy {
 
 // Parse binary format of sofa-pbrpc.
-ParseResult ParseSofaMessage(butil::IOBuf* source, Socket *socket, bool read_eof, const void *arg);
+ParseResult ParseSofaMessage(butil::IOBuf* source, Socket* socket,
+                             bool read_eof, const void* arg);
 
 // Actions to a (client) request in sofa-pbrpc format.
 void ProcessSofaRequest(InputMessageBase* msg);
@@ -39,16 +38,13 @@ void ProcessSofaResponse(InputMessageBase* msg);
 bool VerifySofaRequest(const InputMessageBase* msg);
 
 // Pack `request' to `method' into `buf'.
-void PackSofaRequest(butil::IOBuf* buf,
-                     SocketMessage**,
+void PackSofaRequest(butil::IOBuf* buf, SocketMessage**,
                      uint64_t correlation_id,
                      const google::protobuf::MethodDescriptor* method,
-                     Controller* controller,
-                     const butil::IOBuf& request,
+                     Controller* controller, const butil::IOBuf& request,
                      const Authenticator* auth);
 
 }  // namespace policy
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_POLICY_SOFA_PBRPC_PROTOCOL_H

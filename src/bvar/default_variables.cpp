@@ -17,40 +17,41 @@
 
 // Date: Thu Jul 30 17:44:54 CST 2015
 
-#include <unistd.h>                        // getpagesize
+#include <dirent.h>        // dirent
+#include <sys/resource.h>  // getrusage
 #include <sys/types.h>
-#include <sys/resource.h>                  // getrusage
-#include <dirent.h>                        // dirent
-#include <iomanip>                         // setw
+#include <unistd.h>  // getpagesize
+#include <iomanip>   // setw
 #if defined(__APPLE__)
 #include <libproc.h>
 #include <sys/resource.h>
 #else
 #endif
 
-#include "butil/time.h"
-#include "butil/memory/singleton_on_pthread_once.h"
-#include "butil/scoped_lock.h"
-#include "butil/files/scoped_file.h"
-#include "butil/files/dir_reader_posix.h"
 #include "butil/file_util.h"
-#include "butil/process_util.h"            // ReadCommandLine
-#include "butil/popen.h"                   // read_command_output
+#include "butil/files/dir_reader_posix.h"
+#include "butil/files/scoped_file.h"
+#include "butil/memory/singleton_on_pthread_once.h"
+#include "butil/popen.h"         // read_command_output
+#include "butil/process_util.h"  // ReadCommandLine
+#include "butil/scoped_lock.h"
+#include "butil/time.h"
 #include "bvar/passive_status.h"
 
 namespace bvar {
 
-template <class T, class M> M get_member_type(M T::*);
+template <class T, class M>
+M get_member_type(M T::*);
 
 #define BVAR_MEMBER_TYPE(member) BAIDU_TYPEOF(bvar::get_member_type(member))
 
-int do_link_default_variables = 0;
-const int64_t CACHED_INTERVAL_US = 100000L; // 100ms
+int do_link_default_variables    = 0;
+const int64_t CACHED_INTERVAL_US = 100000L;  // 100ms
 
 // ======================================
 struct ProcStat {
     int pid;
-    //std::string comm;
+    // std::string comm;
     char state;
     int ppid;
     int pgrp;
@@ -71,27 +72,28 @@ struct ProcStat {
     long num_threads;
 };
 
-static bool read_proc_status(ProcStat &stat) {
-    stat = ProcStat();
+static bool read_proc_status(ProcStat& stat) {
+    stat  = ProcStat();
     errno = 0;
 #if defined(OS_LINUX)
-    // Read status from /proc/self/stat. Information from `man proc' is out of date,
-    // see http://man7.org/linux/man-pages/man5/proc.5.html
+    // Read status from /proc/self/stat. Information from `man proc' is out of
+    // date, see http://man7.org/linux/man-pages/man5/proc.5.html
     butil::ScopedFILE fp("/proc/self/stat", "r");
     if (NULL == fp) {
         PLOG_ONCE(WARNING) << "Fail to open /proc/self/stat";
         return false;
     }
-    if (fscanf(fp, "%d %*s %c "
+    if (fscanf(fp,
+               "%d %*s %c "
                "%d %d %d %d %d "
                "%u %lu %lu %lu "
                "%lu %lu %lu %lu %lu "
                "%ld %ld %ld",
-               &stat.pid, &stat.state,
-               &stat.ppid, &stat.pgrp, &stat.session, &stat.tty_nr, &stat.tpgid,
-               &stat.flags, &stat.minflt, &stat.cminflt, &stat.majflt,
-               &stat.cmajflt, &stat.utime, &stat.stime, &stat.cutime, &stat.cstime,
-               &stat.priority, &stat.nice, &stat.num_threads) != 19) {
+               &stat.pid, &stat.state, &stat.ppid, &stat.pgrp, &stat.session,
+               &stat.tty_nr, &stat.tpgid, &stat.flags, &stat.minflt,
+               &stat.cminflt, &stat.majflt, &stat.cmajflt, &stat.utime,
+               &stat.stime, &stat.cutime, &stat.cstime, &stat.priority,
+               &stat.nice, &stat.num_threads) != 19) {
         PLOG(WARNING) << "Fail to fscanf";
         return false;
     }
@@ -103,17 +105,19 @@ static bool read_proc_status(ProcStat &stat) {
     std::ostringstream oss;
     char cmdbuf[128];
     snprintf(cmdbuf, sizeof(cmdbuf),
-            "ps -p %ld -o pid,ppid,pgid,sess"
-            ",tpgid,flags,pri,nice | tail -n1", (long)pid);
+             "ps -p %ld -o pid,ppid,pgid,sess"
+             ",tpgid,flags,pri,nice | tail -n1",
+             (long)pid);
     if (butil::read_command_output(oss, cmdbuf) != 0) {
         LOG(ERROR) << "Fail to read stat";
         return -1;
     }
     const std::string& result = oss.str();
-    if (sscanf(result.c_str(), "%d %d %d %d"
-                              "%d %u %ld %ld",
-               &stat.pid, &stat.ppid, &stat.pgrp, &stat.session,
-               &stat.tpgid, &stat.flags, &stat.priority, &stat.nice) != 8) {
+    if (sscanf(result.c_str(),
+               "%d %d %d %d"
+               "%d %u %ld %ld",
+               &stat.pid, &stat.ppid, &stat.pgrp, &stat.session, &stat.tpgid,
+               &stat.flags, &stat.priority, &stat.nice) != 8) {
         PLOG(WARNING) << "Fail to sscanf";
         return false;
     }
@@ -130,9 +134,7 @@ public:
     CachedReader() : _mtime_us(0) {
         CHECK_EQ(0, pthread_mutex_init(&_mutex, NULL));
     }
-    ~CachedReader() {
-        pthread_mutex_destroy(&_mutex);
-    }
+    ~CachedReader() { pthread_mutex_destroy(&_mutex); }
 
     // NOTE: may return a volatile value that may be overwritten at any time.
     // This is acceptable right now. Both 32-bit and 64-bit numbers are atomic
@@ -141,7 +143,7 @@ public:
     // and 64-bit numbers.
     template <typename ReadFn>
     static const T& get_value(const ReadFn& fn) {
-        CachedReader* p = butil::get_leaky_singleton<CachedReader>();
+        CachedReader* p   = butil::get_leaky_singleton<CachedReader>();
         const int64_t now = butil::gettimeofday_us();
         if (now > p->_mtime_us + CACHED_INTERVAL_US) {
             pthread_mutex_lock(&p->_mutex);
@@ -171,26 +173,27 @@ private:
 
 class ProcStatReader {
 public:
-    bool operator()(ProcStat* stat) const {
-        return read_proc_status(*stat);
-    }
+    bool operator()(ProcStat* stat) const { return read_proc_status(*stat); }
     template <typename T, size_t offset>
     static T get_field(void*) {
-        return *(T*)((char*)&CachedReader<ProcStat>::get_value(
-                         ProcStatReader()) + offset);
+        return *(
+            T*)((char*)&CachedReader<ProcStat>::get_value(ProcStatReader()) +
+                offset);
     }
 };
 
-#define BVAR_DEFINE_PROC_STAT_FIELD(field)                              \
-    PassiveStatus<BVAR_MEMBER_TYPE(&ProcStat::field)> g_##field(        \
-        ProcStatReader::get_field<BVAR_MEMBER_TYPE(&ProcStat::field),   \
-        offsetof(ProcStat, field)>, NULL);
+#define BVAR_DEFINE_PROC_STAT_FIELD(field)                            \
+    PassiveStatus<BVAR_MEMBER_TYPE(&ProcStat::field)> g_##field(      \
+        ProcStatReader::get_field<BVAR_MEMBER_TYPE(&ProcStat::field), \
+                                  offsetof(ProcStat, field)>,         \
+        NULL);
 
-#define BVAR_DEFINE_PROC_STAT_FIELD2(field, name)                       \
-    PassiveStatus<BVAR_MEMBER_TYPE(&ProcStat::field)> g_##field(        \
-        name,                                                           \
-        ProcStatReader::get_field<BVAR_MEMBER_TYPE(&ProcStat::field),   \
-        offsetof(ProcStat, field)>, NULL);
+#define BVAR_DEFINE_PROC_STAT_FIELD2(field, name)                     \
+    PassiveStatus<BVAR_MEMBER_TYPE(&ProcStat::field)> g_##field(      \
+        name,                                                         \
+        ProcStatReader::get_field<BVAR_MEMBER_TYPE(&ProcStat::field), \
+                                  offsetof(ProcStat, field)>,         \
+        NULL);
 
 // ==================================================
 
@@ -204,8 +207,8 @@ struct ProcMemory {
     long dt;        // dirty pages
 };
 
-static bool read_proc_memory(ProcMemory &m) {
-    m = ProcMemory();
+static bool read_proc_memory(ProcMemory& m) {
+    m     = ProcMemory();
     errno = 0;
 #if defined(OS_LINUX)
     butil::ScopedFILE fp("/proc/self/statm", "r");
@@ -213,9 +216,8 @@ static bool read_proc_memory(ProcMemory &m) {
         PLOG_ONCE(WARNING) << "Fail to open /proc/self/statm";
         return false;
     }
-    if (fscanf(fp, "%ld %ld %ld %ld %ld %ld %ld",
-               &m.size, &m.resident, &m.share,
-               &m.trs, &m.lrs, &m.drs, &m.dt) != 7) {
+    if (fscanf(fp, "%ld %ld %ld %ld %ld %ld %ld", &m.size, &m.resident,
+               &m.share, &m.trs, &m.lrs, &m.drs, &m.dt) != 7) {
         PLOG(WARNING) << "Fail to fscanf /proc/self/statm";
         return false;
     }
@@ -223,7 +225,7 @@ static bool read_proc_memory(ProcMemory &m) {
 #elif defined(OS_MACOSX)
     // TODO(zhujiashun): get remaining memory info in MacOS.
     memset(&m, 0, sizeof(m));
-    static pid_t pid = getpid();
+    static pid_t pid        = getpid();
     static int64_t pagesize = getpagesize();
     std::ostringstream oss;
     char cmdbuf[128];
@@ -239,7 +241,7 @@ static bool read_proc_memory(ProcMemory &m) {
     }
     // resident and size in Kbytes
     m.resident = m.resident * 1024 / pagesize;
-    m.size = m.size * 1024 / pagesize;
+    m.size     = m.size * 1024 / pagesize;
     return true;
 #else
     return false;
@@ -248,22 +250,23 @@ static bool read_proc_memory(ProcMemory &m) {
 
 class ProcMemoryReader {
 public:
-    bool operator()(ProcMemory* stat) const {
-        return read_proc_memory(*stat);
-    };
+    bool operator()(ProcMemory* stat) const { return read_proc_memory(*stat); };
     template <typename T, size_t offset>
     static T get_field(void*) {
         static int64_t pagesize = getpagesize();
         return *(T*)((char*)&CachedReader<ProcMemory>::get_value(
-                         ProcMemoryReader()) + offset) * pagesize;
+                         ProcMemoryReader()) +
+                     offset) *
+               pagesize;
     }
 };
 
-#define BVAR_DEFINE_PROC_MEMORY_FIELD(field, name)                      \
-    PassiveStatus<BVAR_MEMBER_TYPE(&ProcMemory::field)> g_##field(      \
-        name,                                                           \
+#define BVAR_DEFINE_PROC_MEMORY_FIELD(field, name)                        \
+    PassiveStatus<BVAR_MEMBER_TYPE(&ProcMemory::field)> g_##field(        \
+        name,                                                             \
         ProcMemoryReader::get_field<BVAR_MEMBER_TYPE(&ProcMemory::field), \
-        offsetof(ProcMemory, field)>, NULL);
+                                    offsetof(ProcMemory, field)>,         \
+        NULL);
 
 // ==================================================
 
@@ -273,17 +276,17 @@ struct LoadAverage {
     double loadavg_15m;
 };
 
-static bool read_load_average(LoadAverage &m) {
+static bool read_load_average(LoadAverage& m) {
 #if defined(OS_LINUX)
     butil::ScopedFILE fp("/proc/loadavg", "r");
     if (NULL == fp) {
         PLOG_ONCE(WARNING) << "Fail to open /proc/loadavg";
         return false;
     }
-    m = LoadAverage();
+    m     = LoadAverage();
     errno = 0;
-    if (fscanf(fp, "%lf %lf %lf",
-               &m.loadavg_1m, &m.loadavg_5m, &m.loadavg_15m) != 3) {
+    if (fscanf(fp, "%lf %lf %lf", &m.loadavg_1m, &m.loadavg_5m,
+               &m.loadavg_15m) != 3) {
         PLOG(WARNING) << "Fail to fscanf";
         return false;
     }
@@ -295,8 +298,8 @@ static bool read_load_average(LoadAverage &m) {
         return -1;
     }
     const std::string& result = oss.str();
-    if (sscanf(result.c_str(), "{ %lf %lf %lf }",
-               &m.loadavg_1m, &m.loadavg_5m, &m.loadavg_15m) != 3) {
+    if (sscanf(result.c_str(), "{ %lf %lf %lf }", &m.loadavg_1m, &m.loadavg_5m,
+               &m.loadavg_15m) != 3) {
         PLOG(WARNING) << "Fail to sscanf";
         return false;
     }
@@ -315,15 +318,17 @@ public:
     template <typename T, size_t offset>
     static T get_field(void*) {
         return *(T*)((char*)&CachedReader<LoadAverage>::get_value(
-                         LoadAverageReader()) + offset);
+                         LoadAverageReader()) +
+                     offset);
     }
 };
 
-#define BVAR_DEFINE_LOAD_AVERAGE_FIELD(field, name)                     \
-    PassiveStatus<BVAR_MEMBER_TYPE(&LoadAverage::field)> g_##field(     \
-        name,                                                           \
+#define BVAR_DEFINE_LOAD_AVERAGE_FIELD(field, name)                         \
+    PassiveStatus<BVAR_MEMBER_TYPE(&LoadAverage::field)> g_##field(         \
+        name,                                                               \
         LoadAverageReader::get_field<BVAR_MEMBER_TYPE(&LoadAverage::field), \
-        offsetof(LoadAverage, field)>, NULL);
+                                     offsetof(LoadAverage, field)>,         \
+        NULL);
 
 // ==================================================
 
@@ -337,12 +342,13 @@ static int get_fd_count(int limit) {
     }
     // Have to limit the scaning which consumes a lot of CPU when #fd
     // are huge (100k+)
-    for (; dr.Next() && count <= limit + 3; ++count) {}
+    for (; dr.Next() && count <= limit + 3; ++count) {
+    }
     return count - 3 /* skipped ., .. and the fd in dr*/;
 #elif defined(OS_MACOSX)
-    // TODO(zhujiashun): following code will cause core dump with some 
+    // TODO(zhujiashun): following code will cause core dump with some
     // probability under mac when program exits. Fix it.
-    /* 
+    /*
     static pid_t pid = getpid();
     std::ostringstream oss;
     char cmdbuf[128];
@@ -371,7 +377,8 @@ static int get_fd_count(int limit) {
 extern PassiveStatus<int> g_fd_num;
 
 const int MAX_FD_SCAN_COUNT = 10003;
-static butil::static_atomic<bool> s_ever_reached_fd_scan_limit = BUTIL_STATIC_ATOMIC_INIT(false);
+static butil::static_atomic<bool> s_ever_reached_fd_scan_limit =
+    BUTIL_STATIC_ATOMIC_INIT(false);
 class FdReader {
 public:
     bool operator()(int* stat) const {
@@ -383,9 +390,9 @@ public:
         if (count < 0) {
             return false;
         }
-        if (count == MAX_FD_SCAN_COUNT - 2 
-                && s_ever_reached_fd_scan_limit.exchange(
-                        true, butil::memory_order_relaxed) == false) {
+        if (count == MAX_FD_SCAN_COUNT - 2 &&
+            s_ever_reached_fd_scan_limit.exchange(
+                true, butil::memory_order_relaxed) == false) {
             // Rename the bvar to notify user.
             g_fd_num.hide();
             g_fd_num.expose("process_fd_num_too_many");
@@ -435,9 +442,8 @@ static bool read_proc_io(ProcIO* s) {
     }
     errno = 0;
     if (fscanf(fp, "%*s %lu %*s %lu %*s %lu %*s %lu %*s %lu %*s %lu %*s %lu",
-               &s->rchar, &s->wchar, &s->syscr, &s->syscw,
-               &s->read_bytes, &s->write_bytes, &s->cancelled_write_bytes)
-        != 7) {
+               &s->rchar, &s->wchar, &s->syscr, &s->syscw, &s->read_bytes,
+               &s->write_bytes, &s->cancelled_write_bytes) != 7) {
         PLOG(WARNING) << "Fail to fscanf";
         return false;
     }
@@ -452,36 +458,35 @@ static bool read_proc_io(ProcIO* s) {
         PLOG(WARNING) << "Fail to proc_pid_rusage";
         return false;
     }
-    s->read_bytes = rusage.ri_diskio_bytesread;
+    s->read_bytes  = rusage.ri_diskio_bytesread;
     s->write_bytes = rusage.ri_diskio_byteswritten;
     return true;
-#else 
+#else
     return false;
 #endif
 }
 
 class ProcIOReader {
 public:
-    bool operator()(ProcIO* stat) const {
-        return read_proc_io(stat);
-    }
+    bool operator()(ProcIO* stat) const { return read_proc_io(stat); }
     template <typename T, size_t offset>
     static T get_field(void*) {
-        return *(T*)((char*)&CachedReader<ProcIO>::get_value(
-                         ProcIOReader()) + offset);
+        return *(T*)((char*)&CachedReader<ProcIO>::get_value(ProcIOReader()) +
+                     offset);
     }
 };
 
-#define BVAR_DEFINE_PROC_IO_FIELD(field)                                \
-    PassiveStatus<BVAR_MEMBER_TYPE(&ProcIO::field)> g_##field(          \
-        ProcIOReader::get_field<BVAR_MEMBER_TYPE(&ProcIO::field),       \
-        offsetof(ProcIO, field)>, NULL);
+#define BVAR_DEFINE_PROC_IO_FIELD(field)                          \
+    PassiveStatus<BVAR_MEMBER_TYPE(&ProcIO::field)> g_##field(    \
+        ProcIOReader::get_field<BVAR_MEMBER_TYPE(&ProcIO::field), \
+                                offsetof(ProcIO, field)>,         \
+        NULL);
 
 // ==================================================
 // Refs:
 //   https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 //   https://www.kernel.org/doc/Documentation/iostats.txt
-// 
+//
 // The /proc/diskstats file displays the I/O statistics of block devices.
 // Each line contains the following 14 fields:
 struct DiskStat {
@@ -490,26 +495,26 @@ struct DiskStat {
     char device_name[64];
 
     // The total number of reads completed successfully.
-    long long reads_completed; // wMB/s wKB/s
-    
+    long long reads_completed;  // wMB/s wKB/s
+
     // Reads and writes which are adjacent to each other may be merged for
     // efficiency.  Thus two 4K reads may become one 8K read before it is
     // ultimately handed to the disk, and so it will be counted (and queued)
     // as only one I/O.  This field lets you know how often this was done.
-    long long reads_merged;     // rrqm/s
-    
+    long long reads_merged;  // rrqm/s
+
     // The total number of sectors read successfully.
-    long long sectors_read;     // rsec/s
+    long long sectors_read;  // rsec/s
 
     // The total number of milliseconds spent by all reads (as
     // measured from __make_request() to end_that_request_last()).
     long long time_spent_reading_ms;
 
     // The total number of writes completed successfully.
-    long long writes_completed; // rKB/s rMB/s
+    long long writes_completed;  // rKB/s rMB/s
 
     // See description of reads_merged
-    long long writes_merged;    // wrqm/s
+    long long writes_merged;  // wrqm/s
 
     // The total number of sectors written successfully.
     long long sectors_written;  // wsec/s
@@ -542,22 +547,15 @@ static bool read_disk_stat(DiskStat* s) {
         return false;
     }
     errno = 0;
-    if (fscanf(fp, "%lld %lld %s %lld %lld %lld %lld %lld %lld %lld "
+    if (fscanf(fp,
+               "%lld %lld %s %lld %lld %lld %lld %lld %lld %lld "
                "%lld %lld %lld %lld",
-               &s->major_number,
-               &s->minor_mumber,
-               s->device_name,
-               &s->reads_completed,
-               &s->reads_merged,
-               &s->sectors_read,
-               &s->time_spent_reading_ms,
-               &s->writes_completed,
-               &s->writes_merged,
-               &s->sectors_written,
-               &s->time_spent_writing_ms,
-               &s->io_in_progress,
-               &s->time_spent_io_ms,
-               &s->weighted_time_spent_io_ms) != 14) {
+               &s->major_number, &s->minor_mumber, s->device_name,
+               &s->reads_completed, &s->reads_merged, &s->sectors_read,
+               &s->time_spent_reading_ms, &s->writes_completed,
+               &s->writes_merged, &s->sectors_written,
+               &s->time_spent_writing_ms, &s->io_in_progress,
+               &s->time_spent_io_ms, &s->weighted_time_spent_io_ms) != 14) {
         PLOG(WARNING) << "Fail to fscanf";
         return false;
     }
@@ -572,20 +570,20 @@ static bool read_disk_stat(DiskStat* s) {
 
 class DiskStatReader {
 public:
-    bool operator()(DiskStat* stat) const {
-        return read_disk_stat(stat);
-    }
+    bool operator()(DiskStat* stat) const { return read_disk_stat(stat); }
     template <typename T, size_t offset>
     static T get_field(void*) {
-        return *(T*)((char*)&CachedReader<DiskStat>::get_value(
-                         DiskStatReader()) + offset);
+        return *(
+            T*)((char*)&CachedReader<DiskStat>::get_value(DiskStatReader()) +
+                offset);
     }
 };
 
-#define BVAR_DEFINE_DISK_STAT_FIELD(field)                              \
-    PassiveStatus<BVAR_MEMBER_TYPE(&DiskStat::field)> g_##field(        \
-        DiskStatReader::get_field<BVAR_MEMBER_TYPE(&DiskStat::field),   \
-        offsetof(DiskStat, field)>, NULL);
+#define BVAR_DEFINE_DISK_STAT_FIELD(field)                            \
+    PassiveStatus<BVAR_MEMBER_TYPE(&DiskStat::field)> g_##field(      \
+        DiskStatReader::get_field<BVAR_MEMBER_TYPE(&DiskStat::field), \
+                                  offsetof(DiskStat, field)>,         \
+        NULL);
 
 // =====================================
 
@@ -623,7 +621,7 @@ static int64_t g_starting_time = butil::gettimeofday_us();
 static timeval get_uptime(void*) {
     int64_t uptime_us = butil::gettimeofday_us() - g_starting_time;
     timeval tm;
-    tm.tv_sec = uptime_us / 1000000L;
+    tm.tv_sec  = uptime_us / 1000000L;
     tm.tv_usec = uptime_us - tm.tv_sec * 1000000L;
     return tm;
 }
@@ -642,21 +640,23 @@ public:
     }
     template <typename T, size_t offset>
     static T get_field(void*) {
-        return *(T*)((char*)&CachedReader<rusage>::get_value(
-                         RUsageReader()) + offset);
+        return *(T*)((char*)&CachedReader<rusage>::get_value(RUsageReader()) +
+                     offset);
     }
 };
 
-#define BVAR_DEFINE_RUSAGE_FIELD(field)                                 \
-    PassiveStatus<BVAR_MEMBER_TYPE(&rusage::field)> g_##field(          \
-        RUsageReader::get_field<BVAR_MEMBER_TYPE(&rusage::field),       \
-        offsetof(rusage, field)>, NULL);                                \
-    
-#define BVAR_DEFINE_RUSAGE_FIELD2(field, name)                          \
-    PassiveStatus<BVAR_MEMBER_TYPE(&rusage::field)> g_##field(          \
-        name,                                                           \
-        RUsageReader::get_field<BVAR_MEMBER_TYPE(&rusage::field),       \
-        offsetof(rusage, field)>, NULL);                                \
+#define BVAR_DEFINE_RUSAGE_FIELD(field)                           \
+    PassiveStatus<BVAR_MEMBER_TYPE(&rusage::field)> g_##field(    \
+        RUsageReader::get_field<BVAR_MEMBER_TYPE(&rusage::field), \
+                                offsetof(rusage, field)>,         \
+        NULL);
+
+#define BVAR_DEFINE_RUSAGE_FIELD2(field, name)                    \
+    PassiveStatus<BVAR_MEMBER_TYPE(&rusage::field)> g_##field(    \
+        name,                                                     \
+        RUsageReader::get_field<BVAR_MEMBER_TYPE(&rusage::field), \
+                                offsetof(rusage, field)>,         \
+        NULL);
 
 // ======================================
 
@@ -667,15 +667,14 @@ BVAR_DEFINE_PROC_STAT_FIELD2(pgrp, "pgrp");
 static void get_username(std::ostream& os, void*) {
     char buf[32];
     if (getlogin_r(buf, sizeof(buf)) == 0) {
-        buf[sizeof(buf)-1] = '\0';
+        buf[sizeof(buf) - 1] = '\0';
         os << buf;
     } else {
-        os << "unknown (" << berror() << ')' ;
+        os << "unknown (" << berror() << ')';
     }
 }
 
-PassiveStatus<std::string> g_username(
-    "process_username", get_username, NULL);
+PassiveStatus<std::string> g_username("process_username", get_username, NULL);
 
 BVAR_DEFINE_PROC_STAT_FIELD(minflt);
 PerSecond<PassiveStatus<unsigned long> > g_minflt_second(
@@ -723,9 +722,7 @@ BVAR_DEFINE_RUSAGE_FIELD(ru_utime);
 BVAR_DEFINE_RUSAGE_FIELD(ru_stime);
 PassiveStatus<timeval> g_uptime("process_uptime", get_uptime, NULL);
 
-static int get_core_num(void*) {
-    return sysconf(_SC_NPROCESSORS_ONLN);
-}
+static int get_core_num(void*) { return sysconf(_SC_NPROCESSORS_ONLN); }
 PassiveStatus<int> g_core_num("system_core_count", get_core_num, NULL);
 
 struct TimePercent {
@@ -751,9 +748,10 @@ inline std::ostream& operator<<(std::ostream& os, const TimePercent& tp) {
 }
 
 static TimePercent get_cputime_percent(void*) {
-    TimePercent tp = { butil::timeval_to_microseconds(g_ru_stime.get_value()) +
-                       butil::timeval_to_microseconds(g_ru_utime.get_value()),
-                       butil::timeval_to_microseconds(g_uptime.get_value()) };
+    TimePercent tp = {
+        butil::timeval_to_microseconds(g_ru_stime.get_value()) +
+            butil::timeval_to_microseconds(g_ru_utime.get_value()),
+        butil::timeval_to_microseconds(g_uptime.get_value())};
     return tp;
 }
 PassiveStatus<TimePercent> g_cputime_percent(get_cputime_percent, NULL);
@@ -761,8 +759,8 @@ Window<PassiveStatus<TimePercent>, SERIES_IN_SECOND> g_cputime_percent_second(
     "process_cpu_usage", &g_cputime_percent, FLAGS_bvar_dump_interval);
 
 static TimePercent get_stime_percent(void*) {
-    TimePercent tp = { butil::timeval_to_microseconds(g_ru_stime.get_value()),
-                       butil::timeval_to_microseconds(g_uptime.get_value()) };
+    TimePercent tp = {butil::timeval_to_microseconds(g_ru_stime.get_value()),
+                      butil::timeval_to_microseconds(g_uptime.get_value())};
     return tp;
 }
 PassiveStatus<TimePercent> g_stime_percent(get_stime_percent, NULL);
@@ -770,8 +768,8 @@ Window<PassiveStatus<TimePercent>, SERIES_IN_SECOND> g_stime_percent_second(
     "process_cpu_usage_system", &g_stime_percent, FLAGS_bvar_dump_interval);
 
 static TimePercent get_utime_percent(void*) {
-    TimePercent tp = { butil::timeval_to_microseconds(g_ru_utime.get_value()),
-                       butil::timeval_to_microseconds(g_uptime.get_value()) };
+    TimePercent tp = {butil::timeval_to_microseconds(g_ru_utime.get_value()),
+                      butil::timeval_to_microseconds(g_uptime.get_value())};
     return tp;
 }
 PassiveStatus<TimePercent> g_utime_percent(get_utime_percent, NULL);
@@ -782,41 +780,40 @@ Window<PassiveStatus<TimePercent>, SERIES_IN_SECOND> g_utime_percent_second(
 // Unsupported fields in linux:
 //   ru_ixrss
 //   ru_idrss
-//   ru_isrss 
-//   ru_nswap 
-//   ru_nsignals 
+//   ru_isrss
+//   ru_nswap
+//   ru_nsignals
 BVAR_DEFINE_RUSAGE_FIELD(ru_inblock);
 BVAR_DEFINE_RUSAGE_FIELD(ru_oublock);
 BVAR_DEFINE_RUSAGE_FIELD(ru_nvcsw);
 BVAR_DEFINE_RUSAGE_FIELD(ru_nivcsw);
-PerSecond<PassiveStatus<long> > g_ru_inblock_second(
-    "process_inblocks_second", &g_ru_inblock);
-PerSecond<PassiveStatus<long> > g_ru_oublock_second(
-    "process_outblocks_second", &g_ru_oublock);
+PerSecond<PassiveStatus<long> > g_ru_inblock_second("process_inblocks_second",
+                                                    &g_ru_inblock);
+PerSecond<PassiveStatus<long> > g_ru_oublock_second("process_outblocks_second",
+                                                    &g_ru_oublock);
 PerSecond<PassiveStatus<long> > cs_vol_second(
     "process_context_switches_voluntary_second", &g_ru_nvcsw);
 PerSecond<PassiveStatus<long> > cs_invol_second(
     "process_context_switches_involuntary_second", &g_ru_nivcsw);
 
 PassiveStatus<std::string> g_cmdline("process_cmdline", get_cmdline, NULL);
-PassiveStatus<std::string> g_kernel_version(
-    "kernel_version", get_kernel_version, NULL);
+PassiveStatus<std::string> g_kernel_version("kernel_version",
+                                            get_kernel_version, NULL);
 
-static std::string* s_gcc_version = NULL;
+static std::string* s_gcc_version     = NULL;
 pthread_once_t g_gen_gcc_version_once = PTHREAD_ONCE_INIT;
 
 void gen_gcc_version() {
-
 #if defined(__GNUC__)
     const int gcc_major = __GNUC__;
-#else 
-    const int gcc_major = -1;
+#else
+    const int gcc_major      = -1;
 #endif
 
 #if defined(__GNUC_MINOR__)
     const int gcc_minor = __GNUC_MINOR__;
 #else
-    const int gcc_minor = -1;
+    const int gcc_minor      = -1;
 #endif
 
 #if defined(__GNUC_PATCHLEVEL__)
@@ -844,7 +841,6 @@ void gen_gcc_version() {
     oss << '.' << gcc_patchlevel;
 
     *s_gcc_version = oss.str();
-
 }
 
 void get_gcc_version(std::ostream& os, void*) {
@@ -874,5 +870,6 @@ PassiveStatus<std::string> g_work_dir("process_work_dir", get_work_dir, NULL);
 
 // In the same scope where timeval is defined. Required by clang.
 inline std::ostream& operator<<(std::ostream& os, const timeval& tm) {
-    return os << tm.tv_sec << '.' << std::setw(6) << std::setfill('0') << tm.tv_usec;
+    return os << tm.tv_sec << '.' << std::setw(6) << std::setfill('0')
+              << tm.tv_usec;
 }

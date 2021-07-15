@@ -17,16 +17,14 @@
 
 // Date: Thu Nov 22 13:57:56 CST 2012
 
+#include "butil/binary_printer.h"
 #include <inttypes.h>
 #include "butil/iobuf.h"
-#include "butil/binary_printer.h"
 
 namespace butil {
 
-static char s_binary_char_map[] = {
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-    'A', 'B', 'C', 'D', 'E', 'F'
-};
+static char s_binary_char_map[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                                   '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
 template <typename Appender>
 class BinaryCharPrinter {
@@ -36,6 +34,7 @@ public:
     ~BinaryCharPrinter() { Flush(); }
     void PushChar(unsigned char c);
     void Flush();
+
 private:
     uint32_t _n;
     Appender* _appender;
@@ -56,7 +55,7 @@ void BinaryCharPrinter<Appender>::PushChar(unsigned char c) {
         _appender->Append(_buf, _n);
         _n = 0;
     }
-    if (c >= 32 && c <= 126) { // displayable ascii characters
+    if (c >= 32 && c <= 126) {  // displayable ascii characters
         if (c != '\\') {
             _buf[_n++] = c;
         } else {
@@ -66,11 +65,19 @@ void BinaryCharPrinter<Appender>::PushChar(unsigned char c) {
     } else {
         _buf[_n++] = '\\';
         switch (c) {
-        case '\b': _buf[_n++] = 'b'; break;
-        case '\t': _buf[_n++] = 't'; break;
-        case '\n': _buf[_n++] = 'n'; break;
-        case '\r': _buf[_n++] = 'r'; break;
-        default: 
+        case '\b':
+            _buf[_n++] = 'b';
+            break;
+        case '\t':
+            _buf[_n++] = 't';
+            break;
+        case '\n':
+            _buf[_n++] = 'n';
+            break;
+        case '\r':
+            _buf[_n++] = 'r';
+            break;
+        default:
             _buf[_n++] = s_binary_char_map[c >> 4];
             _buf[_n++] = s_binary_char_map[c & 0xF];
             break;
@@ -82,6 +89,7 @@ class OStreamAppender {
 public:
     OStreamAppender(std::ostream& os) : _os(&os) {}
     void Append(const char* b, size_t n) { _os->write(b, n); }
+
 private:
     std::ostream* _os;
 };
@@ -90,6 +98,7 @@ class StringAppender {
 public:
     StringAppender(std::string* str) : _str(str) {}
     void Append(const char* b, size_t n) { _str->append(b, n); }
+
 private:
     std::string* _str;
 };
@@ -98,15 +107,16 @@ template <typename Appender>
 static void PrintIOBuf(Appender* appender, const IOBuf& b, size_t max_length) {
     BinaryCharPrinter<Appender> printer(appender);
     const size_t n = b.backing_block_num();
-    size_t nw = 0;
+    size_t nw      = 0;
     for (size_t i = 0; i < n; ++i) {
         StringPiece blk = b.backing_block(i);
         for (size_t j = 0; j < blk.size(); ++j) {
             if (nw >= max_length) {
                 printer.Flush();
                 char buf[48];
-                int len = snprintf(buf, sizeof(buf), "...<skipping %" PRIu64 " bytes>",
-                        (uint64_t)(b.size() - nw));
+                int len = snprintf(buf, sizeof(buf),
+                                   "...<skipping %" PRIu64 " bytes>",
+                                   (uint64_t)(b.size() - nw));
                 appender->Append(buf, len);
                 return;
             }
@@ -117,14 +127,16 @@ static void PrintIOBuf(Appender* appender, const IOBuf& b, size_t max_length) {
 }
 
 template <typename Appender>
-static void PrintString(Appender* appender, const StringPiece& s, size_t max_length) {
+static void PrintString(Appender* appender, const StringPiece& s,
+                        size_t max_length) {
     BinaryCharPrinter<Appender> printer(appender);
     for (size_t i = 0; i < s.size(); ++i) {
         if (i >= max_length) {
             printer.Flush();
             char buf[48];
-            int len = snprintf(buf, sizeof(buf), "...<skipping %" PRIu64 " bytes>",
-                               (uint64_t)(s.size() - i));
+            int len =
+                snprintf(buf, sizeof(buf), "...<skipping %" PRIu64 " bytes>",
+                         (uint64_t)(s.size() - i));
             appender->Append(buf, len);
             return;
         }
@@ -162,4 +174,4 @@ std::string ToPrintableString(const void* data, size_t n, size_t max_length) {
     return result;
 }
 
-} // namespace butil
+}  // namespace butil

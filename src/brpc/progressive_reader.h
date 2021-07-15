@@ -15,12 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_PROGRESSIVE_READER_H
 #define BRPC_PROGRESSIVE_READER_H
 
 #include "brpc/shared_object.h"
-
 
 namespace brpc {
 
@@ -49,7 +47,7 @@ public:
     // This method will be called once and only once. No other methods will
     // be called after. User can release the memory of this object inside.
     virtual void OnEndOfMessage(const butil::Status& status) = 0;
-    
+
 protected:
     virtual ~ProgressiveReader() {}
 };
@@ -86,7 +84,6 @@ public:
     virtual void ReadProgressiveAttachmentBy(ProgressiveReader* r) = 0;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_PROGRESSIVE_READER_H

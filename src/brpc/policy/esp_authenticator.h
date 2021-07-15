@@ -20,11 +20,10 @@
 
 #include "brpc/authenticator.h"
 
-
 namespace brpc {
 namespace policy {
 
-class EspAuthenticator: public Authenticator {
+class EspAuthenticator : public Authenticator {
 public:
     int GenerateCredential(std::string* auth_str) const;
 
@@ -36,7 +35,6 @@ public:
 const Authenticator* global_esp_authenticator();
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_POLICY_GIANO_AUTHENTICATOR_H
+#endif  // BRPC_POLICY_GIANO_AUTHENTICATOR_H

@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_UBRPC2PB_PROTOCOL_H
 #define BRPC_POLICY_UBRPC2PB_PROTOCOL_H
 
-#include "mcpack2pb/mcpack2pb.h"
 #include "brpc/nshead_pb_service_adaptor.h"
 #include "brpc/policy/nshead_protocol.h"
-
+#include "mcpack2pb/mcpack2pb.h"
 
 namespace brpc {
 namespace policy {
@@ -34,33 +32,29 @@ void SerializeUbrpcCompackRequest(butil::IOBuf* buf, Controller* cntl,
 void SerializeUbrpcMcpack2Request(butil::IOBuf* buf, Controller* cntl,
                                   const google::protobuf::Message* request);
 
-void PackUbrpcRequest(butil::IOBuf* buf,
-                      SocketMessage**,
+void PackUbrpcRequest(butil::IOBuf* buf, SocketMessage**,
                       uint64_t correlation_id,
                       const google::protobuf::MethodDescriptor* method,
-                      Controller* controller,
-                      const butil::IOBuf& request,
+                      Controller* controller, const butil::IOBuf& request,
                       const Authenticator* auth);
 
 class UbrpcAdaptor : public NsheadPbServiceAdaptor {
 public:
     explicit UbrpcAdaptor(mcpack2pb::SerializationFormat format)
         : _format(format) {}
-    
-    void ParseNsheadMeta(const Server& svr,
-                        const NsheadMessage& request,
-                        Controller*,
-                        NsheadMeta* out_meta) const;
 
-    void ParseRequestFromIOBuf(
-        const NsheadMeta& meta, const NsheadMessage& ns_req,
-        Controller* controller, google::protobuf::Message* pb_req) const;
+    void ParseNsheadMeta(const Server& svr, const NsheadMessage& request,
+                         Controller*, NsheadMeta* out_meta) const;
 
-    void SerializeResponseToIOBuf(
-        const NsheadMeta& meta,
-        Controller* controller,
-        const google::protobuf::Message* pb_res,
-        NsheadMessage* ns_res) const;
+    void ParseRequestFromIOBuf(const NsheadMeta& meta,
+                               const NsheadMessage& ns_req,
+                               Controller* controller,
+                               google::protobuf::Message* pb_req) const;
+
+    void SerializeResponseToIOBuf(const NsheadMeta& meta,
+                                  Controller* controller,
+                                  const google::protobuf::Message* pb_res,
+                                  NsheadMessage* ns_res) const;
 
 private:
     mcpack2pb::SerializationFormat _format;
@@ -77,7 +71,6 @@ public:
 };
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_POLICY_UBRPC2PB_PROTOCOL_H
+#endif  // BRPC_POLICY_UBRPC2PB_PROTOCOL_H

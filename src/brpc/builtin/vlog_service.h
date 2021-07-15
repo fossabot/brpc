@@ -15,9 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#ifndef  BRPC_VLOG_SERVICE_H
-#define  BRPC_VLOG_SERVICE_H
+#ifndef BRPC_VLOG_SERVICE_H
+#define BRPC_VLOG_SERVICE_H
 
 #if !BRPC_WITH_GLOG
 
@@ -32,11 +31,10 @@ public:
                         const ::brpc::VLogRequest* request,
                         ::brpc::VLogResponse* response,
                         ::google::protobuf::Closure* done);
-
 };
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_WITH_GLOG
 
-#endif  //BRPC_VLOG_SERVICE_H
+#endif  // BRPC_VLOG_SERVICE_H

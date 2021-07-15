@@ -51,83 +51,77 @@ namespace debug {
 #ifndef ENABLE_LEAK_TRACKER
 
 // If leak tracking is disabled, do nothing.
-template<typename T>
+template <typename T>
 class LeakTracker {
- public:
-  ~LeakTracker() {}
-  static void CheckForLeaks() {}
-  static int NumLiveInstances() { return -1; }
+public:
+    ~LeakTracker() {}
+    static void CheckForLeaks() {}
+    static int NumLiveInstances() { return -1; }
 };
 
 #else
 
 // If leak tracking is enabled we track where the object was allocated from.
 
-template<typename T>
+template <typename T>
 class LeakTracker : public LinkNode<LeakTracker<T> > {
- public:
-  LeakTracker() {
-    instances()->Append(this);
-  }
+public:
+    LeakTracker() { instances()->Append(this); }
 
-  ~LeakTracker() {
-    this->RemoveFromList();
-  }
+    ~LeakTracker() { this->RemoveFromList(); }
 
-  static void CheckForLeaks() {
-    // Walk the allocation list and print each entry it contains.
-    size_t count = 0;
+    static void CheckForLeaks() {
+        // Walk the allocation list and print each entry it contains.
+        size_t count = 0;
 
-    // Copy the first 3 leak allocation callstacks onto the stack.
-    // This way if we hit the CHECK() in a release build, the leak
-    // information will be available in mini-dump.
-    const size_t kMaxStackTracesToCopyOntoStack = 3;
-    StackTrace stacktraces[kMaxStackTracesToCopyOntoStack];
+        // Copy the first 3 leak allocation callstacks onto the stack.
+        // This way if we hit the CHECK() in a release build, the leak
+        // information will be available in mini-dump.
+        const size_t kMaxStackTracesToCopyOntoStack = 3;
+        StackTrace stacktraces[kMaxStackTracesToCopyOntoStack];
 
-    for (LinkNode<LeakTracker<T> >* node = instances()->head();
-         node != instances()->end();
-         node = node->next()) {
-      StackTrace& allocation_stack = node->value()->allocation_stack_;
+        for (LinkNode<LeakTracker<T> >* node  = instances()->head();
+             node != instances()->end(); node = node->next()) {
+            StackTrace& allocation_stack = node->value()->allocation_stack_;
 
-      if (count < kMaxStackTracesToCopyOntoStack)
-        stacktraces[count] = allocation_stack;
+            if (count < kMaxStackTracesToCopyOntoStack)
+                stacktraces[count] = allocation_stack;
 
-      ++count;
-      std::ostringstream err;
-      err << "Leaked " << node << " which was allocated by:";
-      allocation_stack.OutputToStream(&err);
-      LOG(ERROR) << err.str();
+            ++count;
+            std::ostringstream err;
+            err << "Leaked " << node << " which was allocated by:";
+            allocation_stack.OutputToStream(&err);
+            LOG(ERROR) << err.str();
+        }
+
+        CHECK_EQ(0u, count);
+
+        // Hack to keep |stacktraces| and |count| alive (so compiler
+        // doesn't optimize it out, and it will appear in mini-dumps).
+        if (count == 0x1234) {
+            for (size_t i = 0; i < kMaxStackTracesToCopyOntoStack; ++i)
+                stacktraces[i].Print();
+        }
     }
 
-    CHECK_EQ(0u, count);
-
-    // Hack to keep |stacktraces| and |count| alive (so compiler
-    // doesn't optimize it out, and it will appear in mini-dumps).
-    if (count == 0x1234) {
-      for (size_t i = 0; i < kMaxStackTracesToCopyOntoStack; ++i)
-        stacktraces[i].Print();
+    static int NumLiveInstances() {
+        // Walk the allocation list and count how many entries it has.
+        int count = 0;
+        for (LinkNode<LeakTracker<T> >* node  = instances()->head();
+             node != instances()->end(); node = node->next()) {
+            ++count;
+        }
+        return count;
     }
-  }
 
-  static int NumLiveInstances() {
-    // Walk the allocation list and count how many entries it has.
-    int count = 0;
-    for (LinkNode<LeakTracker<T> >* node = instances()->head();
-         node != instances()->end();
-         node = node->next()) {
-      ++count;
+private:
+    // Each specialization of LeakTracker gets its own static storage.
+    static LinkedList<LeakTracker<T> >* instances() {
+        static LinkedList<LeakTracker<T> > list;
+        return &list;
     }
-    return count;
-  }
 
- private:
-  // Each specialization of LeakTracker gets its own static storage.
-  static LinkedList<LeakTracker<T> >* instances() {
-    static LinkedList<LeakTracker<T> > list;
-    return &list;
-  }
-
-  StackTrace allocation_stack_;
+    StackTrace allocation_stack_;
 };
 
 #endif  // ENABLE_LEAK_TRACKER

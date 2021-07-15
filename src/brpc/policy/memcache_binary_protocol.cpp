@@ -15,27 +15,25 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <google/protobuf/descriptor.h>         // MethodDescriptor
-#include <google/protobuf/message.h>            // Message
-#include <gflags/gflags.h>
-#include "butil/logging.h"                       // LOG()
-#include "butil/time.h"
-#include "butil/iobuf.h"                         // butil::IOBuf
-#include "butil/sys_byteorder.h"
-#include "brpc/controller.h"               // Controller
-#include "brpc/details/controller_private_accessor.h"
-#include "brpc/socket.h"                   // Socket
-#include "brpc/server.h"                   // Server
-#include "brpc/details/server_private_accessor.h"
-#include "brpc/span.h"
-#include "brpc/compress.h"                 // ParseFromCompressedData
 #include "brpc/policy/memcache_binary_protocol.h"
-#include "brpc/policy/memcache_binary_header.h"
+#include <gflags/gflags.h>
+#include <google/protobuf/descriptor.h>  // MethodDescriptor
+#include <google/protobuf/message.h>     // Message
+#include "brpc/compress.h"               // ParseFromCompressedData
+#include "brpc/controller.h"             // Controller
+#include "brpc/details/controller_private_accessor.h"
+#include "brpc/details/server_private_accessor.h"
 #include "brpc/memcache.h"
+#include "brpc/policy/memcache_binary_header.h"
 #include "brpc/policy/most_common_message.h"
+#include "brpc/server.h"  // Server
+#include "brpc/socket.h"  // Socket
+#include "brpc/span.h"
 #include "butil/containers/flat_map.h"
-
+#include "butil/iobuf.h"    // butil::IOBuf
+#include "butil/logging.h"  // LOG()
+#include "butil/sys_byteorder.h"
+#include "butil/time.h"
 
 namespace brpc {
 
@@ -73,13 +71,13 @@ inline bool IsSupportedCommand(uint8_t command) {
     return butil::bit_array_get(supported_cmd_map, command);
 }
 
-ParseResult ParseMemcacheMessage(butil::IOBuf* source,
-                                 Socket* socket, bool /*read_eof*/, const void */*arg*/) {
+ParseResult ParseMemcacheMessage(butil::IOBuf* source, Socket* socket,
+                                 bool /*read_eof*/, const void* /*arg*/) {
     while (1) {
         const uint8_t* p_mcmagic = (const uint8_t*)source->fetch1();
         if (NULL == p_mcmagic) {
             return MakeParseError(PARSE_ERROR_NOT_ENOUGH_DATA);
-        }            
+        }
         if (*p_mcmagic != (uint8_t)MC_MAGIC_RESPONSE) {
             return MakeParseError(PARSE_ERROR_TRY_OTHERS);
         }
@@ -89,7 +87,8 @@ ParseResult ParseMemcacheMessage(butil::IOBuf* source,
             return MakeParseError(PARSE_ERROR_NOT_ENOUGH_DATA);
         }
         const MemcacheResponseHeader* header = (const MemcacheResponseHeader*)p;
-        uint32_t total_body_length = butil::NetToHost32(header->total_body_length);
+        uint32_t total_body_length =
+            butil::NetToHost32(header->total_body_length);
         if (source->size() < sizeof(*header) + total_body_length) {
             return MakeParseError(PARSE_ERROR_NOT_ENOUGH_DATA);
         }
@@ -99,7 +98,7 @@ ParseResult ParseMemcacheMessage(butil::IOBuf* source,
             source->pop_front(sizeof(*header) + total_body_length);
             return MakeParseError(PARSE_ERROR_NOT_ENOUGH_DATA);
         }
-        
+
         PipelinedInfo pi;
         if (!socket->PopPipelinedInfo(&pi)) {
             LOG(WARNING) << "No corresponding PipelinedInfo in socket, drop";
@@ -131,38 +130,42 @@ ParseResult ParseMemcacheMessage(butil::IOBuf* source,
         if (header->command == MC_BINARY_SASL_AUTH) {
             if (header->status != 0) {
                 LOG(ERROR) << "Failed to authenticate the couchbase bucket.";
-                return MakeParseError(PARSE_ERROR_NO_RESOURCE, 
-                                      "Fail to authenticate with the couchbase bucket");
+                return MakeParseError(
+                    PARSE_ERROR_NO_RESOURCE,
+                    "Fail to authenticate with the couchbase bucket");
             }
             DestroyingPtr<MostCommonMessage> auth_msg(
-                 static_cast<MostCommonMessage*>(socket->release_parsing_context()));
+                static_cast<MostCommonMessage*>(
+                    socket->release_parsing_context()));
             socket->GivebackPipelinedInfo(pi);
         } else {
             if (++msg->pi.count >= pi.count) {
                 CHECK_EQ(msg->pi.count, pi.count);
-                msg = static_cast<MostCommonMessage*>(socket->release_parsing_context());
+                msg = static_cast<MostCommonMessage*>(
+                    socket->release_parsing_context());
                 msg->pi = pi;
                 return MakeMessage(msg);
             } else {
                 socket->GivebackPipelinedInfo(pi);
             }
-        }    
+        }
     }
 }
 
 void ProcessMemcacheResponse(InputMessageBase* msg_base) {
     const int64_t start_parse_us = butil::cpuwide_time_us();
-    DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
+    DestroyingPtr<MostCommonMessage> msg(
+        static_cast<MostCommonMessage*>(msg_base));
 
     const bthread_id_t cid = msg->pi.id_wait;
-    Controller* cntl = NULL;
-    const int rc = bthread_id_lock(cid, (void**)&cntl);
+    Controller* cntl       = NULL;
+    const int rc           = bthread_id_lock(cid, (void**)&cntl);
     if (rc != 0) {
         LOG_IF(ERROR, rc != EINVAL && rc != EPERM)
             << "Fail to lock correlation_id=" << cid << ": " << berror(rc);
         return;
     }
-    
+
     ControllerPrivateAccessor accessor(cntl);
     Span* span = accessor.span();
     if (span) {
@@ -174,15 +177,18 @@ void ProcessMemcacheResponse(InputMessageBase* msg_base) {
     const int saved_error = cntl->ErrorCode();
     if (cntl->response() == NULL) {
         cntl->SetFailed(ERESPONSE, "response is NULL!");
-    } else if (cntl->response()->GetDescriptor() != MemcacheResponse::descriptor()) {
+    } else if (cntl->response()->GetDescriptor() !=
+               MemcacheResponse::descriptor()) {
         cntl->SetFailed(ERESPONSE, "Must be MemcacheResponse");
     } else {
         // We work around ParseFrom of pb which is just a placeholder.
-        ((MemcacheResponse*)cntl->response())->raw_buffer() = msg->meta.movable();
+        ((MemcacheResponse*)cntl->response())->raw_buffer() =
+            msg->meta.movable();
         if (msg->pi.count != accessor.pipelined_count()) {
-            cntl->SetFailed(ERESPONSE, "pipelined_count=%d of response does "
-                                  "not equal request's=%d",
-                                  msg->pi.count, accessor.pipelined_count());
+            cntl->SetFailed(ERESPONSE,
+                            "pipelined_count=%d of response does "
+                            "not equal request's=%d",
+                            msg->pi.count, accessor.pipelined_count());
         }
     }
     // Unlocks correlation_id inside. Revert controller's
@@ -191,8 +197,7 @@ void ProcessMemcacheResponse(InputMessageBase* msg_base) {
     accessor.OnResponse(cid, saved_error);
 }
 
-void SerializeMemcacheRequest(butil::IOBuf* buf,
-                              Controller* cntl,
+void SerializeMemcacheRequest(butil::IOBuf* buf, Controller* cntl,
                               const google::protobuf::Message* request) {
     if (request == NULL) {
         return cntl->SetFailed(EREQUEST, "request is NULL");
@@ -206,12 +211,10 @@ void SerializeMemcacheRequest(butil::IOBuf* buf,
     ControllerPrivateAccessor(cntl).set_pipelined_count(mr->pipelined_count());
 }
 
-void PackMemcacheRequest(butil::IOBuf* buf,
-                         SocketMessage**,
+void PackMemcacheRequest(butil::IOBuf* buf, SocketMessage**,
                          uint64_t /*correlation_id*/,
                          const google::protobuf::MethodDescriptor*,
-                         Controller* cntl,
-                         const butil::IOBuf& request,
+                         Controller* cntl, const butil::IOBuf& request,
                          const Authenticator* auth) {
     if (auth) {
         std::string auth_str;
@@ -224,11 +227,10 @@ void PackMemcacheRequest(butil::IOBuf* buf,
 }
 
 const std::string& GetMemcacheMethodName(
-    const google::protobuf::MethodDescriptor*,
-    const Controller*) {
+    const google::protobuf::MethodDescriptor*, const Controller*) {
     const static std::string MEMCACHED_STR = "memcached";
     return MEMCACHED_STR;
 }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc

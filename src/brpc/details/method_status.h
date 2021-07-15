@@ -15,15 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#ifndef BRPC_METHOD_STATUS_H
+#define BRPC_METHOD_STATUS_H
 
-#ifndef  BRPC_METHOD_STATUS_H
-#define  BRPC_METHOD_STATUS_H
-
-#include "butil/macros.h"                  // DISALLOW_COPY_AND_ASSIGN
-#include "bvar/bvar.h"                    // vars
-#include "brpc/describable.h"
 #include "brpc/concurrency_limiter.h"
-
+#include "brpc/describable.h"
+#include "butil/macros.h"  // DISALLOW_COPY_AND_ASSIGN
+#include "bvar/bvar.h"     // vars
 
 namespace brpc {
 
@@ -41,11 +39,11 @@ public:
     bool OnRequested(int* rejected_cc = NULL);
 
     // Call this when the method just finished.
-    // `error_code' : The error code obtained from the controller. Equal to 
+    // `error_code' : The error code obtained from the controller. Equal to
     // 0 when the call is successful.
     // `latency_us' : microseconds taken by a successful call. Latency can
     // be measured in this utility class as well, but the callsite often
-    // did the time keeping and the cost is better saved. 
+    // did the time keeping and the cost is better saved.
     void OnResponded(int error_code, int64_t latency_us);
 
     // Expose internal vars.
@@ -53,24 +51,24 @@ public:
     int Expose(const butil::StringPiece& prefix);
 
     // Describe internal vars, used by /status
-    void Describe(std::ostream &os, const DescribeOptions&) const override;
+    void Describe(std::ostream& os, const DescribeOptions&) const override;
 
     // Current max_concurrency of the method.
     int MaxConcurrency() const { return _cl ? _cl->MaxConcurrency() : 0; }
 
 private:
-friend class Server;
+    friend class Server;
     DISALLOW_COPY_AND_ASSIGN(MethodStatus);
 
-    // Note: SetConcurrencyLimiter() is not thread safe and can only be called 
-    // before the server is started. 
+    // Note: SetConcurrencyLimiter() is not thread safe and can only be called
+    // before the server is started.
     void SetConcurrencyLimiter(ConcurrencyLimiter* cl);
 
     std::unique_ptr<ConcurrencyLimiter> _cl;
     butil::atomic<int> _nconcurrency;
-    bvar::Adder<int64_t>  _nerror_bvar;
+    bvar::Adder<int64_t> _nerror_bvar;
     bvar::LatencyRecorder _latency_rec;
-    bvar::PassiveStatus<int>  _nconcurrency_bvar;
+    bvar::PassiveStatus<int> _nconcurrency_bvar;
     bvar::PerSecond<bvar::Adder<int64_t>> _eps_bvar;
     bvar::PassiveStatus<int32_t> _max_concurrency_bvar;
 };
@@ -78,10 +76,9 @@ friend class Server;
 class ConcurrencyRemover {
 public:
     ConcurrencyRemover(MethodStatus* status, Controller* c, int64_t received_us)
-        : _status(status) 
-        , _c(c)
-        , _received_us(received_us) {}
+        : _status(status), _c(c), _received_us(received_us) {}
     ~ConcurrencyRemover();
+
 private:
     DISALLOW_COPY_AND_ASSIGN(ConcurrencyRemover);
     MethodStatus* _status;
@@ -93,7 +90,7 @@ inline bool MethodStatus::OnRequested(int* rejected_cc) {
     const int cc = _nconcurrency.fetch_add(1, butil::memory_order_relaxed) + 1;
     if (NULL == _cl || _cl->OnRequested(cc)) {
         return true;
-    } 
+    }
     if (rejected_cc) {
         *rejected_cc = cc;
     }
@@ -112,6 +109,6 @@ inline void MethodStatus::OnResponded(int error_code, int64_t latency) {
     }
 }
 
-} // namespace brpc
+}  // namespace brpc
 
-#endif  //BRPC_METHOD_STATUS_H
+#endif  // BRPC_METHOD_STATUS_H

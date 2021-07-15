@@ -15,13 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
+#include "brpc/periodic_naming_service.h"
 #include <gflags/gflags.h>
-#include "butil/logging.h"
-#include "bthread/bthread.h"
 #include "brpc/log.h"
 #include "brpc/reloadable_flags.h"
-#include "brpc/periodic_naming_service.h"
+#include "bthread/bthread.h"
+#include "butil/logging.h"
 
 namespace brpc {
 
@@ -29,8 +28,8 @@ DEFINE_int32(ns_access_interval, 5,
              "Wait so many seconds before next access to naming service");
 BRPC_VALIDATE_GFLAG(ns_access_interval, PositiveInteger);
 
-int PeriodicNamingService::RunNamingService(
-    const char* service_name, NamingServiceActions* actions) {
+int PeriodicNamingService::RunNamingService(const char* service_name,
+                                            NamingServiceActions* actions) {
     std::vector<ServerNode> servers;
     bool ever_reset = false;
     for (;;) {
@@ -47,7 +46,8 @@ int PeriodicNamingService::RunNamingService(
             actions->ResetServers(servers);
         }
 
-        if (bthread_usleep(std::max(FLAGS_ns_access_interval, 1) * 1000000L) < 0) {
+        if (bthread_usleep(std::max(FLAGS_ns_access_interval, 1) * 1000000L) <
+            0) {
             if (errno == ESTOP) {
                 RPC_VLOG << "Quit NamingServiceThread=" << bthread_self();
                 return 0;
@@ -58,4 +58,4 @@ int PeriodicNamingService::RunNamingService(
     }
 }
 
-} // namespace brpc
+}  // namespace brpc

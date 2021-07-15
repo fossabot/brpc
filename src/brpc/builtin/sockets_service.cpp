@@ -15,27 +15,24 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <ostream>
-#include "brpc/closure_guard.h"        // ClosureGuard
-#include "brpc/controller.h"           // Controller
-#include "brpc/builtin/common.h"
 #include "brpc/builtin/sockets_service.h"
+#include <ostream>
+#include "brpc/builtin/common.h"
+#include "brpc/closure_guard.h"  // ClosureGuard
+#include "brpc/controller.h"     // Controller
 #include "brpc/socket.h"
-
 
 namespace brpc {
 
-void SocketsService::default_method(::google::protobuf::RpcController* cntl_base,
-                                     const ::brpc::SocketsRequest*,
-                                     ::brpc::SocketsResponse*,
-                                     ::google::protobuf::Closure* done) {
+void SocketsService::default_method(
+    ::google::protobuf::RpcController* cntl_base, const ::brpc::SocketsRequest*,
+    ::brpc::SocketsResponse*, ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
+    Controller* cntl = static_cast<Controller*>(cntl_base);
     cntl->http_response().set_content_type("text/plain");
     butil::IOBufBuilder os;
     const std::string& constraint = cntl->http_request().unresolved_path();
-    
+
     if (constraint.empty()) {
         os << "# Use /sockets/<SocketId>\n"
            << butil::describe_resources<Socket>() << '\n';
@@ -52,4 +49,4 @@ void SocketsService::default_method(::google::protobuf::RpcController* cntl_base
     os.move_to(cntl->response_attachment());
 }
 
-} // namespace brpc
+}  // namespace brpc

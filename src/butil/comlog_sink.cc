@@ -17,13 +17,13 @@
 
 // Date: Mon Jul 20 12:39:39 CST 2015
 
-#include <com_log.h>
-#include "butil/memory/singleton.h"
 #include "butil/comlog_sink.h"
-#include "butil/files/file_path.h"
+#include <com_log.h>
+#include "butil/endpoint.h"
 #include "butil/fd_guard.h"
 #include "butil/file_util.h"
-#include "butil/endpoint.h"
+#include "butil/files/file_path.h"
+#include "butil/memory/singleton.h"
 
 namespace logging {
 DECLARE_bool(log_year);
@@ -31,7 +31,7 @@ DECLARE_bool(log_hostname);
 
 struct ComlogLayoutOptions {
     ComlogLayoutOptions() : shorter_log_level(true) {}
-    
+
     bool shorter_log_level;
 };
 
@@ -39,7 +39,8 @@ class ComlogLayout : public comspace::Layout {
 public:
     explicit ComlogLayout(const ComlogLayoutOptions* options);
     ~ComlogLayout();
-    int format(comspace::Event *evt);
+    int format(comspace::Event* evt);
+
 private:
     ComlogLayoutOptions _options;
 };
@@ -50,18 +51,17 @@ ComlogLayout::ComlogLayout(const ComlogLayoutOptions* options) {
     }
 }
 
-ComlogLayout::~ComlogLayout() {
-}
+ComlogLayout::~ComlogLayout() {}
 
 // Override Layout::format to have shorter prefixes. Patterns are just ignored.
-int ComlogLayout::format(comspace::Event *evt) {
+int ComlogLayout::format(comspace::Event* evt) {
     const int bufsize = evt->_render_msgbuf_size;
-    char* const buf = evt->_render_msgbuf;
-    if (bufsize < 2){
+    char* const buf   = evt->_render_msgbuf;
+    if (bufsize < 2) {
         return -1;
     }
 
-    time_t t = evt->_print_time.tv_sec;
+    time_t t           = evt->_print_time.tv_sec;
     struct tm local_tm = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL};
 #if _MSC_VER >= 1400
     localtime_s(&local_tm, &t);
@@ -73,7 +73,7 @@ int ComlogLayout::format(comspace::Event *evt) {
         buf[len++] = *comspace::getLogName(evt->_log_level);
     } else {
         const char* const name = comspace::getLogName(evt->_log_level);
-        int cp_len = std::min(bufsize - len, (int)strlen(name));
+        int cp_len             = std::min(bufsize - len, (int)strlen(name));
         memcpy(buf + len, name, cp_len);
         len += cp_len;
         if (len < bufsize - 1) {
@@ -85,24 +85,16 @@ int ComlogLayout::format(comspace::Event *evt) {
         if (FLAGS_log_year) {
             ret = snprintf(buf + len, bufsize - len,
                            "%04d%02d%02d %02d:%02d:%02d.%06d %5u ",
-                           local_tm.tm_year + 1900,
-                           local_tm.tm_mon + 1,
-                           local_tm.tm_mday,
-                           local_tm.tm_hour,
-                           local_tm.tm_min,
-                           local_tm.tm_sec,
-                           (int)evt->_print_time.tv_usec,
+                           local_tm.tm_year + 1900, local_tm.tm_mon + 1,
+                           local_tm.tm_mday, local_tm.tm_hour, local_tm.tm_min,
+                           local_tm.tm_sec, (int)evt->_print_time.tv_usec,
                            (unsigned int)evt->_thread_id);
         } else {
-            ret = snprintf(buf + len, bufsize - len,
-                           "%02d%02d %02d:%02d:%02d.%06d %5u ",
-                           local_tm.tm_mon + 1,
-                           local_tm.tm_mday,
-                           local_tm.tm_hour,
-                           local_tm.tm_min,
-                           local_tm.tm_sec,
-                           (int)evt->_print_time.tv_usec,
-                           (unsigned int)evt->_thread_id);
+            ret = snprintf(
+                buf + len, bufsize - len, "%02d%02d %02d:%02d:%02d.%06d %5u ",
+                local_tm.tm_mon + 1, local_tm.tm_mday, local_tm.tm_hour,
+                local_tm.tm_min, local_tm.tm_sec, (int)evt->_print_time.tv_usec,
+                (unsigned int)evt->_thread_id);
         }
         if (ret >= 0) {
             len += ret;
@@ -121,8 +113,8 @@ int ComlogLayout::format(comspace::Event *evt) {
     if (len >= bufsize - 1) {
         len = bufsize - 2;
     }
-    buf[len++] = '\n';
-    buf[len] = 0;
+    buf[len++]              = '\n';
+    buf[len]                = 0;
     evt->_render_msgbuf_len = len;
     return 0;
 }
@@ -144,19 +136,17 @@ ComlogSinkOptions::ComlogSinkOptions()
     , quota_day(0)
     , quota_hour(0)
     , quota_min(0)
-    , enable_wf_device(false) {
-}
+    , enable_wf_device(false) {}
 
-ComlogSink::ComlogSink() 
-    : _init(false), _dev(NULL) {
-}
+ComlogSink::ComlogSink() : _init(false), _dev(NULL) {}
 
 int ComlogSink::SetupFromConfig(const std::string& conf_path_str) {
     Unload();
     butil::FilePath path(conf_path_str);
     if (com_loadlog(path.DirName().value().c_str(),
                     path.BaseName().value().c_str()) != 0) {
-        LOG(ERROR) << "Fail to create ComlogSink from `" << conf_path_str << "'";
+        LOG(ERROR) << "Fail to create ComlogSink from `" << conf_path_str
+                   << "'";
         return -1;
     }
     _init = true;
@@ -180,30 +170,35 @@ static std::string GetProcessName() {
     return butil::FilePath(std::string(buf)).BaseName().value();
 }
 
-int ComlogSink::SetupDevice(com_device_t* dev, const char* type, const char* file, bool is_wf) {
+int ComlogSink::SetupDevice(com_device_t* dev, const char* type,
+                            const char* file, bool is_wf) {
     butil::FilePath path(file);
-    snprintf(dev->host, sizeof(dev->host), "%s", path.DirName().value().c_str());
+    snprintf(dev->host, sizeof(dev->host), "%s",
+             path.DirName().value().c_str());
     if (!is_wf) {
         snprintf(dev->name, sizeof(dev->name), "%s_0", type);
         COMLOG_SETSYSLOG(*dev);
 
-        //snprintf(dev->file, COM_MAXFILENAME, "%s", file);
-        snprintf(dev->file, sizeof(dev->file), "%s", path.BaseName().value().c_str());
+        // snprintf(dev->file, COM_MAXFILENAME, "%s", file);
+        snprintf(dev->file, sizeof(dev->file), "%s",
+                 path.BaseName().value().c_str());
     } else {
         snprintf(dev->name, sizeof(dev->name), "%s_1", type);
         dev->log_mask = 0;
         COMLOG_ADDMASK(*dev, COMLOG_WARNING);
         COMLOG_ADDMASK(*dev, COMLOG_FATAL);
 
-        //snprintf(dev->file, COM_MAXFILENAME, "%s.wf", file);
-        snprintf(dev->file, sizeof(dev->file), "%s.wf", path.BaseName().value().c_str());
+        // snprintf(dev->file, COM_MAXFILENAME, "%s.wf", file);
+        snprintf(dev->file, sizeof(dev->file), "%s.wf",
+                 path.BaseName().value().c_str());
     }
-    
+
     snprintf(dev->type, COM_MAXAPPENDERNAME, "%s", type);
     dev->splite_type = static_cast<int>(_options.split_type);
-    dev->log_size = _options.cut_size_megabytes; // SIZECUT precision in MB
-    dev->compress = 0;
-    dev->cuttime = _options.cut_interval_minutes; // DATECUT time precision in min
+    dev->log_size    = _options.cut_size_megabytes;  // SIZECUT precision in MB
+    dev->compress    = 0;
+    dev->cuttime =
+        _options.cut_interval_minutes;  // DATECUT time precision in min
 
     // set quota conf
     int index = dev->reserved_num;
@@ -218,49 +213,60 @@ int ComlogSink::SetupDevice(com_device_t* dev, const char* type, const char* fil
                        << _options.quota_size;
             return -1;
         }
-        snprintf(dev->reservedext[index].name, sizeof(dev->reservedext[index].name),
-                 "%s_QUOTA_SIZE", dev->name);
-        snprintf(dev->reservedext[index].value, sizeof(dev->reservedext[index].value),
-                 "%d", _options.quota_size);
+        snprintf(dev->reservedext[index].name,
+                 sizeof(dev->reservedext[index].name), "%s_QUOTA_SIZE",
+                 dev->name);
+        snprintf(dev->reservedext[index].value,
+                 sizeof(dev->reservedext[index].value), "%d",
+                 _options.quota_size);
         index++;
     } else if (dev->splite_type == COMLOG_SPLIT_DATECUT) {
         if (_options.quota_day < 0) {
-            LOG(ERROR) << "Invalid ComlogSinkOptions.quota_day=" << _options.quota_day;
+            LOG(ERROR) << "Invalid ComlogSinkOptions.quota_day="
+                       << _options.quota_day;
             return -1;
         }
         if (_options.quota_hour < 0) {
-            LOG(ERROR) << "Invalid ComlogSinkOptions.quota_hour=" << _options.quota_hour;
+            LOG(ERROR) << "Invalid ComlogSinkOptions.quota_hour="
+                       << _options.quota_hour;
             return -1;
         }
         if (_options.quota_min < 0) {
-            LOG(ERROR) << "Invalid ComlogSinkOptions.quota_min=" << _options.quota_min;
+            LOG(ERROR) << "Invalid ComlogSinkOptions.quota_min="
+                       << _options.quota_min;
             return -1;
         }
         if (_options.quota_day > 0) {
-            snprintf(dev->reservedext[index].name, sizeof(dev->reservedext[index].name),
-                     "%s_QUOTA_DAY", (char*)dev->name);
-            snprintf(dev->reservedext[index].value, sizeof(dev->reservedext[index].value),
-                     "%d", _options.quota_day);
+            snprintf(dev->reservedext[index].name,
+                     sizeof(dev->reservedext[index].name), "%s_QUOTA_DAY",
+                     (char*)dev->name);
+            snprintf(dev->reservedext[index].value,
+                     sizeof(dev->reservedext[index].value), "%d",
+                     _options.quota_day);
             index++;
         }
         if (_options.quota_hour > 0) {
-            snprintf(dev->reservedext[index].name, sizeof(dev->reservedext[index].name),
-                     "%s_QUOTA_HOUR", (char*)dev->name);
-            snprintf(dev->reservedext[index].value, sizeof(dev->reservedext[index].value),
-                     "%d", _options.quota_hour);
+            snprintf(dev->reservedext[index].name,
+                     sizeof(dev->reservedext[index].name), "%s_QUOTA_HOUR",
+                     (char*)dev->name);
+            snprintf(dev->reservedext[index].value,
+                     sizeof(dev->reservedext[index].value), "%d",
+                     _options.quota_hour);
             index++;
         }
         if (_options.quota_min > 0) {
-            snprintf(dev->reservedext[index].name, sizeof(dev->reservedext[index].name),
-                     "%s_QUOTA_MIN", (char*)dev->name);
-            snprintf(dev->reservedext[index].value, sizeof(dev->reservedext[index].value),
-                     "%d", _options.quota_min);
+            snprintf(dev->reservedext[index].name,
+                     sizeof(dev->reservedext[index].name), "%s_QUOTA_MIN",
+                     (char*)dev->name);
+            snprintf(dev->reservedext[index].value,
+                     sizeof(dev->reservedext[index].value), "%d",
+                     _options.quota_min);
             index++;
         }
     }
-    dev->reserved_num = index;
+    dev->reserved_num      = index;
     dev->reservedconf.item = &dev->reservedext[0];
-    dev->reservedconf.num = dev->reserved_num;
+    dev->reservedconf.num  = dev->reserved_num;
     dev->reservedconf.size = dev->reserved_num;
 
     ComlogLayoutOptions layout_options;
@@ -321,7 +327,7 @@ int ComlogSink::Setup(const ComlogSinkOptions* options) {
              cwd.Append(_options.process_name + ".log").value().c_str());
 
     int dev_num = (_options.enable_wf_device ? 2 : 1);
-    _dev = new (std::nothrow) com_device_t[dev_num];
+    _dev        = new (std::nothrow) com_device_t[dev_num];
     if (NULL == _dev) {
         LOG(FATAL) << "Fail to new com_device_t";
         return -1;
@@ -343,7 +349,7 @@ int ComlogSink::Setup(const ComlogSinkOptions* options) {
     _init = true;
     return 0;
 }
-        
+
 void ComlogSink::Unload() {
     if (_init) {
         com_closelog(0);
@@ -352,36 +358,35 @@ void ComlogSink::Unload() {
     if (_dev) {
         // FIXME(gejun): Can't delete layout, somewhere in comlog may still
         // reference the layout after com_closelog.
-        //delete _dev->layout;
-        delete [] _dev;
+        // delete _dev->layout;
+        delete[] _dev;
         _dev = NULL;
     }
 }
 
-ComlogSink::~ComlogSink() {
-    Unload();
-}
+ComlogSink::~ComlogSink() { Unload(); }
 
 int const comlog_levels[LOG_NUM_SEVERITIES] = {
-    COMLOG_TRACE, COMLOG_NOTICE, COMLOG_WARNING, COMLOG_FATAL, COMLOG_FATAL };
+    COMLOG_TRACE, COMLOG_NOTICE, COMLOG_WARNING, COMLOG_FATAL, COMLOG_FATAL};
 
 bool ComlogSink::OnLogMessage(int severity, const char* file, int line,
                               const butil::StringPiece& content) {
-    // Print warning for VLOG since many online servers do not enable COMLOG_TRACE.
+    // Print warning for VLOG since many online servers do not enable
+    // COMLOG_TRACE.
     int comlog_level = 0;
     if (severity < 0) {
-        comlog_level = _options.print_vlog_as_warning ? COMLOG_WARNING : COMLOG_TRACE;
+        comlog_level =
+            _options.print_vlog_as_warning ? COMLOG_WARNING : COMLOG_TRACE;
     } else {
         comlog_level = comlog_levels[severity];
     }
     if (FLAGS_log_hostname) {
         butil::StringPiece hostname(butil::my_hostname());
-        if (hostname.ends_with(".baidu.com")) { // make it shorter
+        if (hostname.ends_with(".baidu.com")) {  // make it shorter
             hostname.remove_suffix(10);
         }
         return com_writelog(comlog_level, "%.*s %s:%d] %.*s",
-                            (int)hostname.size(), hostname.data(),
-                            file, line,
+                            (int)hostname.size(), hostname.data(), file, line,
                             (int)content.size(), content.data()) == 0;
     }
     // Using %.*s is faster than %s.

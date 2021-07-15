@@ -26,14 +26,15 @@ namespace policy {
 class ConstantConcurrencyLimiter : public ConcurrencyLimiter {
 public:
     explicit ConstantConcurrencyLimiter(int max_concurrency);
-    
+
     bool OnRequested(int current_concurrency) override;
-    
+
     void OnResponded(int error_code, int64_t latency_us) override;
 
     int MaxConcurrency() override;
 
-    ConstantConcurrencyLimiter* New(const AdaptiveMaxConcurrency&) const override;
+    ConstantConcurrencyLimiter* New(
+        const AdaptiveMaxConcurrency&) const override;
 
 private:
     butil::atomic<int> _max_concurrency;
@@ -42,5 +43,4 @@ private:
 }  // namespace policy
 }  // namespace brpc
 
-
-#endif // BRPC_POLICY_CONSTANT_CONCURRENCY_LIMITER_H
+#endif  // BRPC_POLICY_CONSTANT_CONCURRENCY_LIMITER_H

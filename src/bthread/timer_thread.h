@@ -17,21 +17,20 @@
 
 // bthread - A M:N threading library to make applications more concurrent.
 
-
 #ifndef BTHREAD_TIMER_THREAD_H
 #define BTHREAD_TIMER_THREAD_H
 
-#include <vector>                     // std::vector
-#include <pthread.h>                  // pthread_*
-#include "butil/atomicops.h" 
-#include "butil/time.h"                // time utilities
+#include <pthread.h>  // pthread_*
+#include <vector>     // std::vector
 #include "bthread/mutex.h"
+#include "butil/atomicops.h"
+#include "butil/time.h"  // time utilities
 
 namespace bthread {
 
 struct TimerThreadOptions {
     // Scheduling requests are hashed into different bucket to improve
-    // scalability. However bigger num_buckets may NOT result in more scalable 
+    // scalability. However bigger num_buckets may NOT result in more scalable
     // schedule() because bigger values also make each buckets more sparse
     // and more likely to lock the global mutex. You better not change
     // this value, just leave it to us.
@@ -84,29 +83,29 @@ public:
     // Get identifier of internal pthread.
     // Returns (pthread_t)0 if start() is not called yet.
     pthread_t thread_id() const { return _thread; }
-    
+
 private:
     // the timer thread will run this method.
     void run();
     static void* run_this(void* arg);
 
-    bool _started;            // whether the timer thread was started successfully.
+    bool _started;  // whether the timer thread was started successfully.
     butil::atomic<bool> _stop;
 
     TimerThreadOptions _options;
-    Bucket* _buckets;        // list of tasks to be run
-    internal::FastPthreadMutex _mutex;    // protect _nearest_run_time
+    Bucket* _buckets;                   // list of tasks to be run
+    internal::FastPthreadMutex _mutex;  // protect _nearest_run_time
     int64_t _nearest_run_time;
     // the futex for wake up timer thread. can't use _nearest_run_time because
     // it's 64-bit.
     int _nsignals;
-    pthread_t _thread;       // all scheduled task will be run on this thread
+    pthread_t _thread;  // all scheduled task will be run on this thread
 };
 
 // Get the global TimerThread which never quits.
 TimerThread* get_or_create_global_timer_thread();
 TimerThread* get_global_timer_thread();
 
-}   // end namespace bthread
+}  // end namespace bthread
 
 #endif  // BTHREAD_TIMER_THREAD_H

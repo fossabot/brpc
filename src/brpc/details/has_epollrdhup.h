@@ -15,10 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_HAS_EPOLLRDHUP_H
 #define BRPC_HAS_EPOLLRDHUP_H
-
 
 namespace brpc {
 
@@ -28,7 +26,6 @@ namespace brpc {
 // than given `count', otherwise return value=0(indicating EOF) may be lost.
 extern const unsigned int has_epollrdhup;
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_HAS_EPOLLRDHUP_H

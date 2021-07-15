@@ -42,88 +42,74 @@ namespace butil {
 // with |ASSUME| for the former and |RETAIN| for the latter. The default policy
 // is to |ASSUME|.
 
-template<typename T>
+template <typename T>
 struct ScopedTypeRefTraits;
 
-template<typename T, typename Traits = ScopedTypeRefTraits<T>>
+template <typename T, typename Traits = ScopedTypeRefTraits<T>>
 class ScopedTypeRef {
- public:
-  typedef T element_type;
+public:
+    typedef T element_type;
 
-  ScopedTypeRef(
-      T object = NULL,
-      scoped_policy::OwnershipPolicy policy = scoped_policy::ASSUME)
-      : object_(object) {
-    if (object_ && policy == scoped_policy::RETAIN)
-      Traits::Retain(object_);
-  }
+    ScopedTypeRef(T object                              = NULL,
+                  scoped_policy::OwnershipPolicy policy = scoped_policy::ASSUME)
+        : object_(object) {
+        if (object_ && policy == scoped_policy::RETAIN) Traits::Retain(object_);
+    }
 
-  ScopedTypeRef(const ScopedTypeRef<T, Traits>& that)
-      : object_(that.object_) {
-    if (object_)
-      Traits::Retain(object_);
-  }
+    ScopedTypeRef(const ScopedTypeRef<T, Traits>& that)
+        : object_(that.object_) {
+        if (object_) Traits::Retain(object_);
+    }
 
-  ~ScopedTypeRef() {
-    if (object_)
-      Traits::Release(object_);
-  }
+    ~ScopedTypeRef() {
+        if (object_) Traits::Release(object_);
+    }
 
-  ScopedTypeRef& operator=(const ScopedTypeRef<T, Traits>& that) {
-    reset(that.get(), scoped_policy::RETAIN);
-    return *this;
-  }
+    ScopedTypeRef& operator=(const ScopedTypeRef<T, Traits>& that) {
+        reset(that.get(), scoped_policy::RETAIN);
+        return *this;
+    }
 
-  // This is to be used only to take ownership of objects that are created
-  // by pass-by-pointer create functions. To enforce this, require that the
-  // object be reset to NULL before this may be used.
-  T* InitializeInto() WARN_UNUSED_RESULT {
-    DCHECK(!object_);
-    return &object_;
-  }
+    // This is to be used only to take ownership of objects that are created
+    // by pass-by-pointer create functions. To enforce this, require that the
+    // object be reset to NULL before this may be used.
+    T* InitializeInto() WARN_UNUSED_RESULT {
+        DCHECK(!object_);
+        return &object_;
+    }
 
-  void reset(T object = NULL,
-             scoped_policy::OwnershipPolicy policy = scoped_policy::ASSUME) {
-    if (object && policy == scoped_policy::RETAIN)
-      Traits::Retain(object);
-    if (object_)
-      Traits::Release(object_);
-    object_ = object;
-  }
+    void reset(T object                              = NULL,
+               scoped_policy::OwnershipPolicy policy = scoped_policy::ASSUME) {
+        if (object && policy == scoped_policy::RETAIN) Traits::Retain(object);
+        if (object_) Traits::Release(object_);
+        object_ = object;
+    }
 
-  bool operator==(T that) const {
-    return object_ == that;
-  }
+    bool operator==(T that) const { return object_ == that; }
 
-  bool operator!=(T that) const {
-    return object_ != that;
-  }
+    bool operator!=(T that) const { return object_ != that; }
 
-  operator T() const {
-    return object_;
-  }
+    operator T() const { return object_; }
 
-  T get() const {
-    return object_;
-  }
+    T get() const { return object_; }
 
-  void swap(ScopedTypeRef& that) {
-    T temp = that.object_;
-    that.object_ = object_;
-    object_ = temp;
-  }
+    void swap(ScopedTypeRef& that) {
+        T temp       = that.object_;
+        that.object_ = object_;
+        object_      = temp;
+    }
 
-  // ScopedTypeRef<>::release() is like scoped_ptr<>::release.  It is NOT
-  // a wrapper for Release().  To force a ScopedTypeRef<> object to call
-  // Release(), use ScopedTypeRef<>::reset().
-  T release() WARN_UNUSED_RESULT {
-    T temp = object_;
-    object_ = NULL;
-    return temp;
-  }
+    // ScopedTypeRef<>::release() is like scoped_ptr<>::release.  It is NOT
+    // a wrapper for Release().  To force a ScopedTypeRef<> object to call
+    // Release(), use ScopedTypeRef<>::reset().
+    T release() WARN_UNUSED_RESULT {
+        T temp  = object_;
+        object_ = NULL;
+        return temp;
+    }
 
- private:
-  T object_;
+private:
+    T object_;
 };
 
 }  // namespace butil

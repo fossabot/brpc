@@ -17,15 +17,15 @@
 
 // Date: 2014/09/22 11:57:43
 
-#ifndef  BVAR_VARIABLE_H
-#define  BVAR_VARIABLE_H
+#ifndef BVAR_VARIABLE_H
+#define BVAR_VARIABLE_H
 
-#include <ostream>                     // std::ostream
-#include <string>                      // std::string
-#include <vector>                      // std::vector
 #include <gflags/gflags_declare.h>
-#include "butil/macros.h"               // DISALLOW_COPY_AND_ASSIGN
-#include "butil/strings/string_piece.h" // butil::StringPiece
+#include <ostream>                       // std::ostream
+#include <string>                        // std::string
+#include <vector>                        // std::vector
+#include "butil/macros.h"                // DISALLOW_COPY_AND_ASSIGN
+#include "butil/strings/string_piece.h"  // butil::StringPiece
 
 #ifdef BAIDU_INTERNAL
 #include <boost/any.hpp>
@@ -39,18 +39,18 @@ namespace bvar {
 
 DECLARE_bool(save_series);
 
-// Bitwise masks of displayable targets 
+// Bitwise masks of displayable targets
 enum DisplayFilter {
-    DISPLAY_ON_HTML = 1,
+    DISPLAY_ON_HTML       = 1,
     DISPLAY_ON_PLAIN_TEXT = 2,
-    DISPLAY_ON_ALL = 3,
+    DISPLAY_ON_ALL        = 3,
 };
 
 // Implement this class to write variables into different places.
 // If dump() returns false, Variable::dump_exposed() stops and returns -1.
 class Dumper {
 public:
-    virtual ~Dumper() { }
+    virtual ~Dumper() {}
     virtual bool dump(const std::string& name,
                       const butil::StringPiece& description) = 0;
 };
@@ -79,8 +79,8 @@ struct DumpOptions {
 
 struct SeriesOptions {
     SeriesOptions() : fixed_length(true), test_only(false) {}
-    
-    bool fixed_length; // useless now
+
+    bool fixed_length;  // useless now
     bool test_only;
 };
 
@@ -117,8 +117,9 @@ public:
     // Describe saved series as a json-string into the stream.
     // The output will be ploted by flot.js
     // Returns 0 on success, 1 otherwise(this variable does not save series).
-    virtual int describe_series(std::ostream&, const SeriesOptions&) const
-    { return 1; }
+    virtual int describe_series(std::ostream&, const SeriesOptions&) const {
+        return 1;
+    }
 
     // Expose this variable globally so that it's counted in following
     // functions:
@@ -131,7 +132,7 @@ public:
                DisplayFilter display_filter = DISPLAY_ON_ALL) {
         return expose_impl(butil::StringPiece(), name, display_filter);
     }
- 
+
     // Expose this variable with a prefix.
     // Example:
     //   namespace foo {
@@ -163,7 +164,7 @@ public:
     const std::string& name() const { return _name; }
 
     // ====================================================================
-    
+
     // Put names of all exposed variables into `names'.
     // If you want to print all variables, you have to go through `names'
     // and call `describe_exposed' on each name. This prevents an iteration
@@ -176,21 +177,19 @@ public:
 
     // Find an exposed variable by `name' and put its description into `os'.
     // Returns 0 on found, -1 otherwise.
-    static int describe_exposed(const std::string& name,
-                                std::ostream& os,
+    static int describe_exposed(const std::string& name, std::ostream& os,
                                 bool quote_string = false,
-                                DisplayFilter = DISPLAY_ON_ALL);
+                                DisplayFilter     = DISPLAY_ON_ALL);
     // String form. Returns empty string when not found.
     static std::string describe_exposed(const std::string& name,
                                         bool quote_string = false,
-                                        DisplayFilter = DISPLAY_ON_ALL);
+                                        DisplayFilter     = DISPLAY_ON_ALL);
 
     // Describe saved series of variable `name' as a json-string into `os'.
     // The output will be ploted by flot.js
     // Returns 0 on success, 1 when the variable does not save series, -1
     // otherwise (no variable named so).
-    static int describe_series_exposed(const std::string& name,
-                                       std::ostream&,
+    static int describe_series_exposed(const std::string& name, std::ostream&,
                                        const SeriesOptions&);
 
 #ifdef BAIDU_INTERNAL
@@ -234,7 +233,7 @@ void to_underscored_name(std::string* out, const butil::StringPiece& name);
 // Make variables printable.
 namespace std {
 
-inline ostream& operator<<(ostream &os, const ::bvar::Variable &var) {
+inline ostream& operator<<(ostream& os, const ::bvar::Variable& var) {
     var.describe(os, false);
     return os;
 }

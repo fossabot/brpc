@@ -15,16 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #include "brpc/details/hpack.h"
 
-#include <limits>                                       // std::numeric_limits
+#include <limits>  // std::numeric_limits
 #include <vector>
-#include "butil/containers/bounded_queue.h"              // butil::BoundedQueue
-#include "butil/containers/flat_map.h"                   // butil::FlatMap
-#include "butil/containers/case_ignored_flat_map.h"      // butil::FlatMap
-#include "brpc/details/hpack-static-table.h"       // s_static_headers
-
+#include "brpc/details/hpack-static-table.h"         // s_static_headers
+#include "butil/containers/bounded_queue.h"          // butil::BoundedQueue
+#include "butil/containers/case_ignored_flat_map.h"  // butil::FlatMap
+#include "butil/containers/flat_map.h"               // butil::FlatMap
 
 namespace brpc {
 
@@ -40,8 +38,7 @@ struct IndexTableOptions {
         , start_index(0)
         , static_table(NULL)
         , static_table_size(0)
-        , need_indexes(false)
-    {}
+        , need_indexes(false) {}
 };
 
 struct HeaderAndHashCode {
@@ -51,33 +48,30 @@ struct HeaderAndHashCode {
 
 struct HeaderHasher {
     size_t operator()(const HPacker::Header& h) const {
-        return butil::CaseIgnoredHasher()(h.name)
-            * 101 + butil::DefaultHasher<std::string>()(h.value);
+        return butil::CaseIgnoredHasher()(h.name) * 101 +
+               butil::DefaultHasher<std::string>()(h.value);
     }
-    size_t operator()(const HeaderAndHashCode& h) const {
-        return h.hash_code;
-    }
+    size_t operator()(const HeaderAndHashCode& h) const { return h.hash_code; }
 };
 
 struct HeaderEqualTo {
-    bool operator()(const HPacker::Header& h1, const HPacker::Header& h2) const {
-        return butil::CaseIgnoredEqual()(h1.name, h2.name)
-            && butil::DefaultEqualTo<std::string>()(h1.value, h2.value);
+    bool operator()(const HPacker::Header& h1,
+                    const HPacker::Header& h2) const {
+        return butil::CaseIgnoredEqual()(h1.name, h2.name) &&
+               butil::DefaultEqualTo<std::string>()(h1.value, h2.value);
     }
-    bool operator()(const HPacker::Header& h1, const HeaderAndHashCode& h2) const {
+    bool operator()(const HPacker::Header& h1,
+                    const HeaderAndHashCode& h2) const {
         return operator()(h1, *h2.header);
     }
 };
 
 class BAIDU_CACHELINE_ALIGNMENT IndexTable {
-DISALLOW_COPY_AND_ASSIGN(IndexTable);
+    DISALLOW_COPY_AND_ASSIGN(IndexTable);
     typedef HPacker::Header Header;
+
 public:
-    IndexTable()
-        : _start_index(0)
-        , _add_times(0)
-        , _size(0)
-    {}
+    IndexTable() : _start_index(0), _add_times(0), _size(0) {}
     ~IndexTable() {}
     int Init(const IndexTableOptions& options);
 
@@ -121,7 +115,7 @@ public:
 
     void PopHeader() {
         DCHECK(!empty());
-        const Header* h = _header_queue.top();
+        const Header* h         = _header_queue.top();
         const size_t entry_size = HeaderSize(*h);
         DCHECK_LE(entry_size, _size);
         const uint64_t id = _add_times - _header_queue.size();
@@ -177,11 +171,12 @@ public:
     }
 
     void ResetMaxSize(size_t new_max_size) {
-        LOG(INFO) << this << ".size=" << _size << " new_max_size=" << new_max_size
+        LOG(INFO) << this << ".size=" << _size
+                  << " new_max_size=" << new_max_size
                   << " max_size=" << _max_size;
         if (new_max_size > _max_size) {
-            //LOG(ERROR) << "Invalid new_max_size=" << new_max_size;
-            //return -1;
+            // LOG(ERROR) << "Invalid new_max_size=" << new_max_size;
+            // return -1;
             _max_size = new_max_size;
             return;
         }
@@ -197,7 +192,6 @@ public:
     void Print(std::ostream& os) const;
 
 private:
-
     int _start_index;
     bool _need_indexes;
     uint64_t _add_times;  // Increase when adding a new entry.
@@ -221,23 +215,23 @@ int IndexTable::Init(const IndexTableOptions& options) {
     size_t num_headers = 0;
     if (options.static_table_size > 0) {
         num_headers = options.static_table_size;
-        _max_size = UINT_MAX;
+        _max_size   = UINT_MAX;
     } else {
         num_headers = options.max_size / (32 + 2);
         //                                     ^
         // name and value both have at least one byte in.
         _max_size = options.max_size;
     }
-    void *header_queue_storage = malloc(num_headers * sizeof(Header));
+    void* header_queue_storage = malloc(num_headers * sizeof(Header));
     if (!header_queue_storage) {
         LOG(ERROR) << "Fail to malloc space for " << num_headers << " headers";
         return -1;
     }
-    butil::BoundedQueue<Header> tmp(
-        header_queue_storage, num_headers * sizeof(Header),
-        butil::OWNS_STORAGE);
+    butil::BoundedQueue<Header> tmp(header_queue_storage,
+                                    num_headers * sizeof(Header),
+                                    butil::OWNS_STORAGE);
     _header_queue.swap(tmp);
-    _start_index = options.start_index;
+    _start_index  = options.start_index;
     _need_indexes = options.need_indexes;
     if (_need_indexes) {
         if (_name_index.init(num_headers * 2) != 0) {
@@ -253,7 +247,7 @@ int IndexTable::Init(const IndexTableOptions& options) {
         // Add header in the reverse order
         for (int i = options.static_table_size - 1; i >= 0; --i) {
             Header h;
-            h.name = options.static_table[i].name;
+            h.name  = options.static_table[i].name;
             h.value = options.static_table[i].value;
             AddHeader(h);
         }
@@ -262,15 +256,11 @@ int IndexTable::Init(const IndexTableOptions& options) {
 }
 
 void IndexTable::Print(std::ostream& os) const {
-    os << "{start_index=" << _start_index
-       << " need_indexes=" << _need_indexes
-       << " add_times=" << _add_times
-       << " max_size=" << _max_size
-       << " size=" << _size
-       << " header_queue.size=" << _header_queue.size()
+    os << "{start_index=" << _start_index << " need_indexes=" << _need_indexes
+       << " add_times=" << _add_times << " max_size=" << _max_size
+       << " size=" << _size << " header_queue.size=" << _header_queue.size()
        << " header_index.size=" << _header_index.size()
-       << " name_index.size=" << _name_index.size()
-       << '}';
+       << " name_index.size=" << _name_index.size() << '}';
 }
 
 struct HuffmanNode {
@@ -280,40 +270,39 @@ struct HuffmanNode {
 };
 
 class BAIDU_CACHELINE_ALIGNMENT HuffmanTree {
-DISALLOW_COPY_AND_ASSIGN(HuffmanTree);
+    DISALLOW_COPY_AND_ASSIGN(HuffmanTree);
+
 public:
     typedef uint16_t NodeId;
-    enum ConstValue {
-        NULL_NODE = 0,
-        ROOT_NODE = 1,
-        INVALID_VALUE = INT_MAX
-    };
+    enum ConstValue { NULL_NODE = 0, ROOT_NODE = 1, INVALID_VALUE = INT_MAX };
 
     HuffmanTree() {
         // Allocate memory for root
-        HuffmanNode root = { NULL_NODE, NULL_NODE, INVALID_VALUE };
+        HuffmanNode root = {NULL_NODE, NULL_NODE, INVALID_VALUE};
         _node_memory.push_back(root);
     }
 
     void AddLeafNode(int32_t value, const HuffmanCode& code) {
         NodeId cur = ROOT_NODE;
         for (int i = code.bit_len; i > 0; i--) {
-            CHECK_EQ(node(cur).value, INVALID_VALUE) << "value=" << value << "cur=" << cur;
+            CHECK_EQ(node(cur).value, INVALID_VALUE)
+                << "value=" << value << "cur=" << cur;
             if (code.code & (1u << (i - 1))) {
                 if (node(cur).right_child == NULL_NODE) {
-                    NodeId new_id = AllocNode();
+                    NodeId new_id         = AllocNode();
                     node(cur).right_child = new_id;
                 }
                 cur = node(cur).right_child;
             } else {
                 if (node(cur).left_child == NULL_NODE) {
-                    NodeId new_id = AllocNode();
+                    NodeId new_id        = AllocNode();
                     node(cur).left_child = new_id;
                 }
                 cur = node(cur).left_child;
             }
         }
-        CHECK_EQ(INVALID_VALUE, node(cur).value) << "value=" << value << " cur=" << cur;
+        CHECK_EQ(INVALID_VALUE, node(cur).value)
+            << "value=" << value << " cur=" << cur;
         CHECK_EQ(NULL_NODE, node(cur).left_child);
         CHECK_EQ(NULL_NODE, node(cur).right_child);
         node(cur).value = value;
@@ -330,47 +319,43 @@ public:
     }
 
 private:
-
-    HuffmanNode& node(NodeId id) {
-        return _node_memory[id - 1];
-    }
+    HuffmanNode& node(NodeId id) { return _node_memory[id - 1]; }
 
     NodeId AllocNode() {
-        const NodeId id = _node_memory.size() + 1;
-        HuffmanNode node = { NULL_NODE, NULL_NODE, INVALID_VALUE };
+        const NodeId id  = _node_memory.size() + 1;
+        HuffmanNode node = {NULL_NODE, NULL_NODE, INVALID_VALUE};
         _node_memory.push_back(node);
         return id;
     }
     std::vector<HuffmanNode> _node_memory;
-
 };
 
 class HuffmanEncoder {
-DISALLOW_COPY_AND_ASSIGN(HuffmanEncoder);
+    DISALLOW_COPY_AND_ASSIGN(HuffmanEncoder);
+
 public:
     HuffmanEncoder(butil::IOBufAppender* out, const HuffmanCode* table)
         : _out(out)
         , _table(table)
         , _partial_byte(0)
         , _remain_bit(8)
-        , _out_bytes(0)
-    {}
+        , _out_bytes(0) {}
 
     void Encode(unsigned char byte) {
         const HuffmanCode code = _table[byte];
-        uint16_t bits_left = code.bit_len;
+        uint16_t bits_left     = code.bit_len;
         while (bits_left) {
             const uint16_t adding_bits_len = std::min(_remain_bit, bits_left);
-            const uint8_t adding_bits = static_cast<uint8_t>(
-                    (code.code & ((1u << bits_left) - 1))   // clear leading bits
-                            >> (bits_left - adding_bits_len));  // align to LSB
+            const uint8_t adding_bits      = static_cast<uint8_t>(
+                (code.code & ((1u << bits_left) - 1))  // clear leading bits
+                >> (bits_left - adding_bits_len));     // align to LSB
             _partial_byte |= adding_bits << (_remain_bit - adding_bits_len);
             _remain_bit -= adding_bits_len;
             bits_left -= adding_bits_len;
             if (!_remain_bit) {
                 ++_out_bytes;
                 _out->push_back(_partial_byte);
-                _remain_bit = 8;
+                _remain_bit   = 8;
                 _partial_byte = 0;
             }
         }
@@ -387,8 +372,8 @@ public:
         // is invoked.
         _out->push_back(_partial_byte);
         _partial_byte = 0;
-        _remain_bit = 0;
-        _out = NULL;
+        _remain_bit   = 0;
+        _out          = NULL;
         ++_out_bytes;
     }
 
@@ -397,13 +382,14 @@ public:
 private:
     butil::IOBufAppender* _out;
     const HuffmanCode* _table;
-    uint8_t  _partial_byte;
+    uint8_t _partial_byte;
     uint16_t _remain_bit;
     uint32_t _out_bytes;
 };
 
 class HuffmanDecoder {
-DISALLOW_COPY_AND_ASSIGN(HuffmanDecoder);
+    DISALLOW_COPY_AND_ASSIGN(HuffmanDecoder);
+
 public:
     HuffmanDecoder(std::string* out, const HuffmanTree* tree)
         // FIXME: resizing of out is costly
@@ -411,8 +397,7 @@ public:
         , _tree(tree)
         , _cur_node(tree->node(HuffmanTree::ROOT_NODE))
         , _cur_depth(0)  // Depth of root node is 0
-        , _padding(true)
-    {}
+        , _padding(true) {}
     int Decode(uint8_t byte) {
         for (int i = 7; i >= 0; --i) {
             if (byte & (1u << i)) {
@@ -427,9 +412,9 @@ public:
                         return -1;
                     }
                     _out->push_back(static_cast<uint8_t>(_cur_node->value));
-                    _cur_node = _tree->node(HuffmanTree::ROOT_NODE);
+                    _cur_node  = _tree->node(HuffmanTree::ROOT_NODE);
                     _cur_depth = 0;
-                    _padding = true;
+                    _padding   = true;
                     continue;
                 }
                 _padding &= 1;
@@ -445,9 +430,9 @@ public:
                         return -1;
                     }
                     _out->push_back(static_cast<uint8_t>(_cur_node->value));
-                    _cur_node = _tree->node(HuffmanTree::ROOT_NODE);
+                    _cur_node  = _tree->node(HuffmanTree::ROOT_NODE);
                     _cur_depth = 0;
-                    _padding = true;
+                    _padding   = true;
                     continue;
                 }
                 _padding &= 0;
@@ -467,6 +452,7 @@ public:
         // https://tools.ietf.org/html/rfc7541#section-5.2
         return -1;
     }
+
 private:
     std::string* _out;
     const HuffmanTree* _tree;
@@ -499,8 +485,8 @@ inline void EncodeInteger(butil::IOBufAppender* out, uint8_t msb,
 }
 
 // Static variables
-static HuffmanTree* s_huffman_tree = NULL;
-static IndexTable* s_static_table = NULL;
+static HuffmanTree* s_huffman_tree  = NULL;
+static IndexTable* s_static_table   = NULL;
 static pthread_once_t s_create_once = PTHREAD_ONCE_INIT;
 
 static void CreateStaticTableOrDie() {
@@ -509,12 +495,12 @@ static void CreateStaticTableOrDie() {
         s_huffman_tree->AddLeafNode(i, s_huffman_table[i]);
     }
     IndexTableOptions options;
-    options.max_size = UINT_MAX;
-    options.static_table = s_static_headers;
+    options.max_size          = UINT_MAX;
+    options.static_table      = s_static_headers;
     options.static_table_size = ARRAY_SIZE(s_static_headers);
-    options.start_index = 1;
-    options.need_indexes = true;
-    s_static_table = new IndexTable;
+    options.start_index       = 1;
+    options.need_indexes      = true;
+    s_static_table            = new IndexTable;
     if (s_static_table->Init(options) != 0) {
         LOG(ERROR) << "Fail to init static table";
         exit(1);
@@ -534,17 +520,17 @@ static const size_t MAX_HPACK_INTEGER = 10 * 1024 * 1024ul;
 inline ssize_t DecodeInteger(butil::IOBufBytesIterator& iter,
                              uint8_t prefix_size, uint32_t* value) {
     if (iter == NULL) {
-        return 0; // No enough data
+        return 0;  // No enough data
     }
     uint8_t first_byte = *iter;
-    uint64_t tmp = first_byte & ((1 << prefix_size) - 1);
+    uint64_t tmp       = first_byte & ((1 << prefix_size) - 1);
     ++iter;
     if (tmp < ((1u << prefix_size) - 1)) {
         *value = static_cast<uint32_t>(tmp);
         return 1;
     }
     uint8_t cur_byte = 0;
-    int m = 0;
+    int m            = 0;
     ssize_t in_bytes = 1;
     do {
         if (!iter) {
@@ -567,7 +553,7 @@ inline ssize_t DecodeInteger(butil::IOBufBytesIterator& iter,
     return in_bytes;
 }
 
-template <bool LOWERCASE> // use template to remove dead branches.
+template <bool LOWERCASE>  // use template to remove dead branches.
 inline void EncodeString(butil::IOBufAppender* out, const std::string& s,
                          bool huffman_encoding) {
     if (!huffman_encoding) {
@@ -585,7 +571,8 @@ inline void EncodeString(butil::IOBufAppender* out, const std::string& s,
     uint32_t bit_len = 0;
     if (LOWERCASE) {
         for (size_t i = 0; i < s.size(); ++i) {
-            bit_len += s_huffman_table[(uint8_t)butil::ascii_tolower(s[i])].bit_len;
+            bit_len +=
+                s_huffman_table[(uint8_t)butil::ascii_tolower(s[i])].bit_len;
         }
     } else {
         for (size_t i = 0; i < s.size(); ++i) {
@@ -611,8 +598,8 @@ inline ssize_t DecodeString(butil::IOBufBytesIterator& iter, std::string* out) {
         return 0;
     }
     const bool huffman = *iter & 0x80;
-    uint32_t length = 0;
-    ssize_t in_bytes = DecodeInteger(iter, 7, &length);
+    uint32_t length    = 0;
+    ssize_t in_bytes   = DecodeInteger(iter, 7, &length);
     if (in_bytes <= 0) {
         return -1;
     }
@@ -637,9 +624,7 @@ inline ssize_t DecodeString(butil::IOBufBytesIterator& iter, std::string* out) {
     return in_bytes;
 }
 
-HPacker::HPacker()
-    : _encode_table(NULL)
-    , _decode_table(NULL) {
+HPacker::HPacker() : _encode_table(NULL), _decode_table(NULL) {
     CreateStaticTableOnceOrDie();
 }
 
@@ -658,19 +643,19 @@ int HPacker::Init(size_t max_table_size) {
     CHECK(!_encode_table);
     CHECK(!_decode_table);
     IndexTableOptions encode_table_options;
-    encode_table_options.max_size = max_table_size;
-    encode_table_options.start_index = s_static_table->end_index();
+    encode_table_options.max_size     = max_table_size;
+    encode_table_options.start_index  = s_static_table->end_index();
     encode_table_options.need_indexes = true;
-    _encode_table = new IndexTable;
+    _encode_table                     = new IndexTable;
     if (_encode_table->Init(encode_table_options) != 0) {
         LOG(ERROR) << "Fail to init encode table";
         return -1;
     }
     IndexTableOptions decode_table_options;
-    decode_table_options.max_size = max_table_size;
-    decode_table_options.start_index = s_static_table->end_index();
+    decode_table_options.max_size     = max_table_size;
+    decode_table_options.start_index  = s_static_table->end_index();
     decode_table_options.need_indexes = false;
-    _decode_table = new IndexTable;
+    _decode_table                     = new IndexTable;
     if (_decode_table->Init(decode_table_options) != 0) {
         LOG(ERROR) << "Fail to init decode table";
         return -1;
@@ -680,8 +665,8 @@ int HPacker::Init(size_t max_table_size) {
 
 inline int HPacker::FindHeaderFromIndexTable(const Header& h) const {
     // saves a hash (which is a hotspot) for ones missing s_static_table
-    const HeaderAndHashCode hhc = { HeaderHasher()(h), &h };
-    int index = s_static_table->GetIndexOfHeader(hhc);
+    const HeaderAndHashCode hhc = {HeaderHasher()(h), &h};
+    int index                   = s_static_table->GetIndexOfHeader(hhc);
     if (index > 0) {
         return index;
     }
@@ -704,8 +689,8 @@ void HPacker::Encode(butil::IOBufAppender* out, const Header& header,
             // This header is already in the index table
             return EncodeInteger(out, 0x80, 7, index);
         }
-    } // The header can't be indexed or the header wasn't in the index table
-    
+    }  // The header can't be indexed or the header wasn't in the index table
+
     const int name_index = FindNameFromIndexTable(header.name);
     if (options.index_policy == HPACK_INDEX_HEADER) {
         // TODO: Add Options that indexes name independently
@@ -730,14 +715,16 @@ void HPacker::Encode(butil::IOBufAppender* out, const Header& header,
 
 inline const HPacker::Header* HPacker::HeaderAt(int index) const {
     return (index >= _decode_table->start_index())
-            ? _decode_table->HeaderAt(index) : s_static_table->HeaderAt(index);
+               ? _decode_table->HeaderAt(index)
+               : s_static_table->HeaderAt(index);
 }
 
-inline ssize_t HPacker::DecodeWithKnownPrefix(
-    butil::IOBufBytesIterator& iter, Header* h, uint8_t prefix_size) const {
-    int index = 0;
+inline ssize_t HPacker::DecodeWithKnownPrefix(butil::IOBufBytesIterator& iter,
+                                              Header* h,
+                                              uint8_t prefix_size) const {
+    int index           = 0;
     ssize_t index_bytes = DecodeInteger(iter, prefix_size, (uint32_t*)&index);
-    ssize_t name_bytes = 0;
+    ssize_t name_bytes  = 0;
     if (index_bytes <= 0) {
         LOG(ERROR) << "Fail to decode index";
         return -1;
@@ -783,7 +770,7 @@ ssize_t HPacker::Decode(butil::IOBufBytesIterator& iter, Header* h) {
         // (1xxx) Indexed Header Field Representation
         // https://tools.ietf.org/html/rfc7541#section-6.1
         {
-            int index = 0;
+            int index           = 0;
             ssize_t index_bytes = DecodeInteger(iter, 7, (uint32_t*)&index);
             if (index_bytes <= 0) {
                 return index_bytes;
@@ -817,7 +804,7 @@ ssize_t HPacker::Decode(butil::IOBufBytesIterator& iter, Header* h) {
         // (001x) Dynamic Table Size Update
         // https://tools.ietf.org/html/rfc7541#section-6.3
         {
-            uint32_t max_size = 0;
+            uint32_t max_size  = 0;
             ssize_t read_bytes = DecodeInteger(iter, 5, &max_size);
             if (read_bytes <= 0) {
                 return read_bytes;
@@ -870,7 +857,7 @@ void HPacker::Describe(std::ostream& os, const DescribeOptions& opt) const {
 void tolower(std::string* s) {
     const char* d = s->c_str();
     for (size_t i = 0; i < s->size(); ++i) {
-        const char c = d[i];
+        const char c  = d[i];
         const char c2 = butil::ascii_tolower(c);
         if (c2 != c) {
             (*s)[i] = c2;
@@ -878,4 +865,4 @@ void tolower(std::string* s) {
     }
 }
 
-} // namespace brpc
+}  // namespace brpc

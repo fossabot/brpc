@@ -20,33 +20,40 @@
 
 #include "butil/sys_byteorder.h"
 
-
 namespace brpc {
 
 // Sync with
 //   https://github.com/mongodb/mongo-c-driver/blob/master/src/mongoc/mongoc-opcode.h
 //   https://docs.mongodb.org/manual/reference/mongodb-wire-protocol/#request-opcodes
 enum MongoOpCode {
-    MONGO_OPCODE_REPLY         = 1,
-    MONGO_OPCODE_MSG           = 1000,
-    MONGO_OPCODE_UPDATE        = 2001,
-    MONGO_OPCODE_INSERT        = 2002,
-    MONGO_OPCODE_QUERY         = 2004,
-    MONGO_OPCODE_GET_MORE      = 2005,
-    MONGO_OPCODE_DELETE        = 2006,
-    MONGO_OPCODE_KILL_CURSORS  = 2007,
+    MONGO_OPCODE_REPLY        = 1,
+    MONGO_OPCODE_MSG          = 1000,
+    MONGO_OPCODE_UPDATE       = 2001,
+    MONGO_OPCODE_INSERT       = 2002,
+    MONGO_OPCODE_QUERY        = 2004,
+    MONGO_OPCODE_GET_MORE     = 2005,
+    MONGO_OPCODE_DELETE       = 2006,
+    MONGO_OPCODE_KILL_CURSORS = 2007,
 };
 
 inline bool is_mongo_opcode(int32_t op_code) {
     switch (op_code) {
-    case MONGO_OPCODE_REPLY:         return true;
-    case MONGO_OPCODE_MSG:           return true;
-    case MONGO_OPCODE_UPDATE:        return true; 
-    case MONGO_OPCODE_INSERT:        return true; 
-    case MONGO_OPCODE_QUERY:         return true; 
-    case MONGO_OPCODE_GET_MORE:      return true; 
-    case MONGO_OPCODE_DELETE:        return true; 
-    case MONGO_OPCODE_KILL_CURSORS : return true;
+    case MONGO_OPCODE_REPLY:
+        return true;
+    case MONGO_OPCODE_MSG:
+        return true;
+    case MONGO_OPCODE_UPDATE:
+        return true;
+    case MONGO_OPCODE_INSERT:
+        return true;
+    case MONGO_OPCODE_QUERY:
+        return true;
+    case MONGO_OPCODE_GET_MORE:
+        return true;
+    case MONGO_OPCODE_DELETE:
+        return true;
+    case MONGO_OPCODE_KILL_CURSORS:
+        return true;
     }
     return false;
 }
@@ -64,15 +71,14 @@ struct mongo_head_t {
     void make_host_endian() {
         if (!ARCH_CPU_LITTLE_ENDIAN) {
             message_length = butil::ByteSwap((uint32_t)message_length);
-            request_id = butil::ByteSwap((uint32_t)request_id);
-            response_to = butil::ByteSwap((uint32_t)response_to);
-            op_code = butil::ByteSwap((uint32_t)op_code);
+            request_id     = butil::ByteSwap((uint32_t)request_id);
+            response_to    = butil::ByteSwap((uint32_t)response_to);
+            op_code        = butil::ByteSwap((uint32_t)op_code);
         }
     }
 };
 #pragma pack()
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_MONGO_HEAD_H
+#endif  // BRPC_MONGO_HEAD_H

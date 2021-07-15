@@ -15,12 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_BUILTIN_SORTTABLE_JS_H
 #define BRPC_BUILTIN_SORTTABLE_JS_H
 
 #include "butil/iobuf.h"
-
 
 namespace brpc {
 
@@ -30,7 +28,6 @@ namespace brpc {
 const char* sorttable_js();
 const butil::IOBuf& sorttable_js_iobuf();
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_BUILTIN_SORTTABLE_JS_H
+#endif  // BRPC_BUILTIN_SORTTABLE_JS_H

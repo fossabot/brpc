@@ -10,13 +10,13 @@ namespace butil {
 
 void CancellationFlag::Set() {
 #if !defined(NDEBUG)
-  DCHECK_EQ(set_on_, PlatformThread::CurrentId());
+    DCHECK_EQ(set_on_, PlatformThread::CurrentId());
 #endif
-  butil::subtle::Release_Store(&flag_, 1);
+    butil::subtle::Release_Store(&flag_, 1);
 }
 
 bool CancellationFlag::IsSet() const {
-  return butil::subtle::Acquire_Load(&flag_) != 0;
+    return butil::subtle::Acquire_Load(&flag_) != 0;
 }
 
 }  // namespace butil

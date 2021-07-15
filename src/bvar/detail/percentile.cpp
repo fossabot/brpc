@@ -45,10 +45,10 @@ inline uint32_t log2(uint32_t x) {
     x |= (x >> 4);
     x |= (x >> 8);
     x |= (x >> 16);
-    return(ones32(x) - 1 - y);
+    return (ones32(x) - 1 - y);
 }
 
-inline size_t get_interval_index(int64_t &x) {
+inline size_t get_interval_index(int64_t& x) {
     if (x <= 2) {
         return 0;
     } else if (x > std::numeric_limits<uint32_t>::max()) {
@@ -62,11 +62,11 @@ inline size_t get_interval_index(int64_t &x) {
 class AddLatency {
 public:
     AddLatency(int64_t latency) : _latency(latency) {}
-    
+
     void operator()(GlobalValue<Percentile::combiner_type>& global_value,
                     ThreadLocalPercentileSamples& local_value) const {
         // Copy to latency since get_interval_index may change input.
-        int64_t latency = _latency;
+        int64_t latency    = _latency;
         const size_t index = get_interval_index(latency);
         PercentileInterval<ThreadLocalPercentileSamples::SAMPLE_SIZE>&
             interval = local_value.get_interval_at(index);
@@ -81,6 +81,7 @@ public:
         interval.add64(latency);
         ++local_value._num_added;
     }
+
 private:
     int64_t _latency;
 };
@@ -107,7 +108,7 @@ Percentile::value_type Percentile::get_value() const {
     return _combiner->combine_agents();
 }
 
-Percentile &Percentile::operator<<(int64_t latency) {
+Percentile& Percentile::operator<<(int64_t latency) {
     agent_type* agent = _combiner->get_or_create_tls_agent();
     if (BAIDU_UNLIKELY(!agent)) {
         LOG(FATAL) << "Fail to create agent";
@@ -119,10 +120,10 @@ Percentile &Percentile::operator<<(int64_t latency) {
         // overall distribution of other values too much.
         if (!_debug_name.empty()) {
             LOG(WARNING) << "Input=" << latency << " to `" << _debug_name
-                       << "' is negative, drop";
+                         << "' is negative, drop";
         } else {
             LOG(WARNING) << "Input=" << latency << " to Percentile("
-                       << (void*)this << ") is negative, drop";
+                         << (void*)this << ") is negative, drop";
         }
         return *this;
     }

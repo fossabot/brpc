@@ -10,7 +10,7 @@ namespace {
 
 // Pointer to the function that's called by DumpWithoutCrashing() to dump the
 // process's memory.
-void (CDECL *dump_without_crashing_function_)() = NULL;
+void(CDECL *dump_without_crashing_function_)() = NULL;
 
 }  // namespace
 
@@ -19,12 +19,11 @@ namespace butil {
 namespace debug {
 
 void DumpWithoutCrashing() {
-  if (dump_without_crashing_function_)
-    (*dump_without_crashing_function_)();
+    if (dump_without_crashing_function_) (*dump_without_crashing_function_)();
 }
 
-void SetDumpWithoutCrashingFunction(void (CDECL *function)()) {
-  dump_without_crashing_function_ = function;
+void SetDumpWithoutCrashingFunction(void(CDECL *function)()) {
+    dump_without_crashing_function_ = function;
 }
 
 }  // namespace debug

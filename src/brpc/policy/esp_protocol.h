@@ -18,38 +18,29 @@
 #ifndef BRPC_POLICY_ESP_PROTOCOL_H
 #define BRPC_POLICY_ESP_PROTOCOL_H
 
-#include <unistd.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "brpc/protocol.h"
-
 
 namespace brpc {
 namespace policy {
 
-ParseResult ParseEspMessage(
-        butil::IOBuf* source, 
-        Socket* socket, 
-        bool read_eof, 
-        const void *arg);
+ParseResult ParseEspMessage(butil::IOBuf* source, Socket* socket, bool read_eof,
+                            const void* arg);
 
-void SerializeEspRequest(
-        butil::IOBuf* request_buf, 
-        Controller* controller,
-        const google::protobuf::Message* request);
+void SerializeEspRequest(butil::IOBuf* request_buf, Controller* controller,
+                         const google::protobuf::Message* request);
 
-void PackEspRequest(butil::IOBuf* packet_buf,
-                    SocketMessage**,
+void PackEspRequest(butil::IOBuf* packet_buf, SocketMessage**,
                     uint64_t correlation_id,
                     const google::protobuf::MethodDescriptor*,
-                    Controller* controller,
-                    const butil::IOBuf&,
+                    Controller* controller, const butil::IOBuf&,
                     const Authenticator*);
 
 void ProcessEspResponse(InputMessageBase* msg);
 
-} // namespace policy
-} // namespace brpc
+}  // namespace policy
+}  // namespace brpc
 
-
-#endif // BRPC_POLICY_ESP_PROTOCOL_H
+#endif  // BRPC_POLICY_ESP_PROTOCOL_H

@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_CONNECTIONS_SERVICE_H
 #define BRPC_CONNECTIONS_SERVICE_H
 
-#include "brpc/socket_id.h"
-#include "brpc/builtin_service.pb.h"
 #include "brpc/builtin/tabbed.h"
-
+#include "brpc/builtin_service.pb.h"
+#include "brpc/socket_id.h"
 
 namespace brpc {
 
@@ -35,13 +33,12 @@ public:
                         ::google::protobuf::Closure* done);
 
     void GetTabInfo(TabInfoList* info_list) const;
-    
+
 private:
     void PrintConnections(std::ostream& os, const std::vector<SocketId>& conns,
                           bool use_html, const Server*, bool need_local) const;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_CONNECTIONS_SERVICE_H
+#endif  // BRPC_CONNECTIONS_SERVICE_H

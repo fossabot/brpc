@@ -24,12 +24,12 @@
 
 #include <pthread.h>
 #include <sys/socket.h>
-#include "bthread/types.h"
 #include "bthread/errno.h"
+#include "bthread/types.h"
 
 #if defined(__cplusplus)
-#  include <iostream>
-#  include "bthread/mutex.h"        // use bthread_mutex_t in the RAII way
+#include <iostream>
+#include "bthread/mutex.h"  // use bthread_mutex_t in the RAII way
 #endif
 
 #include "bthread/id.h"
@@ -42,8 +42,7 @@ __BEGIN_DECLS
 // Returns 0 on success, errno otherwise.
 extern int bthread_start_urgent(bthread_t* __restrict tid,
                                 const bthread_attr_t* __restrict attr,
-                                void * (*fn)(void*),
-                                void* __restrict args);
+                                void* (*fn)(void*), void* __restrict args);
 
 // Create bthread `fn(args)' with attributes `attr' and put the identifier into
 // `tid'. This function behaves closer to pthread_create: after scheduling the
@@ -52,8 +51,7 @@ extern int bthread_start_urgent(bthread_t* __restrict tid,
 // Return 0 on success, errno otherwise.
 extern int bthread_start_background(bthread_t* __restrict tid,
                                     const bthread_attr_t* __restrict attr,
-                                    void * (*fn)(void*),
-                                    void* __restrict args);
+                                    void* (*fn)(void*), void* __restrict args);
 
 // Wake up operations blocking the thread. Different functions may behave
 // differently:
@@ -111,12 +109,12 @@ extern int bthread_join(bthread_t bt, void** bthread_return);
 
 // Track and join many bthreads.
 // Notice that all bthread_list* functions are NOT thread-safe.
-extern int  bthread_list_init(bthread_list_t* list,
-                              unsigned size, unsigned conflict_size);
+extern int bthread_list_init(bthread_list_t* list, unsigned size,
+                             unsigned conflict_size);
 extern void bthread_list_destroy(bthread_list_t* list);
-extern int  bthread_list_add(bthread_list_t* list, bthread_t tid);
+extern int bthread_list_add(bthread_list_t* list, bthread_t tid);
 extern int bthread_list_stop(bthread_list_t* list);
-extern int  bthread_list_join(bthread_list_t* list);
+extern int bthread_list_join(bthread_list_t* list);
 
 // ------------------------------------------
 // Functions for handling attributes.
@@ -146,8 +144,8 @@ extern int bthread_getconcurrency(void);
 // NOTE: currently concurrency cannot be reduced after any bthread created.
 extern int bthread_setconcurrency(int num);
 
-// Yield processor to another bthread. 
-// Notice that current implementation is not fair, which means that 
+// Yield processor to another bthread.
+// Notice that current implementation is not fair, which means that
 // even if bthread_yield() is called, suspended threads may still starve.
 extern int bthread_yield(void);
 
@@ -211,10 +209,9 @@ extern int bthread_cond_wait(bthread_cond_t* __restrict cond,
 // `abstime'. `mutex' is assumed to be locked before.  `abstime' is an
 // absolute time specification; zero is the beginning of the epoch
 // (00:00:00 GMT, January 1, 1970).
-extern int bthread_cond_timedwait(
-    bthread_cond_t* __restrict cond,
-    bthread_mutex_t* __restrict mutex,
-    const struct timespec* __restrict abstime);
+extern int bthread_cond_timedwait(bthread_cond_t* __restrict cond,
+                                  bthread_mutex_t* __restrict mutex,
+                                  const struct timespec* __restrict abstime);
 
 // -------------------------------------------
 // Functions for handling read-write locks.
@@ -268,9 +265,7 @@ extern int bthread_rwlockattr_getkind_np(const bthread_rwlockattr_t* attr,
                                          int* pref);
 
 // Set reader/write preference.
-extern int bthread_rwlockattr_setkind_np(bthread_rwlockattr_t* attr,
-                                         int pref);
-
+extern int bthread_rwlockattr_setkind_np(bthread_rwlockattr_t* attr, int pref);
 
 // ----------------------------------------------------------------------
 // Functions for handling barrier which is a new feature in 1003.1j-2000.
@@ -285,8 +280,8 @@ extern int bthread_barrier_destroy(bthread_barrier_t* barrier);
 extern int bthread_barrier_wait(bthread_barrier_t* barrier);
 
 // ---------------------------------------------------------------------
-// Functions for handling thread-specific data. 
-// Notice that they can be used in pthread: get pthread-specific data in 
+// Functions for handling thread-specific data.
+// Notice that they can be used in pthread: get pthread-specific data in
 // pthreads and get bthread-specific data in bthreads.
 // ---------------------------------------------------------------------
 
@@ -313,7 +308,7 @@ extern int bthread_key_delete(bthread_key_t key);
 // PTHREAD_DESTRUCTOR_ITERATIONS times to clear the slots.
 // NOTE: If the thread is not created by brpc server and lifetime is
 // very short(doing a little thing and exit), avoid using bthread-local. The
-// reason is that bthread-local always allocate keytable on first call to 
+// reason is that bthread-local always allocate keytable on first call to
 // bthread_setspecific, the overhead is negligible in long-lived threads,
 // but noticeable in shortly-lived threads. Threads in brpc server
 // are special since they reuse keytables from a bthread_keytable_pool_t

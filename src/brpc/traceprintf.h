@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_TRACEPRINTF_H
 #define BRPC_TRACEPRINTF_H
 
@@ -24,23 +23,22 @@
 // To brpc developers: This is a header included by user, don't depend
 // on internal structures, use opaque pointers instead.
 
-
 namespace brpc {
 
 bool CanAnnotateSpan();
 void AnnotateSpan(const char* fmt, ...);
 
-} // namespace brpc
-
+}  // namespace brpc
 
 // Use this macro to print log to /rpcz and tracing system.
 // If rpcz is not enabled, arguments to this macro is NOT evaluated, don't
 // have (critical) side effects in arguments.
-#define TRACEPRINTF(fmt, args...)                                       \
-    do {                                                                \
-        if (::brpc::CanAnnotateSpan()) {                          \
-            ::brpc::AnnotateSpan("[" __FILE__ ":" BAIDU_SYMBOLSTR(__LINE__) "] " fmt, ##args);           \
-        }                                                               \
+#define TRACEPRINTF(fmt, args...)                                             \
+    do {                                                                      \
+        if (::brpc::CanAnnotateSpan()) {                                      \
+            ::brpc::AnnotateSpan(                                             \
+                "[" __FILE__ ":" BAIDU_SYMBOLSTR(__LINE__) "] " fmt, ##args); \
+        }                                                                     \
     } while (0)
 
 #endif  // BRPC_TRACEPRINTF_H

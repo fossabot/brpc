@@ -20,13 +20,13 @@ namespace butil {
 // Clears internal memory of an STL object.
 // STL clear()/reserve(0) does not always free internal memory allocated
 // This function uses swap/destructor to ensure the internal memory is freed.
-template<class T>
+template <class T>
 void STLClearObject(T* obj) {
-  T tmp;
-  tmp.swap(*obj);
-  // Sometimes "T tmp" allocates objects with memory (arena implementation?).
-  // Hence using additional reserve(0) even if it doesn't always work.
-  obj->reserve(0);
+    T tmp;
+    tmp.swap(*obj);
+    // Sometimes "T tmp" allocates objects with memory (arena implementation?).
+    // Hence using additional reserve(0) even if it doesn't always work.
+    obj->reserve(0);
 }
 
 // For a range within a container of pointers, calls delete (non-array version)
@@ -40,11 +40,11 @@ void STLClearObject(T* obj) {
 // stale pointer.
 template <class ForwardIterator>
 void STLDeleteContainerPointers(ForwardIterator begin, ForwardIterator end) {
-  while (begin != end) {
-    ForwardIterator temp = begin;
-    ++begin;
-    delete *temp;
-  }
+    while (begin != end) {
+        ForwardIterator temp = begin;
+        ++begin;
+        delete *temp;
+    }
 }
 
 // For a range within a container of pairs, calls delete (non-array version) on
@@ -57,12 +57,12 @@ void STLDeleteContainerPointers(ForwardIterator begin, ForwardIterator end) {
 template <class ForwardIterator>
 void STLDeleteContainerPairPointers(ForwardIterator begin,
                                     ForwardIterator end) {
-  while (begin != end) {
-    ForwardIterator temp = begin;
-    ++begin;
-    delete temp->first;
-    delete temp->second;
-  }
+    while (begin != end) {
+        ForwardIterator temp = begin;
+        ++begin;
+        delete temp->first;
+        delete temp->second;
+    }
 }
 
 // For a range within a container of pairs, calls delete (non-array version) on
@@ -71,11 +71,11 @@ void STLDeleteContainerPairPointers(ForwardIterator begin,
 template <class ForwardIterator>
 void STLDeleteContainerPairFirstPointers(ForwardIterator begin,
                                          ForwardIterator end) {
-  while (begin != end) {
-    ForwardIterator temp = begin;
-    ++begin;
-    delete temp->first;
-  }
+    while (begin != end) {
+        ForwardIterator temp = begin;
+        ++begin;
+        delete temp->first;
+    }
 }
 
 // For a range within a container of pairs, calls delete.
@@ -85,24 +85,24 @@ void STLDeleteContainerPairFirstPointers(ForwardIterator begin,
 template <class ForwardIterator>
 void STLDeleteContainerPairSecondPointers(ForwardIterator begin,
                                           ForwardIterator end) {
-  while (begin != end) {
-    ForwardIterator temp = begin;
-    ++begin;
-    delete temp->second;
-  }
+    while (begin != end) {
+        ForwardIterator temp = begin;
+        ++begin;
+        delete temp->second;
+    }
 }
 
 // To treat a possibly-empty vector as an array, use these functions.
 // If you know the array will never be empty, you can use &*v.begin()
 // directly, but that is undefined behaviour if |v| is empty.
-template<typename T>
+template <typename T>
 inline T* vector_as_array(std::vector<T>* v) {
-  return v->empty() ? NULL : &*v->begin();
+    return v->empty() ? NULL : &*v->begin();
 }
 
-template<typename T>
+template <typename T>
 inline const T* vector_as_array(const std::vector<T>* v) {
-  return v->empty() ? NULL : &*v->begin();
+    return v->empty() ? NULL : &*v->begin();
 }
 
 // Return a mutable char* pointing to a string's internal buffer,
@@ -118,8 +118,8 @@ inline const T* vector_as_array(const std::vector<T>* v) {
 // proposes this as the method. According to Matt Austern, this should
 // already work on all current implementations.
 inline char* string_as_array(std::string* str) {
-  // DO NOT USE const_cast<char*>(str->data())
-  return str->empty() ? NULL : &*str->begin();
+    // DO NOT USE const_cast<char*>(str->data())
+    return str->empty() ? NULL : &*str->begin();
 }
 
 // The following functions are useful for cleaning up STL containers whose
@@ -137,10 +137,9 @@ inline char* string_as_array(std::string* str) {
 // elements are deleted when the STLElementDeleter goes out of scope.
 template <class T>
 void STLDeleteElements(T* container) {
-  if (!container)
-    return;
-  STLDeleteContainerPointers(container->begin(), container->end());
-  container->clear();
+    if (!container) return;
+    STLDeleteContainerPointers(container->begin(), container->end());
+    container->clear();
 }
 
 // Given an STL container consisting of (key, value) pairs, STLDeleteValues
@@ -148,13 +147,11 @@ void STLDeleteElements(T* container) {
 // in the case it's given a NULL pointer.
 template <class T>
 void STLDeleteValues(T* container) {
-  if (!container)
-    return;
-  for (typename T::iterator i(container->begin()); i != container->end(); ++i)
-    delete i->second;
-  container->clear();
+    if (!container) return;
+    for (typename T::iterator i(container->begin()); i != container->end(); ++i)
+        delete i->second;
+    container->clear();
 }
-
 
 // The following classes provide a convenient way to delete all elements or
 // values from STL containers when they goes out of scope.  This greatly
@@ -169,90 +166,86 @@ void STLDeleteValues(T* container) {
 
 // Given a pointer to an STL container this class will delete all the element
 // pointers when it goes out of scope.
-template<class T>
+template <class T>
 class STLElementDeleter {
- public:
-  STLElementDeleter<T>(T* container) : container_(container) {}
-  ~STLElementDeleter<T>() { STLDeleteElements(container_); }
+public:
+    STLElementDeleter<T>(T* container) : container_(container) {}
+    ~STLElementDeleter<T>() { STLDeleteElements(container_); }
 
- private:
-  T* container_;
+private:
+    T* container_;
 };
 
 // Given a pointer to an STL container this class will delete all the value
 // pointers when it goes out of scope.
-template<class T>
+template <class T>
 class STLValueDeleter {
- public:
-  STLValueDeleter<T>(T* container) : container_(container) {}
-  ~STLValueDeleter<T>() { STLDeleteValues(container_); }
+public:
+    STLValueDeleter<T>(T* container) : container_(container) {}
+    ~STLValueDeleter<T>() { STLDeleteValues(container_); }
 
- private:
-  T* container_;
+private:
+    T* container_;
 };
 
 // Test to see if a set, map, hash_set or hash_map contains a particular key.
 // Returns true if the key is in the collection.
 template <typename Collection, typename Key>
 bool ContainsKey(const Collection& collection, const Key& key) {
-  return collection.find(key) != collection.end();
+    return collection.find(key) != collection.end();
 }
 
 // Returns true if the container is sorted.
 template <typename Container>
 bool STLIsSorted(const Container& cont) {
-  // Note: Use reverse iterator on container to ensure we only require
-  // value_type to implement operator<.
-  return std::adjacent_find(cont.rbegin(), cont.rend(),
-                            std::less<typename Container::value_type>())
-      == cont.rend();
+    // Note: Use reverse iterator on container to ensure we only require
+    // value_type to implement operator<.
+    return std::adjacent_find(cont.rbegin(), cont.rend(),
+                              std::less<typename Container::value_type>()) ==
+           cont.rend();
 }
 
 // Returns a new ResultType containing the difference of two sorted containers.
 template <typename ResultType, typename Arg1, typename Arg2>
 ResultType STLSetDifference(const Arg1& a1, const Arg2& a2) {
-  DCHECK(STLIsSorted(a1));
-  DCHECK(STLIsSorted(a2));
-  ResultType difference;
-  std::set_difference(a1.begin(), a1.end(),
-                      a2.begin(), a2.end(),
-                      std::inserter(difference, difference.end()));
-  return difference;
+    DCHECK(STLIsSorted(a1));
+    DCHECK(STLIsSorted(a2));
+    ResultType difference;
+    std::set_difference(a1.begin(), a1.end(), a2.begin(), a2.end(),
+                        std::inserter(difference, difference.end()));
+    return difference;
 }
 
 // Returns a new ResultType containing the union of two sorted containers.
 template <typename ResultType, typename Arg1, typename Arg2>
 ResultType STLSetUnion(const Arg1& a1, const Arg2& a2) {
-  DCHECK(STLIsSorted(a1));
-  DCHECK(STLIsSorted(a2));
-  ResultType result;
-  std::set_union(a1.begin(), a1.end(),
-                 a2.begin(), a2.end(),
-                 std::inserter(result, result.end()));
-  return result;
+    DCHECK(STLIsSorted(a1));
+    DCHECK(STLIsSorted(a2));
+    ResultType result;
+    std::set_union(a1.begin(), a1.end(), a2.begin(), a2.end(),
+                   std::inserter(result, result.end()));
+    return result;
 }
 
 // Returns a new ResultType containing the intersection of two sorted
 // containers.
 template <typename ResultType, typename Arg1, typename Arg2>
 ResultType STLSetIntersection(const Arg1& a1, const Arg2& a2) {
-  DCHECK(STLIsSorted(a1));
-  DCHECK(STLIsSorted(a2));
-  ResultType result;
-  std::set_intersection(a1.begin(), a1.end(),
-                        a2.begin(), a2.end(),
-                        std::inserter(result, result.end()));
-  return result;
+    DCHECK(STLIsSorted(a1));
+    DCHECK(STLIsSorted(a2));
+    ResultType result;
+    std::set_intersection(a1.begin(), a1.end(), a2.begin(), a2.end(),
+                          std::inserter(result, result.end()));
+    return result;
 }
 
 // Returns true if the sorted container |a1| contains all elements of the sorted
 // container |a2|.
 template <typename Arg1, typename Arg2>
 bool STLIncludes(const Arg1& a1, const Arg2& a2) {
-  DCHECK(STLIsSorted(a1));
-  DCHECK(STLIsSorted(a2));
-  return std::includes(a1.begin(), a1.end(),
-                       a2.begin(), a2.end());
+    DCHECK(STLIsSorted(a1));
+    DCHECK(STLIsSorted(a2));
+    return std::includes(a1.begin(), a1.end(), a2.begin(), a2.end());
 }
 
 }  // namespace butil

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "butil/debug/debugger.h"
 #include "butil/build_config.h"
+#include "butil/debug/debugger.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -57,65 +57,64 @@ namespace debug {
 // Based on Apple's recommended method as described in
 // http://developer.apple.com/qa/qa2004/qa1361.html
 bool BeingDebugged() {
-  // NOTE: This code MUST be async-signal safe (it's used by in-process
-  // stack dumping signal handler). NO malloc or stdio is allowed here.
-  //
-  // While some code used below may be async-signal unsafe, note how
-  // the result is cached (see |is_set| and |being_debugged| static variables
-  // right below). If this code is properly warmed-up early
-  // in the start-up process, it should be safe to use later.
+    // NOTE: This code MUST be async-signal safe (it's used by in-process
+    // stack dumping signal handler). NO malloc or stdio is allowed here.
+    //
+    // While some code used below may be async-signal unsafe, note how
+    // the result is cached (see |is_set| and |being_debugged| static variables
+    // right below). If this code is properly warmed-up early
+    // in the start-up process, it should be safe to use later.
 
-  // If the process is sandboxed then we can't use the sysctl, so cache the
-  // value.
-  static bool is_set = false;
-  static bool being_debugged = false;
+    // If the process is sandboxed then we can't use the sysctl, so cache the
+    // value.
+    static bool is_set         = false;
+    static bool being_debugged = false;
 
-  if (is_set)
-    return being_debugged;
+    if (is_set) return being_debugged;
 
-  // Initialize mib, which tells sysctl what info we want.  In this case,
-  // we're looking for information about a specific process ID.
-  int mib[] = {
-    CTL_KERN,
-    KERN_PROC,
-    KERN_PROC_PID,
-    getpid()
+    // Initialize mib, which tells sysctl what info we want.  In this case,
+    // we're looking for information about a specific process ID.
+    int mib[] = {
+        CTL_KERN,
+        KERN_PROC,
+        KERN_PROC_PID,
+        getpid()
 #if defined(OS_OPENBSD)
-    , sizeof(struct kinfo_proc),
-    0
+            ,
+        sizeof(struct kinfo_proc),
+        0
 #endif
-  };
+    };
 
-  // Caution: struct kinfo_proc is marked __APPLE_API_UNSTABLE.  The source and
-  // binary interfaces may change.
-  struct kinfo_proc info;
-  size_t info_size = sizeof(info);
+    // Caution: struct kinfo_proc is marked __APPLE_API_UNSTABLE.  The source
+    // and binary interfaces may change.
+    struct kinfo_proc info;
+    size_t info_size = sizeof(info);
 
 #if defined(OS_OPENBSD)
-  if (sysctl(mib, arraysize(mib), NULL, &info_size, NULL, 0) < 0)
-    return -1;
+    if (sysctl(mib, arraysize(mib), NULL, &info_size, NULL, 0) < 0) return -1;
 
-  mib[5] = (info_size / sizeof(struct kinfo_proc));
+    mib[5] = (info_size / sizeof(struct kinfo_proc));
 #endif
 
-  int sysctl_result = sysctl(mib, arraysize(mib), &info, &info_size, NULL, 0);
-  DCHECK_EQ(sysctl_result, 0);
-  if (sysctl_result != 0) {
+    int sysctl_result = sysctl(mib, arraysize(mib), &info, &info_size, NULL, 0);
+    DCHECK_EQ(sysctl_result, 0);
+    if (sysctl_result != 0) {
+        is_set         = true;
+        being_debugged = false;
+        return being_debugged;
+    }
+
+    // This process is being debugged if the P_TRACED flag is set.
     is_set = true;
-    being_debugged = false;
-    return being_debugged;
-  }
-
-  // This process is being debugged if the P_TRACED flag is set.
-  is_set = true;
 #if defined(OS_FREEBSD)
-  being_debugged = (info.ki_flag & P_TRACED) != 0;
+    being_debugged = (info.ki_flag & P_TRACED) != 0;
 #elif defined(OS_BSD)
-  being_debugged = (info.p_flag & P_TRACED) != 0;
+    being_debugged = (info.p_flag & P_TRACED) != 0;
 #else
-  being_debugged = (info.kp_proc.p_flag & P_TRACED) != 0;
+    being_debugged = (info.kp_proc.p_flag & P_TRACED) != 0;
 #endif
-  return being_debugged;
+    return being_debugged;
 }
 
 #elif defined(OS_LINUX) || defined(OS_ANDROID)
@@ -126,42 +125,38 @@ bool BeingDebugged() {
 // can't detach without forking(), and that's not so great.
 // static
 bool BeingDebugged() {
-  // NOTE: This code MUST be async-signal safe (it's used by in-process
-  // stack dumping signal handler). NO malloc or stdio is allowed here.
+    // NOTE: This code MUST be async-signal safe (it's used by in-process
+    // stack dumping signal handler). NO malloc or stdio is allowed here.
 
-  int status_fd = open("/proc/self/status", O_RDONLY);
-  if (status_fd == -1)
-    return false;
+    int status_fd = open("/proc/self/status", O_RDONLY);
+    if (status_fd == -1) return false;
 
-  // We assume our line will be in the first 1024 characters and that we can
-  // read this much all at once.  In practice this will generally be true.
-  // This simplifies and speeds up things considerably.
-  char buf[1024];
+    // We assume our line will be in the first 1024 characters and that we can
+    // read this much all at once.  In practice this will generally be true.
+    // This simplifies and speeds up things considerably.
+    char buf[1024];
 
-  ssize_t num_read = HANDLE_EINTR(read(status_fd, buf, sizeof(buf)));
-  if (IGNORE_EINTR(close(status_fd)) < 0)
-    return false;
+    ssize_t num_read = HANDLE_EINTR(read(status_fd, buf, sizeof(buf)));
+    if (IGNORE_EINTR(close(status_fd)) < 0) return false;
 
-  if (num_read <= 0)
-    return false;
+    if (num_read <= 0) return false;
 
-  StringPiece status(buf, num_read);
-  StringPiece tracer("TracerPid:\t");
+    StringPiece status(buf, num_read);
+    StringPiece tracer("TracerPid:\t");
 
-  StringPiece::size_type pid_index = status.find(tracer);
-  if (pid_index == StringPiece::npos)
-    return false;
+    StringPiece::size_type pid_index = status.find(tracer);
+    if (pid_index == StringPiece::npos) return false;
 
-  // Our pid is 0 without a debugger, assume this for any pid starting with 0.
-  pid_index += tracer.size();
-  return pid_index < status.size() && status[pid_index] != '0';
+    // Our pid is 0 without a debugger, assume this for any pid starting with 0.
+    pid_index += tracer.size();
+    return pid_index < status.size() && status[pid_index] != '0';
 }
 
 #else
 
 bool BeingDebugged() {
-  NOTIMPLEMENTED();
-  return false;
+    NOTIMPLEMENTED();
+    return false;
 }
 
 #endif
@@ -213,18 +208,19 @@ bool BeingDebugged() {
 // use a debugger.
 namespace {
 void DebugBreak() {
-  if (!BeingDebugged()) {
-    abort();
-  } else {
+    if (!BeingDebugged()) {
+        abort();
+    } else {
 #if defined(DEBUG_BREAK_ASM)
-    DEBUG_BREAK_ASM();
+        DEBUG_BREAK_ASM();
 #else
-    volatile int go = 0;
-    while (!go) {
-      butil::PlatformThread::Sleep(butil::TimeDelta::FromMilliseconds(100));
-    }
+        volatile int go = 0;
+        while (!go) {
+            butil::PlatformThread::Sleep(
+                butil::TimeDelta::FromMilliseconds(100));
+        }
 #endif
-  }
+    }
 }
 }  // namespace
 #define DEBUG_BREAK() DebugBreak()
@@ -235,19 +231,19 @@ void DebugBreak() {
 #endif
 
 void BreakDebugger() {
-  // NOTE: This code MUST be async-signal safe (it's used by in-process
-  // stack dumping signal handler). NO malloc or stdio is allowed here.
+    // NOTE: This code MUST be async-signal safe (it's used by in-process
+    // stack dumping signal handler). NO malloc or stdio is allowed here.
 
-  DEBUG_BREAK();
+    DEBUG_BREAK();
 #if defined(OS_ANDROID) && !defined(OFFICIAL_BUILD)
-  // For Android development we always build release (debug builds are
-  // unmanageably large), so the unofficial build is used for debugging. It is
-  // helpful to be able to insert BreakDebugger() statements in the source,
-  // attach the debugger, inspect the state of the program and then resume it by
-  // setting the 'go' variable above.
+    // For Android development we always build release (debug builds are
+    // unmanageably large), so the unofficial build is used for debugging. It is
+    // helpful to be able to insert BreakDebugger() statements in the source,
+    // attach the debugger, inspect the state of the program and then resume it
+    // by setting the 'go' variable above.
 #elif defined(NDEBUG)
-  // Terminate the program after signaling the debug break.
-  _exit(1);
+    // Terminate the program after signaling the debug break.
+    _exit(1);
 #endif
 }
 

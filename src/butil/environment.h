@@ -9,9 +9,9 @@
 #include <string>
 
 #include "butil/base_export.h"
+#include "butil/build_config.h"
 #include "butil/memory/scoped_ptr.h"
 #include "butil/strings/string16.h"
-#include "butil/build_config.h"
 
 namespace butil {
 
@@ -24,28 +24,27 @@ BUTIL_EXPORT extern const char kHome[];
 }  // namespace env_vars
 
 class BUTIL_EXPORT Environment {
- public:
-  virtual ~Environment();
+public:
+    virtual ~Environment();
 
-  // Static factory method that returns the implementation that provide the
-  // appropriate platform-specific instance.
-  static Environment* Create();
+    // Static factory method that returns the implementation that provide the
+    // appropriate platform-specific instance.
+    static Environment* Create();
 
-  // Gets an environment variable's value and stores it in |result|.
-  // Returns false if the key is unset.
-  virtual bool GetVar(const char* variable_name, std::string* result) = 0;
+    // Gets an environment variable's value and stores it in |result|.
+    // Returns false if the key is unset.
+    virtual bool GetVar(const char* variable_name, std::string* result) = 0;
 
-  // Syntactic sugar for GetVar(variable_name, NULL);
-  virtual bool HasVar(const char* variable_name);
+    // Syntactic sugar for GetVar(variable_name, NULL);
+    virtual bool HasVar(const char* variable_name);
 
-  // Returns true on success, otherwise returns false.
-  virtual bool SetVar(const char* variable_name,
-                      const std::string& new_value) = 0;
+    // Returns true on success, otherwise returns false.
+    virtual bool SetVar(const char* variable_name,
+                        const std::string& new_value) = 0;
 
-  // Returns true on success, otherwise returns false.
-  virtual bool UnSetVar(const char* variable_name) = 0;
+    // Returns true on success, otherwise returns false.
+    virtual bool UnSetVar(const char* variable_name) = 0;
 };
-
 
 #if defined(OS_WIN)
 
@@ -64,7 +63,7 @@ typedef std::map<NativeEnvironmentString, NativeEnvironmentString>
 // marked by a double-null terminator. The size of the returned string will
 // include the terminators.
 BUTIL_EXPORT string16 AlterEnvironment(const wchar_t* env,
-                                      const EnvironmentMap& changes);
+                                       const EnvironmentMap& changes);
 
 #elif defined(OS_POSIX)
 
@@ -79,9 +78,8 @@ typedef std::map<NativeEnvironmentString, NativeEnvironmentString>
 // returned array will have appended to it the storage for the array itself so
 // there is only one pointer to manage, but this means that you can't copy the
 // array without keeping the original around.
-BUTIL_EXPORT scoped_ptr<char*[]> AlterEnvironment(
-    const char* const* env,
-    const EnvironmentMap& changes);
+BUTIL_EXPORT scoped_ptr<char* []> AlterEnvironment(
+    const char* const* env, const EnvironmentMap& changes);
 
 #endif
 

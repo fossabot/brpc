@@ -15,11 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
+#include "brpc/load_balancer.h"
 #include <gflags/gflags.h>
 #include "brpc/reloadable_flags.h"
-#include "brpc/load_balancer.h"
-
 
 namespace brpc {
 
@@ -38,23 +36,19 @@ void SharedLoadBalancer::ExposeLB() {
     _st_mutex.lock();
     if (!_exposed) {
         _exposed = true;
-        changed = true;
+        changed  = true;
     }
     _st_mutex.unlock();
     if (changed) {
         char name[32];
-        snprintf(name, sizeof(name), "_load_balancer_%d", g_lb_counter.fetch_add(
-                     1, butil::memory_order_relaxed));
+        snprintf(name, sizeof(name), "_load_balancer_%d",
+                 g_lb_counter.fetch_add(1, butil::memory_order_relaxed));
         _st.expose(name);
     }
 }
 
 SharedLoadBalancer::SharedLoadBalancer()
-    : _lb(NULL)
-    , _weight_sum(0)
-    , _exposed(false)
-    , _st(DescribeLB, this) {
-}
+    : _lb(NULL), _weight_sum(0), _exposed(false), _st(DescribeLB, this) {}
 
 SharedLoadBalancer::~SharedLoadBalancer() {
     _st.hide();
@@ -68,7 +62,8 @@ int SharedLoadBalancer::Init(const char* lb_protocol) {
     std::string lb_name;
     butil::StringPiece lb_params;
     if (!ParseParameters(lb_protocol, &lb_name, &lb_params)) {
-        LOG(FATAL) << "Fail to parse this load balancer protocol '" << lb_protocol << '\'';
+        LOG(FATAL) << "Fail to parse this load balancer protocol '"
+                   << lb_protocol << '\'';
         return -1;
     }
     const LoadBalancer* lb = LoadBalancerExtension()->Find(lb_name.c_str());
@@ -105,7 +100,7 @@ bool SharedLoadBalancer::ParseParameters(const butil::StringPiece& lb_protocol,
         return false;
     }
     const char separator = ':';
-    size_t pos = lb_protocol.find(separator);
+    size_t pos           = lb_protocol.find(separator);
     if (pos == std::string::npos) {
         lb_name->append(lb_protocol.data(), lb_protocol.size());
     } else {
@@ -117,5 +112,5 @@ bool SharedLoadBalancer::ParseParameters(const butil::StringPiece& lb_protocol,
 
     return true;
 }
-																				 
-} // namespace brpc
+
+}  // namespace brpc

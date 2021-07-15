@@ -17,15 +17,15 @@
 
 // Date: 2014/12/29 14:54:11
 
-#ifndef  BVAR_BVAR_H
-#define  BVAR_BVAR_H
+#ifndef BVAR_BVAR_H
+#define BVAR_BVAR_H
 
-#include "bvar/reducer.h"
-#include "bvar/recorder.h"
-#include "bvar/status.h"
-#include "bvar/passive_status.h"
-#include "bvar/latency_recorder.h"
 #include "bvar/gflag.h"
+#include "bvar/latency_recorder.h"
+#include "bvar/passive_status.h"
+#include "bvar/recorder.h"
+#include "bvar/reducer.h"
 #include "bvar/scoped_timer.h"
+#include "bvar/status.h"
 
-#endif  //BVAR_BVAR_H
+#endif  // BVAR_BVAR_H

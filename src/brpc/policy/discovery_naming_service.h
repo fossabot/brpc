@@ -15,12 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_DISCOVERY_NAMING_SERVICE_H
 #define BRPC_POLICY_DISCOVERY_NAMING_SERVICE_H
 
-#include "brpc/periodic_naming_service.h"
 #include "brpc/channel.h"
+#include "brpc/periodic_naming_service.h"
 #include "butil/synchronization/lock.h"
 
 namespace brpc {
@@ -32,7 +31,7 @@ struct DiscoveryRegisterParam {
     std::string env;
     std::string zone;
     std::string region;
-    std::string addrs;          // splitted by ','
+    std::string addrs;  // splitted by ','
     int status;
     std::string version;
     std::string metadata;
@@ -82,8 +81,7 @@ private:
     DiscoveryClient _client;
 };
 
+}  // namespace policy
+}  // namespace brpc
 
-} // namespace policy
-} // namespace brpc
-
-#endif // BRPC_POLICY_DISCOVERY_NAMING_SERVICE_H
+#endif  // BRPC_POLICY_DISCOVERY_NAMING_SERVICE_H

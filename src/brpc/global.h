@@ -15,10 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_GLOBAL_H
 #define BRPC_GLOBAL_H
-
 
 namespace brpc {
 
@@ -26,7 +24,6 @@ namespace brpc {
 // `brpc/policy/' directory
 void GlobalInitializeOrDie();
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_GLOBAL_H
+#endif  // BRPC_GLOBAL_H

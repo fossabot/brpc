@@ -7,8 +7,8 @@
 
 #include "butil/build_config.h"
 
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include <stdint.h>
 
@@ -34,39 +34,40 @@ namespace butil {
 // need to define keys, then values should be chosen randomly so as not to
 // collide.
 class BUTIL_EXPORT GlobalDescriptors {
- public:
-  typedef uint32_t Key;
-  typedef std::pair<Key, int> KeyFDPair;
-  typedef std::vector<KeyFDPair> Mapping;
+public:
+    typedef uint32_t Key;
+    typedef std::pair<Key, int> KeyFDPair;
+    typedef std::vector<KeyFDPair> Mapping;
 
-  // Often we want a canonical descriptor for a given Key. In this case, we add
-  // the following constant to the key value:
+    // Often we want a canonical descriptor for a given Key. In this case, we
+    // add the following constant to the key value:
 #if !defined(OS_ANDROID)
-  static const int kBaseDescriptor = 3;  // 0, 1, 2 are already taken.
+    static const int kBaseDescriptor = 3;  // 0, 1, 2 are already taken.
 #else
-  static const int kBaseDescriptor = 4;  // 3 used by __android_log_write().
+    static const int kBaseDescriptor = 4;  // 3 used by __android_log_write().
 #endif
 
-  // Return the singleton instance of GlobalDescriptors.
-  static GlobalDescriptors* GetInstance();
+    // Return the singleton instance of GlobalDescriptors.
+    static GlobalDescriptors* GetInstance();
 
-  // Get a descriptor given a key. It is a fatal error if the key is not known.
-  int Get(Key key) const;
+    // Get a descriptor given a key. It is a fatal error if the key is not
+    // known.
+    int Get(Key key) const;
 
-  // Get a descriptor give a key. Returns -1 on error.
-  int MaybeGet(Key key) const;
+    // Get a descriptor give a key. Returns -1 on error.
+    int MaybeGet(Key key) const;
 
-  // Set the descriptor for the given key.
-  void Set(Key key, int fd);
+    // Set the descriptor for the given key.
+    void Set(Key key, int fd);
 
-  void Reset(const Mapping& mapping);
+    void Reset(const Mapping& mapping);
 
- private:
-  friend struct DefaultSingletonTraits<GlobalDescriptors>;
-  GlobalDescriptors();
-  ~GlobalDescriptors();
+private:
+    friend struct DefaultSingletonTraits<GlobalDescriptors>;
+    GlobalDescriptors();
+    ~GlobalDescriptors();
 
-  Mapping descriptors_;
+    Mapping descriptors_;
 };
 
 }  // namespace butil

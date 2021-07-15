@@ -15,19 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "butil/macros.h"
-#include "butil/fast_rand.h"
-#include "brpc/socket.h"
 #include "brpc/policy/dynpart_load_balancer.h"
-
+#include "brpc/socket.h"
+#include "butil/fast_rand.h"
+#include "butil/macros.h"
 
 namespace brpc {
 
 namespace schan {
 // defined in brpc/selective_channel.cpp
 int GetSubChannelWeight(SocketUser* u);
-}
+}  // namespace schan
 
 namespace policy {
 
@@ -47,8 +45,8 @@ bool DynPartLoadBalancer::Add(Servers& bg, const ServerId& id) {
 bool DynPartLoadBalancer::Remove(Servers& bg, const ServerId& id) {
     std::map<ServerId, size_t>::iterator it = bg.server_map.find(id);
     if (it != bg.server_map.end()) {
-        size_t index = it->second;
-        bg.server_list[index] = bg.server_list.back();
+        size_t index                         = it->second;
+        bg.server_list[index]                = bg.server_list.back();
         bg.server_map[bg.server_list[index]] = index;
         bg.server_list.pop_back();
         bg.server_map.erase(it);
@@ -57,8 +55,8 @@ bool DynPartLoadBalancer::Remove(Servers& bg, const ServerId& id) {
     return false;
 }
 
-size_t DynPartLoadBalancer::BatchAdd(
-    Servers& bg, const std::vector<ServerId>& servers) {
+size_t DynPartLoadBalancer::BatchAdd(Servers& bg,
+                                     const std::vector<ServerId>& servers) {
     size_t count = 0;
     for (size_t i = 0; i < servers.size(); ++i) {
         count += !!Add(bg, servers[i]);
@@ -66,8 +64,8 @@ size_t DynPartLoadBalancer::BatchAdd(
     return count;
 }
 
-size_t DynPartLoadBalancer::BatchRemove(
-    Servers& bg, const std::vector<ServerId>& servers) {
+size_t DynPartLoadBalancer::BatchRemove(Servers& bg,
+                                        const std::vector<ServerId>& servers) {
     size_t count = 0;
     for (size_t i = 0; i < servers.size(); ++i) {
         count += !!Remove(bg, servers[i]);
@@ -86,9 +84,8 @@ bool DynPartLoadBalancer::RemoveServer(const ServerId& id) {
 size_t DynPartLoadBalancer::AddServersInBatch(
     const std::vector<ServerId>& servers) {
     const size_t n = _db_servers.Modify(BatchAdd, servers);
-    LOG_IF(ERROR, n != servers.size())
-        << "Fail to AddServersInBatch, expected " << servers.size()
-        << " actually " << n;
+    LOG_IF(ERROR, n != servers.size()) << "Fail to AddServersInBatch, expected "
+                                       << servers.size() << " actually " << n;
     return n;
 }
 
@@ -118,13 +115,13 @@ int DynPartLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
     }
     int64_t total_weight = 0;
     std::pair<SocketUniquePtr, int64_t> ptrs[8];
-    int nptr = 0;
+    int nptr       = 0;
     bool exclusion = true;
     do {
         for (size_t i = 0; i < n; ++i) {
             const SocketId id = s->server_list[i].id;
-            if ((!exclusion || !ExcludedServers::IsExcluded(in.excluded, id))
-                && Socket::Address(id, &ptrs[nptr].first) == 0) {
+            if ((!exclusion || !ExcludedServers::IsExcluded(in.excluded, id)) &&
+                Socket::Address(id, &ptrs[nptr].first) == 0) {
                 int w = schan::GetSubChannelWeight(ptrs[nptr].first->user());
                 total_weight += w;
                 if (nptr < 8) {
@@ -146,7 +143,7 @@ int DynPartLoadBalancer::SelectServer(const SelectIn& in, SelectOut* out) {
         CHECK_EQ(0, total_weight);
         total_weight = 0;
     } while (1);
-    
+
     if (nptr == 1) {
         out->ptr->reset(ptrs[0].first.release());
         return 0;
@@ -165,12 +162,10 @@ DynPartLoadBalancer* DynPartLoadBalancer::New(const butil::StringPiece&) const {
     return new (std::nothrow) DynPartLoadBalancer;
 }
 
-void DynPartLoadBalancer::Destroy() {
-    delete this;
-}
+void DynPartLoadBalancer::Destroy() { delete this; }
 
-void DynPartLoadBalancer::Describe(
-    std::ostream &os, const DescribeOptions& options) {
+void DynPartLoadBalancer::Describe(std::ostream& os,
+                                   const DescribeOptions& options) {
     if (!options.verbose) {
         os << "dynpart";
         return;
@@ -189,4 +184,4 @@ void DynPartLoadBalancer::Describe(
 }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc

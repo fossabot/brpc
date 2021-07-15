@@ -15,16 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_IDS_SERVICE_H
 #define BRPC_IDS_SERVICE_H
 
 #include "brpc/builtin_service.pb.h"
 
-
 namespace brpc {
 
-class IdsService: public ids {
+class IdsService : public ids {
 public:
     void default_method(::google::protobuf::RpcController* cntl_base,
                         const ::brpc::IdsRequest* request,
@@ -32,7 +30,6 @@ public:
                         ::google::protobuf::Closure* done);
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_IDS_SERVICE_H
+#endif  // BRPC_IDS_SERVICE_H

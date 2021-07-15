@@ -20,20 +20,18 @@ class AtomicSequenceNumber;
 // number on the stack (or heap), please use the AtomicSequenceNumber class
 // declared below.
 class StaticAtomicSequenceNumber {
- public:
-  inline int GetNext() {
-    return static_cast<int>(
-        butil::subtle::NoBarrier_AtomicIncrement(&seq_, 1) - 1);
-  }
+public:
+    inline int GetNext() {
+        return static_cast<int>(
+            butil::subtle::NoBarrier_AtomicIncrement(&seq_, 1) - 1);
+    }
 
- private:
-  friend class AtomicSequenceNumber;
+private:
+    friend class AtomicSequenceNumber;
 
-  inline void Reset() {
-    butil::subtle::Release_Store(&seq_, 0);
-  }
+    inline void Reset() { butil::subtle::Release_Store(&seq_, 0); }
 
-  butil::subtle::Atomic32 seq_;
+    butil::subtle::Atomic32 seq_;
 };
 
 // AtomicSequenceNumber that can be stored and used safely (i.e. its fields are
@@ -41,18 +39,14 @@ class StaticAtomicSequenceNumber {
 // Please use StaticAtomicSequenceNumber if you want to declare an atomic
 // sequence number in the global scope.
 class AtomicSequenceNumber {
- public:
-  AtomicSequenceNumber() {
-    seq_.Reset();
-  }
+public:
+    AtomicSequenceNumber() { seq_.Reset(); }
 
-  inline int GetNext() {
-    return seq_.GetNext();
-  }
+    inline int GetNext() { return seq_.GetNext(); }
 
- private:
-  StaticAtomicSequenceNumber seq_;
-  DISALLOW_COPY_AND_ASSIGN(AtomicSequenceNumber);
+private:
+    StaticAtomicSequenceNumber seq_;
+    DISALLOW_COPY_AND_ASSIGN(AtomicSequenceNumber);
 };
 
 }  // namespace butil

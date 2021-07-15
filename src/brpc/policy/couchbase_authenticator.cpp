@@ -17,11 +17,11 @@
 
 #include "brpc/policy/couchbase_authenticator.h"
 
+#include "brpc/policy/memcache_binary_header.h"
 #include "butil/base64.h"
 #include "butil/iobuf.h"
 #include "butil/string_printf.h"
 #include "butil/sys_byteorder.h"
-#include "brpc/policy/memcache_binary_header.h"
 
 namespace brpc {
 namespace policy {
@@ -29,7 +29,7 @@ namespace policy {
 namespace {
 
 constexpr char kPlainAuthCommand[] = "PLAIN";
-constexpr char kPadding[1] = {'\0'};
+constexpr char kPadding[1]         = {'\0'};
 
 }  // namespace
 
@@ -37,11 +37,17 @@ constexpr char kPadding[1] = {'\0'};
 // https://developer.couchbase.com/documentation/server/3.x/developer/dev-guide-3.0/sasl.html
 int CouchbaseAuthenticator::GenerateCredential(std::string* auth_str) const {
     const brpc::policy::MemcacheRequestHeader header = {
-        brpc::policy::MC_MAGIC_REQUEST, brpc::policy::MC_BINARY_SASL_AUTH,
-        butil::HostToNet16(sizeof(kPlainAuthCommand) - 1), 0, 0, 0,
+        brpc::policy::MC_MAGIC_REQUEST,
+        brpc::policy::MC_BINARY_SASL_AUTH,
+        butil::HostToNet16(sizeof(kPlainAuthCommand) - 1),
+        0,
+        0,
+        0,
         butil::HostToNet32(sizeof(kPlainAuthCommand) + 1 +
-                           bucket_name_.length() * 2 + bucket_password_.length()),
-        0, 0};
+                           bucket_name_.length() * 2 +
+                           bucket_password_.length()),
+        0,
+        0};
     auth_str->clear();
     auth_str->append(reinterpret_cast<const char*>(&header), sizeof(header));
     auth_str->append(kPlainAuthCommand, sizeof(kPlainAuthCommand) - 1);

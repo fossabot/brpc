@@ -17,9 +17,9 @@
 
 // Date: 2014/09/22 11:57:43
 
+#include "bvar/latency_recorder.h"
 #include <gflags/gflags.h>
 #include "butil/unique_ptr.h"
-#include "bvar/latency_recorder.h"
 
 namespace bvar {
 
@@ -32,12 +32,15 @@ DEFINE_int32(bvar_latency_p3, 99, "Third latency percentile");
 static bool valid_percentile(const char*, int32_t v) {
     return v > 0 && v < 100;
 }
-const bool ALLOW_UNUSED dummy_bvar_latency_p1 = ::GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_bvar_latency_p1, valid_percentile);
-const bool ALLOW_UNUSED dummy_bvar_latency_p2 = ::GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_bvar_latency_p2, valid_percentile);
-const bool ALLOW_UNUSED dummy_bvar_latency_p3 = ::GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_bvar_latency_p3, valid_percentile);
+const bool ALLOW_UNUSED dummy_bvar_latency_p1 =
+    ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_bvar_latency_p1,
+                                       valid_percentile);
+const bool ALLOW_UNUSED dummy_bvar_latency_p2 =
+    ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_bvar_latency_p2,
+                                       valid_percentile);
+const bool ALLOW_UNUSED dummy_bvar_latency_p3 =
+    ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_bvar_latency_p3,
+                                       valid_percentile);
 
 namespace detail {
 
@@ -45,23 +48,19 @@ typedef PercentileSamples<1022> CombinedPercentileSamples;
 
 CDF::CDF(PercentileWindow* w) : _w(w) {}
 
-CDF::~CDF() {
-    hide();
-}
-    
-void CDF::describe(std::ostream& os, bool) const {
-    os << "\"click to view\"";
-}
+CDF::~CDF() { hide(); }
 
-int CDF::describe_series(
-    std::ostream& os, const SeriesOptions& options) const {
+void CDF::describe(std::ostream& os, bool) const { os << "\"click to view\""; }
+
+int CDF::describe_series(std::ostream& os, const SeriesOptions& options) const {
     if (_w == NULL) {
         return 1;
     }
     if (options.test_only) {
         return 0;
     }
-    std::unique_ptr<CombinedPercentileSamples> cb(new CombinedPercentileSamples);
+    std::unique_ptr<CombinedPercentileSamples> cb(
+        new CombinedPercentileSamples);
     std::vector<GlobalPercentileSamples> buckets;
     _w->get_samples(&buckets);
     for (size_t i = 0; i < buckets.size(); ++i) {
@@ -70,7 +69,7 @@ int CDF::describe_series(
     std::pair<int, int> values[20];
     size_t n = 0;
     for (int i = 1; i < 10; ++i) {
-        values[n++] = std::make_pair(i*10, cb->get_number(i * 0.1));
+        values[n++] = std::make_pair(i * 10, cb->get_number(i * 0.1));
     }
     for (int i = 91; i < 100; ++i) {
         values[n++] = std::make_pair(i, cb->get_number(i * 0.01));
@@ -114,8 +113,8 @@ static CombinedPercentileSamples* combine(PercentileWindow* w) {
 
 template <int64_t numerator, int64_t denominator>
 static int64_t get_percetile(void* arg) {
-    return ((LatencyRecorder*)arg)->latency_percentile(
-            (double)numerator / double(denominator));
+    return ((LatencyRecorder*)arg)
+        ->latency_percentile((double)numerator / double(denominator));
 }
 
 static int64_t get_p1(void* arg) {
@@ -131,7 +130,7 @@ static int64_t get_p3(void* arg) {
     return lr->latency_percentile(FLAGS_bvar_latency_p3 / 100.0);
 }
 
-static Vector<int64_t, 4> get_latencies(void *arg) {
+static Vector<int64_t, 4> get_latencies(void* arg) {
     std::unique_ptr<CombinedPercentileSamples> cb(
         combine((PercentileWindow*)arg));
     // NOTE: We don't show 99.99% since it's often significantly larger than
@@ -158,8 +157,7 @@ LatencyRecorderBase::LatencyRecorderBase(time_t window_size)
     , _latency_999(get_percetile<999, 1000>, this)
     , _latency_9999(get_percetile<9999, 10000>, this)
     , _latency_cdf(&_latency_percentile_window)
-    , _latency_percentiles(get_latencies, &_latency_percentile_window)
-{}
+    , _latency_percentiles(get_latencies, &_latency_percentile_window) {}
 
 }  // namespace detail
 
@@ -198,7 +196,7 @@ int LatencyRecorder::expose(const butil::StringPiece& prefix1,
     if (!prefix1.empty()) {
         tmp.reserve(prefix1.size() + prefix.size() + 1);
         tmp.append(prefix1.data(), prefix1.size());
-        tmp.push_back('_'); // prefix1 ending with _ is good.
+        tmp.push_back('_');  // prefix1 ending with _ is good.
         tmp.append(prefix.data(), prefix.size());
         prefix = tmp;
     }
@@ -220,19 +218,23 @@ int LatencyRecorder::expose(const butil::StringPiece& prefix1,
         return -1;
     }
     char namebuf[32];
-    snprintf(namebuf, sizeof(namebuf), "latency_%d", (int)FLAGS_bvar_latency_p1);
+    snprintf(namebuf, sizeof(namebuf), "latency_%d",
+             (int)FLAGS_bvar_latency_p1);
     if (_latency_p1.expose_as(prefix, namebuf, DISPLAY_ON_PLAIN_TEXT) != 0) {
         return -1;
     }
-    snprintf(namebuf, sizeof(namebuf), "latency_%d", (int)FLAGS_bvar_latency_p2);
+    snprintf(namebuf, sizeof(namebuf), "latency_%d",
+             (int)FLAGS_bvar_latency_p2);
     if (_latency_p2.expose_as(prefix, namebuf, DISPLAY_ON_PLAIN_TEXT) != 0) {
         return -1;
     }
-    snprintf(namebuf, sizeof(namebuf), "latency_%u", (int)FLAGS_bvar_latency_p3);
+    snprintf(namebuf, sizeof(namebuf), "latency_%u",
+             (int)FLAGS_bvar_latency_p3);
     if (_latency_p3.expose_as(prefix, namebuf, DISPLAY_ON_PLAIN_TEXT) != 0) {
         return -1;
     }
-    if (_latency_999.expose_as(prefix, "latency_999", DISPLAY_ON_PLAIN_TEXT) != 0) {
+    if (_latency_999.expose_as(prefix, "latency_999", DISPLAY_ON_PLAIN_TEXT) !=
+        0) {
         return -1;
     }
     if (_latency_9999.expose_as(prefix, "latency_9999") != 0) {
@@ -241,7 +243,8 @@ int LatencyRecorder::expose(const butil::StringPiece& prefix1,
     if (_latency_cdf.expose_as(prefix, "latency_cdf", DISPLAY_ON_HTML) != 0) {
         return -1;
     }
-    if (_latency_percentiles.expose_as(prefix, "latency_percentiles", DISPLAY_ON_HTML) != 0) {
+    if (_latency_percentiles.expose_as(prefix, "latency_percentiles",
+                                       DISPLAY_ON_HTML) != 0) {
         return -1;
     }
     snprintf(namebuf, sizeof(namebuf), "%d%%,%d%%,%d%%,99.9%%",
@@ -279,9 +282,8 @@ LatencyRecorder& LatencyRecorder::operator<<(int64_t latency) {
 }
 
 std::ostream& operator<<(std::ostream& os, const LatencyRecorder& rec) {
-    return os << "{latency=" << rec.latency()
-              << " max" << rec.window_size() << '=' << rec.max_latency()
-              << " qps=" << rec.qps()
+    return os << "{latency=" << rec.latency() << " max" << rec.window_size()
+              << '=' << rec.max_latency() << " qps=" << rec.qps()
               << " count=" << rec.count() << '}';
 }
 

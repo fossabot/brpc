@@ -15,32 +15,32 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <vector>
-#include <gflags/gflags.h>
 #include "brpc/cluster_recover_policy.h"
-#include "butil/scoped_lock.h"
-#include "butil/synchronization/lock.h"
+#include <gflags/gflags.h>
+#include <vector>
 #include "brpc/server_id.h"
 #include "brpc/socket.h"
 #include "butil/fast_rand.h"
-#include "butil/time.h"
+#include "butil/scoped_lock.h"
 #include "butil/string_splitter.h"
+#include "butil/synchronization/lock.h"
+#include "butil/time.h"
 
 namespace brpc {
 
-DEFINE_int64(detect_available_server_interval_ms, 10, "The interval "
-        "to detect available server count in DefaultClusterRecoverPolicy");
+DEFINE_int64(detect_available_server_interval_ms, 10,
+             "The interval "
+             "to detect available server count in DefaultClusterRecoverPolicy");
 
 DefaultClusterRecoverPolicy::DefaultClusterRecoverPolicy(
-        int64_t min_working_instances, int64_t hold_seconds)
+    int64_t min_working_instances, int64_t hold_seconds)
     : _recovering(false)
     , _min_working_instances(min_working_instances)
     , _last_usable(0)
     , _last_usable_change_time_ms(0)
     , _hold_seconds(hold_seconds)
     , _usable_cache(0)
-    , _usable_cache_time_ms(0) { }
+    , _usable_cache_time_ms(0) {}
 
 void DefaultClusterRecoverPolicy::StartRecover() {
     std::unique_lock<butil::Mutex> mu(_mutex);
@@ -54,9 +54,9 @@ bool DefaultClusterRecoverPolicy::StopRecoverIfNecessary() {
     int64_t now_ms = butil::gettimeofday_ms();
     std::unique_lock<butil::Mutex> mu(_mutex);
     if (_last_usable_change_time_ms != 0 && _last_usable != 0 &&
-            (now_ms - _last_usable_change_time_ms > _hold_seconds * 1000)) {
-        _recovering = false;
-        _last_usable = 0;
+        (now_ms - _last_usable_change_time_ms > _hold_seconds * 1000)) {
+        _recovering                 = false;
+        _last_usable                = 0;
         _last_usable_change_time_ms = 0;
         mu.unlock();
         return false;
@@ -66,38 +66,39 @@ bool DefaultClusterRecoverPolicy::StopRecoverIfNecessary() {
 }
 
 uint64_t DefaultClusterRecoverPolicy::GetUsableServerCount(
-        int64_t now_ms, const std::vector<ServerId>& server_list) {
-    if (now_ms - _usable_cache_time_ms < FLAGS_detect_available_server_interval_ms) {
+    int64_t now_ms, const std::vector<ServerId>& server_list) {
+    if (now_ms - _usable_cache_time_ms <
+        FLAGS_detect_available_server_interval_ms) {
         return _usable_cache;
     }
     uint64_t usable = 0;
-    size_t n = server_list.size();
+    size_t n        = server_list.size();
     SocketUniquePtr ptr;
     for (size_t i = 0; i < n; ++i) {
-        if (Socket::Address(server_list[i].id, &ptr) == 0
-            && ptr->IsAvailable()) {
+        if (Socket::Address(server_list[i].id, &ptr) == 0 &&
+            ptr->IsAvailable()) {
             usable++;
         }
     }
     {
         std::unique_lock<butil::Mutex> mu(_mutex);
-        _usable_cache = usable;
+        _usable_cache         = usable;
         _usable_cache_time_ms = now_ms;
     }
     return _usable_cache;
 }
 
-
-bool DefaultClusterRecoverPolicy::DoReject(const std::vector<ServerId>& server_list) {
+bool DefaultClusterRecoverPolicy::DoReject(
+    const std::vector<ServerId>& server_list) {
     if (!_recovering) {
         return false;
     }
-    int64_t now_ms = butil::gettimeofday_ms();
+    int64_t now_ms  = butil::gettimeofday_ms();
     uint64_t usable = GetUsableServerCount(now_ms, server_list);
     if (_last_usable != usable) {
         std::unique_lock<butil::Mutex> mu(_mutex);
         if (_last_usable != usable) {
-            _last_usable = usable;
+            _last_usable                = usable;
             _last_usable_change_time_ms = now_ms;
         }
     }
@@ -110,10 +111,11 @@ bool DefaultClusterRecoverPolicy::DoReject(const std::vector<ServerId>& server_l
 bool GetRecoverPolicyByParams(const butil::StringPiece& params,
                               std::shared_ptr<ClusterRecoverPolicy>* ptr_out) {
     int64_t min_working_instances = -1;
-    int64_t hold_seconds = -1;
-    bool has_meet_params = false;
-    for (butil::KeyValuePairsSplitter sp(params.begin(), params.end(), ' ', '=');
-            sp; ++sp) {
+    int64_t hold_seconds          = -1;
+    bool has_meet_params          = false;
+    for (butil::KeyValuePairsSplitter sp(params.begin(), params.end(), ' ',
+                                         '=');
+         sp; ++sp) {
         if (sp.value().empty()) {
             LOG(ERROR) << "Empty value for " << sp.key() << " in lb parameter";
             return false;
@@ -131,19 +133,20 @@ bool GetRecoverPolicyByParams(const butil::StringPiece& params,
             has_meet_params = true;
             continue;
         }
-        LOG(ERROR) << "Failed to set this unknown parameters " << sp.key_and_value();
+        LOG(ERROR) << "Failed to set this unknown parameters "
+                   << sp.key_and_value();
         return false;
     }
     if (min_working_instances > 0 && hold_seconds > 0) {
-        ptr_out->reset(
-                new DefaultClusterRecoverPolicy(min_working_instances, hold_seconds));
+        ptr_out->reset(new DefaultClusterRecoverPolicy(min_working_instances,
+                                                       hold_seconds));
     } else if (has_meet_params) {
-        // In this case, user set some params but not in the right way, just return
-        // false to let user take care of this situation.
+        // In this case, user set some params but not in the right way, just
+        // return false to let user take care of this situation.
         LOG(ERROR) << "Invalid params=`" << params << "'";
         return false;
     }
     return true;
 }
 
-} // namespace brpc
+}  // namespace brpc

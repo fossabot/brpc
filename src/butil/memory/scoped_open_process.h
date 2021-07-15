@@ -12,36 +12,32 @@ namespace butil {
 // A class that opens a process from its process id and closes it when the
 // instance goes out of scope.
 class ScopedOpenProcess {
- public:
-  ScopedOpenProcess() : handle_(kNullProcessHandle) {
-  }
+public:
+    ScopedOpenProcess() : handle_(kNullProcessHandle) {}
 
-  // Automatically close the process.
-  ~ScopedOpenProcess() {
-    Close();
-  }
+    // Automatically close the process.
+    ~ScopedOpenProcess() { Close(); }
 
-  // Open a new process by pid. Closes any previously opened process (even if
-  // opening the new one fails).
-  bool Open(ProcessId pid) {
-    Close();
-    return OpenProcessHandle(pid, &handle_);
-  }
+    // Open a new process by pid. Closes any previously opened process (even if
+    // opening the new one fails).
+    bool Open(ProcessId pid) {
+        Close();
+        return OpenProcessHandle(pid, &handle_);
+    }
 
-  // Close the previously opened process.
-  void Close() {
-    if (handle_ == kNullProcessHandle)
-      return;
+    // Close the previously opened process.
+    void Close() {
+        if (handle_ == kNullProcessHandle) return;
 
-    CloseProcessHandle(handle_);
-    handle_ = kNullProcessHandle;
-  }
+        CloseProcessHandle(handle_);
+        handle_ = kNullProcessHandle;
+    }
 
-  ProcessHandle handle() const { return handle_; }
+    ProcessHandle handle() const { return handle_; }
 
- private:
-  ProcessHandle handle_;
-  DISALLOW_COPY_AND_ASSIGN(ScopedOpenProcess);
+private:
+    ProcessHandle handle_;
+    DISALLOW_COPY_AND_ASSIGN(ScopedOpenProcess);
 };
 }  // namespace butil
 

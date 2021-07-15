@@ -35,8 +35,9 @@ class UIFont;
 // Adapted from NSObjCRuntime.h NS_ENUM definition (used in Foundation starting
 // with the OS X 10.8 SDK and the iOS 6.0 SDK).
 #if __has_extension(cxx_strong_enums) && \
-    (defined(OS_IOS) || (defined(MAC_OS_X_VERSION_10_8) && \
-                         MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_8))
+    (defined(OS_IOS) ||                  \
+     (defined(MAC_OS_X_VERSION_10_8) &&  \
+      MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_8))
 #define CR_FORWARD_ENUM(_type, _name) enum _name : _type
 #else
 #define CR_FORWARD_ENUM(_type, _name) typedef _type _name
@@ -82,20 +83,20 @@ BUTIL_EXPORT OSType CreatorCodeForApplication();
 // If found, fills result (which must always be non-NULL) with the
 // first found directory and returns true.  Otherwise, returns false.
 BUTIL_EXPORT bool GetSearchPathDirectory(NSSearchPathDirectory directory,
-                                        NSSearchPathDomainMask domain_mask,
-                                        FilePath* result);
+                                         NSSearchPathDomainMask domain_mask,
+                                         FilePath* result);
 
 // Searches for directories for the given key in only the local domain.
 // If found, fills result (which must always be non-NULL) with the
 // first found directory and returns true.  Otherwise, returns false.
 BUTIL_EXPORT bool GetLocalDirectory(NSSearchPathDirectory directory,
-                                   FilePath* result);
+                                    FilePath* result);
 
 // Searches for directories for the given key in only the user domain.
 // If found, fills result (which must always be non-NULL) with the
 // first found directory and returns true.  Otherwise, returns false.
 BUTIL_EXPORT bool GetUserDirectory(NSSearchPathDirectory directory,
-                                  FilePath* result);
+                                   FilePath* result);
 
 // Returns the ~/Library directory.
 BUTIL_EXPORT FilePath GetUserLibraryPath();
@@ -108,7 +109,7 @@ BUTIL_EXPORT FilePath GetUserLibraryPath();
 BUTIL_EXPORT FilePath GetAppBundlePath(const FilePath& exec_name);
 
 #define TYPE_NAME_FOR_CF_TYPE_DECL(TypeCF) \
-BUTIL_EXPORT std::string TypeNameForCFType(TypeCF##Ref);
+    BUTIL_EXPORT std::string TypeNameForCFType(TypeCF##Ref);
 
 TYPE_NAME_FOR_CF_TYPE_DECL(CFArray);
 TYPE_NAME_FOR_CF_TYPE_DECL(CFBag);
@@ -184,26 +185,26 @@ BUTIL_EXPORT void SetBaseBundleID(const char* new_base_bundle_id);
 // (http://www.gotw.ca/publications/mill17.htm) so the trusty combination
 // of macros and function overloading is used instead.
 
-#define CF_TO_NS_CAST_DECL(TypeCF, TypeNS) \
-OBJC_CPP_CLASS_DECL(TypeNS) \
-\
-namespace butil { \
-namespace mac { \
-BUTIL_EXPORT TypeNS* CFToNSCast(TypeCF##Ref cf_val); \
-BUTIL_EXPORT TypeCF##Ref NSToCFCast(TypeNS* ns_val); \
-} \
-}
+#define CF_TO_NS_CAST_DECL(TypeCF, TypeNS)               \
+    OBJC_CPP_CLASS_DECL(TypeNS)                          \
+                                                         \
+    namespace butil {                                    \
+    namespace mac {                                      \
+    BUTIL_EXPORT TypeNS* CFToNSCast(TypeCF##Ref cf_val); \
+    BUTIL_EXPORT TypeCF##Ref NSToCFCast(TypeNS* ns_val); \
+    }                                                    \
+    }
 
-#define CF_TO_NS_MUTABLE_CAST_DECL(name) \
-CF_TO_NS_CAST_DECL(CF##name, NS##name) \
-OBJC_CPP_CLASS_DECL(NSMutable##name) \
-\
-namespace butil { \
-namespace mac { \
-BUTIL_EXPORT NSMutable##name* CFToNSCast(CFMutable##name##Ref cf_val); \
-BUTIL_EXPORT CFMutable##name##Ref NSToCFCast(NSMutable##name* ns_val); \
-} \
-}
+#define CF_TO_NS_MUTABLE_CAST_DECL(name)                                   \
+    CF_TO_NS_CAST_DECL(CF##name, NS##name)                                 \
+    OBJC_CPP_CLASS_DECL(NSMutable##name)                                   \
+                                                                           \
+    namespace butil {                                                      \
+    namespace mac {                                                        \
+    BUTIL_EXPORT NSMutable##name* CFToNSCast(CFMutable##name##Ref cf_val); \
+    BUTIL_EXPORT CFMutable##name##Ref NSToCFCast(NSMutable##name* ns_val); \
+    }                                                                      \
+    }
 
 // List of toll-free bridged types taken from:
 // http://www.cocoadev.com/index.pl?TollFreeBridged
@@ -255,18 +256,19 @@ namespace mac {
 // CFTypeRef hello = CFSTR("hello world");
 // CFStringRef some_string = butil::mac::CFCastStrict<CFStringRef>(hello);
 
-template<typename T>
+template <typename T>
 T CFCast(const CFTypeRef& cf_val);
 
-template<typename T>
+template <typename T>
 T CFCastStrict(const CFTypeRef& cf_val);
 
-#define CF_CAST_DECL(TypeCF) \
-template<> BUTIL_EXPORT TypeCF##Ref \
-CFCast<TypeCF##Ref>(const CFTypeRef& cf_val);\
-\
-template<> BUTIL_EXPORT TypeCF##Ref \
-CFCastStrict<TypeCF##Ref>(const CFTypeRef& cf_val);
+#define CF_CAST_DECL(TypeCF)                                               \
+    template <>                                                            \
+    BUTIL_EXPORT TypeCF##Ref CFCast<TypeCF##Ref>(const CFTypeRef& cf_val); \
+                                                                           \
+    template <>                                                            \
+    BUTIL_EXPORT TypeCF##Ref CFCastStrict<TypeCF##Ref>(                    \
+        const CFTypeRef& cf_val);
 
 CF_CAST_DECL(CFArray);
 CF_CAST_DECL(CFBag);
@@ -315,19 +317,19 @@ CF_CAST_DECL(SecTrustedApplication);
 //
 // NSString* str = butil::mac::ObjCCastStrict<NSString>(
 //     [ns_arr_of_ns_strs objectAtIndex:0]);
-template<typename T>
+template <typename T>
 T* ObjCCast(id objc_val) {
-  if ([objc_val isKindOfClass:[T class]]) {
-    return reinterpret_cast<T*>(objc_val);
-  }
-  return nil;
+    if ([objc_val isKindOfClass:[T class]]) {
+        return reinterpret_cast<T*>(objc_val);
+    }
+    return nil;
 }
 
-template<typename T>
+template <typename T>
 T* ObjCCastStrict(id objc_val) {
-  T* rv = ObjCCast<T>(objc_val);
-  DCHECK(objc_val == nil || rv);
-  return rv;
+    T* rv = ObjCCast<T>(objc_val);
+    DCHECK(objc_val == nil || rv);
+    return rv;
 }
 
 #endif  // defined(__OBJC__)
@@ -339,19 +341,18 @@ BUTIL_EXPORT std::string GetValueFromDictionaryErrorMessage(
 
 // Utility function to pull out a value from a dictionary, check its type, and
 // return it. Returns NULL if the key is not present or of the wrong type.
-template<typename T>
+template <typename T>
 T GetValueFromDictionary(CFDictionaryRef dict, CFStringRef key) {
-  CFTypeRef value = CFDictionaryGetValue(dict, key);
-  T value_specific = CFCast<T>(value);
+    CFTypeRef value  = CFDictionaryGetValue(dict, key);
+    T value_specific = CFCast<T>(value);
 
-  if (value && !value_specific) {
-    std::string expected_type = TypeNameForCFType(value_specific);
-    DLOG(WARNING) << GetValueFromDictionaryErrorMessage(key,
-                                                        expected_type,
-                                                        value);
-  }
+    if (value && !value_specific) {
+        std::string expected_type = TypeNameForCFType(value_specific);
+        DLOG(WARNING) << GetValueFromDictionaryErrorMessage(key, expected_type,
+                                                            value);
+    }
 
-  return value_specific;
+    return value_specific;
 }
 
 // Converts |path| to an autoreleased NSString. Returns nil if |path| is empty.
@@ -369,8 +370,8 @@ BUTIL_EXPORT FilePath NSStringToFilePath(NSString* str);
 // Operator << can not be overloaded for ObjectiveC types as the compiler
 // can not distinguish between overloads for id with overloads for void*.
 BUTIL_EXPORT extern std::ostream& operator<<(std::ostream& o,
-                                            const CFErrorRef err);
+                                             const CFErrorRef err);
 BUTIL_EXPORT extern std::ostream& operator<<(std::ostream& o,
-                                            const CFStringRef str);
+                                             const CFStringRef str);
 
 #endif  // BUTIL_MAC_FOUNDATION_UTIL_H_

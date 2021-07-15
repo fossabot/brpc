@@ -15,21 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <pthread.h>
-#include <dlfcn.h>                               // dlsym
-#include <stdlib.h>                              // getenv
-#include "butil/compiler_specific.h"
 #include "brpc/details/tcmalloc_extension.h"
+#include <dlfcn.h>  // dlsym
+#include <pthread.h>
+#include <stdlib.h>  // getenv
+#include "butil/compiler_specific.h"
 
 namespace {
 typedef MallocExtension* (*GetInstanceFn)();
 static pthread_once_t g_get_instance_fn_once = PTHREAD_ONCE_INIT;
-static GetInstanceFn g_get_instance_fn = NULL;
+static GetInstanceFn g_get_instance_fn       = NULL;
 static void InitGetInstanceFn() {
-    g_get_instance_fn = (GetInstanceFn)dlsym(
-        RTLD_NEXT, "_ZN15MallocExtension8instanceEv");
+    g_get_instance_fn =
+        (GetInstanceFn)dlsym(RTLD_NEXT, "_ZN15MallocExtension8instanceEv");
 }
-} // namespace
+}  // namespace
 
 MallocExtension* BAIDU_WEAK MallocExtension::instance() {
     // On fedora 26, this weak function is NOT overriden by the one in tcmalloc
@@ -46,9 +46,7 @@ MallocExtension* BAIDU_WEAK MallocExtension::instance() {
     return NULL;
 }
 
-bool IsHeapProfilerEnabled() {
-    return MallocExtension::instance() != NULL;
-}
+bool IsHeapProfilerEnabled() { return MallocExtension::instance() != NULL; }
 
 static bool check_TCMALLOC_SAMPLE_PARAMETER() {
     char* str = getenv("TCMALLOC_SAMPLE_PARAMETER");

@@ -15,18 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_NSHEAD_PROTOCOL_H
 #define BRPC_POLICY_NSHEAD_PROTOCOL_H
 
 #include "brpc/protocol.h"
 
-
 namespace brpc {
 namespace policy {
 
 // Parse binary format of nshead
-ParseResult ParseNsheadMessage(butil::IOBuf* source, Socket* socket, bool read_eof, const void *arg);
+ParseResult ParseNsheadMessage(butil::IOBuf* source, Socket* socket,
+                               bool read_eof, const void* arg);
 
 // Actions to a (client) request in nshead format
 void ProcessNsheadRequest(InputMessageBase* msg);
@@ -37,20 +36,16 @@ void ProcessNsheadResponse(InputMessageBase* msg);
 void SerializeNsheadRequest(butil::IOBuf* request_buf, Controller* controller,
                             const google::protobuf::Message* request);
 
-void PackNsheadRequest(
-    butil::IOBuf* packet_buf,
-    SocketMessage**,
-    uint64_t correlation_id,
-    const google::protobuf::MethodDescriptor*,
-    Controller* controller,
-    const butil::IOBuf&,
-    const Authenticator*);
+void PackNsheadRequest(butil::IOBuf* packet_buf, SocketMessage**,
+                       uint64_t correlation_id,
+                       const google::protobuf::MethodDescriptor*,
+                       Controller* controller, const butil::IOBuf&,
+                       const Authenticator*);
 
 // Verify authentication information in nshead format
-bool VerifyNsheadRequest(const InputMessageBase *msg);
+bool VerifyNsheadRequest(const InputMessageBase* msg);
 
-} // namespace policy
-} // namespace brpc
+}  // namespace policy
+}  // namespace brpc
 
-
-#endif // BRPC_POLICY_NSHEAD_PROTOCOL_H
+#endif  // BRPC_POLICY_NSHEAD_PROTOCOL_H

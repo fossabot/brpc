@@ -92,8 +92,7 @@ BUTIL_EXPORT bool Move(const FilePath& from_path, const FilePath& to_path);
 // Returns true on success, leaving *error unchanged.
 // Returns false on failure and sets *error appropriately, if it is non-NULL.
 BUTIL_EXPORT bool ReplaceFile(const FilePath& from_path,
-                             const FilePath& to_path,
-                             File::Error* error);
+                              const FilePath& to_path, File::Error* error);
 
 // Copies a single file. Use CopyDirectory to copy directories.
 // This function fails if either path contains traversal components ('..').
@@ -113,8 +112,7 @@ BUTIL_EXPORT bool CopyFile(const FilePath& from_path, const FilePath& to_path);
 //
 // If you only need to copy a file use CopyFile, it's faster.
 BUTIL_EXPORT bool CopyDirectory(const FilePath& from_path,
-                               const FilePath& to_path,
-                               bool recursive);
+                                const FilePath& to_path, bool recursive);
 
 // Returns true if the given path exists on the local filesystem,
 // false otherwise.
@@ -129,12 +127,12 @@ BUTIL_EXPORT bool DirectoryExists(const FilePath& path);
 // Returns true if the contents of the two files given are equal, false
 // otherwise.  If either file can't be read, returns false.
 BUTIL_EXPORT bool ContentsEqual(const FilePath& filename1,
-                               const FilePath& filename2);
+                                const FilePath& filename2);
 
 // Returns true if the contents of the two text files given are equal, false
 // otherwise.  This routine treats "\r\n" and "\n" as equivalent.
 BUTIL_EXPORT bool TextContentsEqual(const FilePath& filename1,
-                                   const FilePath& filename2);
+                                    const FilePath& filename2);
 
 // Reads the file at |path| into |contents| and returns true on success and
 // false on error.  For security reasons, a |path| containing path traversal
@@ -154,9 +152,8 @@ BUTIL_EXPORT bool ReadFileToString(const FilePath& path, std::string* contents);
 // |max_size|.
 // |contents| may be NULL, in which case this function is useful for its side
 // effect of priming the disk cache (could be used for unit tests).
-BUTIL_EXPORT bool ReadFileToString(const FilePath& path,
-                                  std::string* contents,
-                                  size_t max_size);
+BUTIL_EXPORT bool ReadFileToString(const FilePath& path, std::string* contents,
+                                   size_t max_size);
 
 #if defined(OS_POSIX)
 
@@ -168,7 +165,7 @@ BUTIL_EXPORT bool ReadFromFD(int fd, char* buffer, size_t bytes);
 // Creates a symbolic link at |symlink| pointing to |target|.  Returns
 // false on failure.
 BUTIL_EXPORT bool CreateSymbolicLink(const FilePath& target,
-                                    const FilePath& symlink);
+                                     const FilePath& symlink);
 
 // Reads the given |symlink| and returns where it points to in |target|.
 // Returns false upon failure.
@@ -176,20 +173,20 @@ BUTIL_EXPORT bool ReadSymbolicLink(const FilePath& symlink, FilePath* target);
 
 // Bits and masks of the file permission.
 enum FilePermissionBits {
-  FILE_PERMISSION_MASK              = S_IRWXU | S_IRWXG | S_IRWXO,
-  FILE_PERMISSION_USER_MASK         = S_IRWXU,
-  FILE_PERMISSION_GROUP_MASK        = S_IRWXG,
-  FILE_PERMISSION_OTHERS_MASK       = S_IRWXO,
+    FILE_PERMISSION_MASK        = S_IRWXU | S_IRWXG | S_IRWXO,
+    FILE_PERMISSION_USER_MASK   = S_IRWXU,
+    FILE_PERMISSION_GROUP_MASK  = S_IRWXG,
+    FILE_PERMISSION_OTHERS_MASK = S_IRWXO,
 
-  FILE_PERMISSION_READ_BY_USER      = S_IRUSR,
-  FILE_PERMISSION_WRITE_BY_USER     = S_IWUSR,
-  FILE_PERMISSION_EXECUTE_BY_USER   = S_IXUSR,
-  FILE_PERMISSION_READ_BY_GROUP     = S_IRGRP,
-  FILE_PERMISSION_WRITE_BY_GROUP    = S_IWGRP,
-  FILE_PERMISSION_EXECUTE_BY_GROUP  = S_IXGRP,
-  FILE_PERMISSION_READ_BY_OTHERS    = S_IROTH,
-  FILE_PERMISSION_WRITE_BY_OTHERS   = S_IWOTH,
-  FILE_PERMISSION_EXECUTE_BY_OTHERS = S_IXOTH,
+    FILE_PERMISSION_READ_BY_USER      = S_IRUSR,
+    FILE_PERMISSION_WRITE_BY_USER     = S_IWUSR,
+    FILE_PERMISSION_EXECUTE_BY_USER   = S_IXUSR,
+    FILE_PERMISSION_READ_BY_GROUP     = S_IRGRP,
+    FILE_PERMISSION_WRITE_BY_GROUP    = S_IWGRP,
+    FILE_PERMISSION_EXECUTE_BY_GROUP  = S_IXGRP,
+    FILE_PERMISSION_READ_BY_OTHERS    = S_IROTH,
+    FILE_PERMISSION_WRITE_BY_OTHERS   = S_IWOTH,
+    FILE_PERMISSION_EXECUTE_BY_OTHERS = S_IXOTH,
 };
 
 // Reads the permission of the given |path|, storing the file permission
@@ -228,7 +225,7 @@ BUTIL_EXPORT bool CreateTemporaryFile(FilePath* path);
 
 // Same as CreateTemporaryFile but the file is created in |dir|.
 BUTIL_EXPORT bool CreateTemporaryFileInDir(const FilePath& dir,
-                                          FilePath* temp_file);
+                                           FilePath* temp_file);
 
 // Create and open a temporary file.  File is opened for read/write.
 // The full path is placed in |path|.
@@ -237,21 +234,21 @@ BUTIL_EXPORT FILE* CreateAndOpenTemporaryFile(FilePath* path);
 
 // Similar to CreateAndOpenTemporaryFile, but the file is created in |dir|.
 BUTIL_EXPORT FILE* CreateAndOpenTemporaryFileInDir(const FilePath& dir,
-                                                  FilePath* path);
+                                                   FilePath* path);
 
 // Create a new directory. If prefix is provided, the new directory name is in
 // the format of prefixyyyy.
 // NOTE: prefix is ignored in the POSIX implementation.
 // If success, return true and output the full path of the directory created.
 BUTIL_EXPORT bool CreateNewTempDirectory(const FilePath::StringType& prefix,
-                                        FilePath* new_temp_path);
+                                         FilePath* new_temp_path);
 
 // Create a directory within another directory.
 // Extra characters will be appended to |prefix| to ensure that the
 // new directory does not have the same name as an existing directory.
 BUTIL_EXPORT bool CreateTemporaryDirInDir(const FilePath& base_dir,
-                                         const FilePath::StringType& prefix,
-                                         FilePath* new_dir);
+                                          const FilePath::StringType& prefix,
+                                          FilePath* new_dir);
 
 // Creates a directory, as well as creating any parent directories by default,
 // if they don't exist by default. If |create_parents| is false and the parent
@@ -261,15 +258,15 @@ BUTIL_EXPORT bool CreateTemporaryDirInDir(const FilePath& base_dir,
 // Returns true on success, leaving *error unchanged.
 // Returns false on failure and sets *error appropriately, if it is non-NULL.
 BUTIL_EXPORT bool CreateDirectoryAndGetError(const FilePath& full_path,
-                                            File::Error* error);
+                                             File::Error* error);
 BUTIL_EXPORT bool CreateDirectoryAndGetError(const FilePath& full_path,
-                                            File::Error* error,
-                                            bool create_parents);
+                                             File::Error* error,
+                                             bool create_parents);
 
 // Backward-compatible convenience method for the above.
 BUTIL_EXPORT bool CreateDirectory(const FilePath& full_path);
-BUTIL_EXPORT bool CreateDirectory(const FilePath& full_path, bool create_parents);
-
+BUTIL_EXPORT bool CreateDirectory(const FilePath& full_path,
+                                  bool create_parents);
 
 // Returns the file size. Returns true on success.
 BUTIL_EXPORT bool GetFileSize(const FilePath& file_path, int64_t* file_size);
@@ -288,14 +285,14 @@ BUTIL_EXPORT bool NormalizeFilePath(const FilePath& path, FilePath* real_path);
 // return in |drive_letter_path| the equivalent path that starts with
 // a drive letter ("C:\...").  Return false if no such path exists.
 BUTIL_EXPORT bool DevicePathToDriveLetterPath(const FilePath& device_path,
-                                             FilePath* drive_letter_path);
+                                              FilePath* drive_letter_path);
 
 // Given an existing file in |path|, set |real_path| to the path
 // in native NT format, of the form "\Device\HarddiskVolumeXX\..".
 // Returns false if the path can not be found. Empty files cannot
 // be resolved with this function.
 BUTIL_EXPORT bool NormalizeToNativeFilePath(const FilePath& path,
-                                           FilePath* nt_path);
+                                            FilePath* nt_path);
 #endif
 
 // This function will return if the given file is a symlink or not.
@@ -305,9 +302,8 @@ BUTIL_EXPORT bool IsLink(const FilePath& file_path);
 BUTIL_EXPORT bool GetFileInfo(const FilePath& file_path, File::Info* info);
 
 // Sets the time of the last access and the time of the last modification.
-BUTIL_EXPORT bool TouchFile(const FilePath& path,
-                           const Time& last_accessed,
-                           const Time& last_modified);
+BUTIL_EXPORT bool TouchFile(const FilePath& path, const Time& last_accessed,
+                            const Time& last_modified);
 
 // Wrapper for fopen-like calls. Returns non-NULL FILE* on success.
 BUTIL_EXPORT FILE* OpenFile(const FilePath& filename, const char* mode);
@@ -330,7 +326,7 @@ BUTIL_EXPORT int ReadFile(const FilePath& filename, char* data, int max_size);
 // Writes the given buffer into the file, overwriting any data that was
 // previously there.  Returns the number of bytes written, or -1 on error.
 BUTIL_EXPORT int WriteFile(const FilePath& filename, const char* data,
-                          int size);
+                           int size);
 
 #if defined(OS_POSIX)
 // Append the data to |fd|. Does not close |fd| when done.
@@ -339,8 +335,8 @@ BUTIL_EXPORT int WriteFileDescriptor(const int fd, const char* data, int size);
 
 // Append the given buffer into the file. Returns the number of bytes written,
 // or -1 on error.
-BUTIL_EXPORT int AppendToFile(const FilePath& filename,
-                             const char* data, int size);
+BUTIL_EXPORT int AppendToFile(const FilePath& filename, const char* data,
+                              int size);
 
 // Gets the current working directory for the process.
 BUTIL_EXPORT bool GetCurrentDirectory(FilePath* path);
@@ -353,7 +349,7 @@ BUTIL_EXPORT bool SetCurrentDirectory(const FilePath& path);
 // a number, -1 is returned. If |suffix| is not empty, also checks the
 // existence of it with the given suffix.
 BUTIL_EXPORT int GetUniquePathNumber(const FilePath& path,
-                                    const FilePath::StringType& suffix);
+                                     const FilePath::StringType& suffix);
 
 #if defined(OS_POSIX)
 // Test that |path| can only be changed by a given user and members of
@@ -368,9 +364,9 @@ BUTIL_EXPORT int GetUniquePathNumber(const FilePath& path,
 // This is useful for checking that a config file is administrator-controlled.
 // |base| must contain |path|.
 BUTIL_EXPORT bool VerifyPathControlledByUser(const butil::FilePath& base,
-                                            const butil::FilePath& path,
-                                            uid_t owner_uid,
-                                            const std::set<gid_t>& group_gids);
+                                             const butil::FilePath& path,
+                                             uid_t owner_uid,
+                                             const std::set<gid_t>& group_gids);
 #endif  // defined(OS_POSIX)
 
 #if defined(OS_MACOSX) && !defined(OS_IOS)
@@ -391,16 +387,16 @@ BUTIL_EXPORT int GetMaximumPathComponentLength(const butil::FilePath& path);
 #if defined(OS_LINUX)
 // Broad categories of file systems as returned by statfs() on Linux.
 enum FileSystemType {
-  FILE_SYSTEM_UNKNOWN,  // statfs failed.
-  FILE_SYSTEM_0,        // statfs.f_type == 0 means unknown, may indicate AFS.
-  FILE_SYSTEM_ORDINARY,       // on-disk filesystem like ext2
-  FILE_SYSTEM_NFS,
-  FILE_SYSTEM_SMB,
-  FILE_SYSTEM_CODA,
-  FILE_SYSTEM_MEMORY,         // in-memory file system
-  FILE_SYSTEM_CGROUP,         // cgroup control.
-  FILE_SYSTEM_OTHER,          // any other value.
-  FILE_SYSTEM_TYPE_COUNT
+    FILE_SYSTEM_UNKNOWN,  // statfs failed.
+    FILE_SYSTEM_0,        // statfs.f_type == 0 means unknown, may indicate AFS.
+    FILE_SYSTEM_ORDINARY,  // on-disk filesystem like ext2
+    FILE_SYSTEM_NFS,
+    FILE_SYSTEM_SMB,
+    FILE_SYSTEM_CODA,
+    FILE_SYSTEM_MEMORY,  // in-memory file system
+    FILE_SYSTEM_CGROUP,  // cgroup control.
+    FILE_SYSTEM_OTHER,   // any other value.
+    FILE_SYSTEM_TYPE_COUNT
 };
 
 // Attempts determine the FileSystemType for |path|.
@@ -425,10 +421,9 @@ namespace file_util {
 
 // Functor for |ScopedFILE| (below).
 struct ScopedFILEClose {
-  inline void operator()(FILE* x) const {
-    if (x)
-      fclose(x);
-  }
+    inline void operator()(FILE* x) const {
+        if (x) fclose(x);
+    }
 };
 
 // Automatically closes |FILE*|s.
@@ -444,12 +439,12 @@ namespace internal {
 // Same as Move but allows paths with traversal components.
 // Use only with extreme care.
 BUTIL_EXPORT bool MoveUnsafe(const FilePath& from_path,
-                            const FilePath& to_path);
+                             const FilePath& to_path);
 
 // Same as CopyFile but allows paths with traversal components.
 // Use only with extreme care.
 BUTIL_EXPORT bool CopyFileUnsafe(const FilePath& from_path,
-                                const FilePath& to_path);
+                                 const FilePath& to_path);
 
 #if defined(OS_WIN)
 // Copy from_path to to_path recursively and then delete from_path recursively.
@@ -457,7 +452,7 @@ BUTIL_EXPORT bool CopyFileUnsafe(const FilePath& from_path,
 // This function simulates Move(), but unlike Move() it works across volumes.
 // This function is not transactional.
 BUTIL_EXPORT bool CopyAndDeleteDirectory(const FilePath& from_path,
-                                        const FilePath& to_path);
+                                         const FilePath& to_path);
 #endif  // defined(OS_WIN)
 
 }  // namespace internal

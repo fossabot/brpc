@@ -15,21 +15,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
+#include "brpc/builtin/hotspots_service.h"
+#include <gflags/gflags.h>
 #include <stdio.h>
 #include <thread>
-#include <gflags/gflags.h>
-#include "butil/files/file_enumerator.h"
-#include "butil/file_util.h"                     // butil::FilePath
-#include "butil/popen.h"                         // butil::read_command_output
-#include "butil/fd_guard.h"                      // butil::fd_guard
-#include "brpc/log.h"
-#include "brpc/controller.h"
-#include "brpc/server.h"
-#include "brpc/reloadable_flags.h"
 #include "brpc/builtin/pprof_perl.h"
-#include "brpc/builtin/hotspots_service.h"
+#include "brpc/controller.h"
 #include "brpc/details/tcmalloc_extension.h"
+#include "brpc/log.h"
+#include "brpc/reloadable_flags.h"
+#include "brpc/server.h"
+#include "butil/fd_guard.h"   // butil::fd_guard
+#include "butil/file_util.h"  // butil::FilePath
+#include "butil/files/file_enumerator.h"
+#include "butil/popen.h"  // butil::read_command_output
 
 extern "C" {
 int __attribute__((weak)) ProfilerStart(const char* fname);
@@ -39,10 +38,10 @@ void __attribute__((weak)) ProfilerStop();
 namespace bthread {
 bool ContentionProfilerStart(const char* filename);
 void ContentionProfilerStop();
-}
+}  // namespace bthread
 
 namespace brpc {
-enum class DisplayType{
+enum class DisplayType {
     kUnknown,
     kDot,
 #if defined(OS_LINUX)
@@ -53,12 +52,16 @@ enum class DisplayType{
 
 static const char* DisplayTypeToString(DisplayType type) {
     switch (type) {
-        case DisplayType::kDot: return "dot";
+    case DisplayType::kDot:
+        return "dot";
 #if defined(OS_LINUX)
-        case DisplayType::kFlameGraph: return "flame";
+    case DisplayType::kFlameGraph:
+        return "flame";
 #endif
-        case DisplayType::kText: return "text";
-        default: return "unknown";
+    case DisplayType::kText:
+        return "text";
+    default:
+        return "unknown";
     }
 }
 
@@ -76,7 +79,7 @@ static DisplayType StringToDisplayType(const std::string& val) {
     });
     auto type = display_type_map->seek(val);
     if (type == nullptr) {
-      return DisplayType::kUnknown;
+        return DisplayType::kUnknown;
     }
     return *type;
 }
@@ -84,14 +87,20 @@ static DisplayType StringToDisplayType(const std::string& val) {
 static std::string DisplayTypeToPProfArgument(DisplayType type) {
     switch (type) {
 #if defined(OS_LINUX)
-        case DisplayType::kDot: return " --dot ";
-        case DisplayType::kFlameGraph: return " --collapsed ";
-        case DisplayType::kText: return " --text ";
+    case DisplayType::kDot:
+        return " --dot ";
+    case DisplayType::kFlameGraph:
+        return " --collapsed ";
+    case DisplayType::kText:
+        return " --text ";
 #elif defined(OS_MACOSX)
-        case DisplayType::kDot: return " -dot ";
-        case DisplayType::kText: return " -text ";
+    case DisplayType::kDot:
+        return " -dot ";
+    case DisplayType::kText:
+        return " -text ";
 #endif
-        default: return " unknown type ";
+    default:
+        return " unknown type ";
     }
 }
 
@@ -106,15 +115,16 @@ static std::string GeneratePerlScriptPath(const std::string& filename) {
 
 extern bool cpu_profiler_enabled;
 
-DEFINE_int32(max_profiling_seconds, 300, "upper limit of running time of profilers");
+DEFINE_int32(max_profiling_seconds, 300,
+             "upper limit of running time of profilers");
 BRPC_VALIDATE_GFLAG(max_profiling_seconds, NonNegativeInteger);
 
 DEFINE_int32(max_profiles_kept, 32,
              "max profiles kept for cpu/heap/growth/contention respectively");
 BRPC_VALIDATE_GFLAG(max_profiles_kept, PassValidate);
 
-static const char* const PPROF_FILENAME = "pprof.pl";
-static int DEFAULT_PROFILING_SECONDS = 10;
+static const char* const PPROF_FILENAME  = "pprof.pl";
+static int DEFAULT_PROFILING_SECONDS     = 10;
 static size_t CONCURRENT_PROFILING_LIMIT = 256;
 
 struct ProfilingWaiter {
@@ -125,7 +135,7 @@ struct ProfilingWaiter {
 // Information of the client doing profiling.
 struct ProfilingClient {
     ProfilingClient() : end_us(0), seconds(0), id(0) {}
-    
+
     int64_t end_us;
     int seconds;
     int64_t id;
@@ -134,7 +144,7 @@ struct ProfilingClient {
 
 struct ProfilingResult {
     ProfilingResult() : id(0), status_code(HTTP_STATUS_OK) {}
-    
+
     int64_t id;
     int status_code;
     butil::IOBuf result;
@@ -152,11 +162,10 @@ struct ProfilingEnvironment {
 
 // Different ProfilingType have different env.
 static ProfilingEnvironment g_env[4] = {
-    { PTHREAD_MUTEX_INITIALIZER, 0, NULL, NULL, NULL },
-    { PTHREAD_MUTEX_INITIALIZER, 0, NULL, NULL, NULL },
-    { PTHREAD_MUTEX_INITIALIZER, 0, NULL, NULL, NULL },
-    { PTHREAD_MUTEX_INITIALIZER, 0, NULL, NULL, NULL }
-};
+    {PTHREAD_MUTEX_INITIALIZER, 0, NULL, NULL, NULL},
+    {PTHREAD_MUTEX_INITIALIZER, 0, NULL, NULL, NULL},
+    {PTHREAD_MUTEX_INITIALIZER, 0, NULL, NULL, NULL},
+    {PTHREAD_MUTEX_INITIALIZER, 0, NULL, NULL, NULL}};
 
 // The `content' should be small so that it can be written into file in one
 // fwrite (at most time).
@@ -166,8 +175,8 @@ static bool WriteSmallFile(const char* filepath_in,
     butil::FilePath path(filepath_in);
     butil::FilePath dir = path.DirName();
     if (!butil::CreateDirectoryAndGetError(dir, &error)) {
-        LOG(ERROR) << "Fail to create directory=`" << dir.value()
-                   << "', " << error;
+        LOG(ERROR) << "Fail to create directory=`" << dir.value() << "', "
+                   << error;
         return false;
     }
     FILE* fp = fopen(path.value().c_str(), "w");
@@ -190,8 +199,8 @@ static bool WriteSmallFile(const char* filepath_in,
     butil::FilePath path(filepath_in);
     butil::FilePath dir = path.DirName();
     if (!butil::CreateDirectoryAndGetError(dir, &error)) {
-        LOG(ERROR) << "Fail to create directory=`" << dir.value()
-                   << "', " << error;
+        LOG(ERROR) << "Fail to create directory=`" << dir.value() << "', "
+                   << error;
         return false;
     }
     FILE* fp = fopen(path.value().c_str(), "w");
@@ -201,7 +210,7 @@ static bool WriteSmallFile(const char* filepath_in,
     }
     butil::IOBufAsZeroCopyInputStream iter(content);
     const void* data = NULL;
-    int size = 0;
+    int size         = 0;
     while (iter.Next(&data, &size)) {
         if (fwrite(data, size, 1UL, fp) != 1UL) {
             LOG(ERROR) << "Fail to write into " << path.value();
@@ -214,11 +223,10 @@ static bool WriteSmallFile(const char* filepath_in,
 }
 
 static int ReadSeconds(const Controller* cntl) {
-    int seconds = DEFAULT_PROFILING_SECONDS;
-    const std::string* param =
-        cntl->http_request().uri().GetQuery("seconds");
+    int seconds              = DEFAULT_PROFILING_SECONDS;
+    const std::string* param = cntl->http_request().uri().GetQuery("seconds");
     if (param != NULL) {
-        char* endptr = NULL;
+        char* endptr   = NULL;
         const long sec = strtol(param->c_str(), &endptr, 10);
         if (endptr == param->c_str() + param->length()) {
             seconds = sec;
@@ -277,29 +285,24 @@ static bool ValidProfilePath(const butil::StringPiece& path) {
         } else {
             consecutive_dot_count = 0;
         }
-        if (!isalpha(c) && !isdigit(c) &&
-            c != '_' && c != '-' && c != '/') {
+        if (!isalpha(c) && !isdigit(c) && c != '_' && c != '-' && c != '/') {
             return false;
         }
     }
     return true;
 }
 
-static int MakeCacheName(char* cache_name, size_t len,
-                         const char* prof_name,
-                         const char* base_name,
-                         DisplayType display_type,
+static int MakeCacheName(char* cache_name, size_t len, const char* prof_name,
+                         const char* base_name, DisplayType display_type,
                          bool show_ccount) {
     if (base_name) {
         return snprintf(cache_name, len, "%s.cache/base_%s.%s%s", prof_name,
-                        base_name,
-                        DisplayTypeToString(display_type),
+                        base_name, DisplayTypeToString(display_type),
                         (show_ccount ? ".ccount" : ""));
     } else {
         return snprintf(cache_name, len, "%s.cache/%s%s", prof_name,
                         DisplayTypeToString(display_type),
                         (show_ccount ? ".ccount" : ""));
-
     }
 }
 
@@ -311,11 +314,11 @@ static int MakeProfName(ProfilingType type, char* buf, size_t buf_len) {
     }
     buf += nr;
     buf_len -= nr;
-    
+
     time_t rawtime;
     time(&rawtime);
     struct tm* timeinfo = localtime(&rawtime);
-    const size_t nw = strftime(buf, buf_len, "%Y%m%d.%H%M%S", timeinfo);
+    const size_t nw     = strftime(buf, buf_len, "%Y%m%d.%H%M%S", timeinfo);
     buf += nw;
     buf_len -= nw;
 
@@ -363,7 +366,7 @@ static void NotifyWaiters(ProfilingType type, const Controller* cur_cntl,
     CHECK(g_env[type].client);
     ConsumeWaiters(type, cur_cntl, &saved_waiters);
     for (size_t i = 0; i < saved_waiters.size(); ++i) {
-        Controller* cntl = saved_waiters[i].cntl;
+        Controller* cntl                  = saved_waiters[i].cntl;
         ::google::protobuf::Closure* done = saved_waiters[i].done;
         cntl->http_response().set_status_code(
             cur_cntl->http_response().status_code());
@@ -393,8 +396,7 @@ static bool has_GOOGLE_PPROF_BINARY_PATH() {
 }
 #endif
 
-static void DisplayResult(Controller* cntl,
-                          google::protobuf::Closure* done,
+static void DisplayResult(Controller* cntl, google::protobuf::Closure* done,
                           const char* prof_name,
                           const butil::IOBuf& result_prefix) {
     ClosureGuard done_guard(done);
@@ -404,23 +406,28 @@ static void DisplayResult(Controller* cntl,
         // already closed by browser.
         return;
     }
-    butil::IOBuf& resp = cntl->response_attachment();
-    const bool use_html = UseHTML(cntl->http_request());
+    butil::IOBuf& resp     = cntl->response_attachment();
+    const bool use_html    = UseHTML(cntl->http_request());
     const bool show_ccount = cntl->http_request().uri().GetQuery("ccount");
     const std::string* base_name = cntl->http_request().uri().GetQuery("base");
-    const std::string* display_type_query = cntl->http_request().uri().GetQuery("display_type");
+    const std::string* display_type_query =
+        cntl->http_request().uri().GetQuery("display_type");
     const char* flamegraph_tool = getenv("FLAMEGRAPH_PL_PATH");
-    DisplayType display_type = DisplayType::kDot;
+    DisplayType display_type    = DisplayType::kDot;
     if (display_type_query) {
         display_type = StringToDisplayType(*display_type_query);
         if (display_type == DisplayType::kUnknown) {
-            return cntl->SetFailed(EINVAL, "Invalid display_type=%s", display_type_query->c_str());
+            return cntl->SetFailed(EINVAL, "Invalid display_type=%s",
+                                   display_type_query->c_str());
         }
 #if defined(OS_LINUX)
         if (display_type == DisplayType::kFlameGraph && !flamegraph_tool) {
-            return cntl->SetFailed(EINVAL, "Failed to find environment variable "
+            return cntl->SetFailed(
+                EINVAL,
+                "Failed to find environment variable "
                 "FLAMEGRAPH_PL_PATH, please read cpu_profiler doc"
-                "(https://github.com/brpc/brpc/blob/master/docs/cn/cpu_profiler.md)");
+                "(https://github.com/brpc/brpc/blob/master/docs/cn/"
+                "cpu_profiler.md)");
         }
 #endif
     }
@@ -436,9 +443,8 @@ static void DisplayResult(Controller* cntl,
     butil::IOBufBuilder os;
     os << result_prefix;
     char expected_result_name[256];
-    MakeCacheName(expected_result_name, sizeof(expected_result_name),
-                  prof_name, GetBaseName(base_name),
-                  display_type, show_ccount);
+    MakeCacheName(expected_result_name, sizeof(expected_result_name), prof_name,
+                  GetBaseName(base_name), display_type, show_ccount);
     // Try to read cache first.
     FILE* fp = fopen(expected_result_name, "r");
     if (fp != NULL) {
@@ -475,7 +481,7 @@ static void DisplayResult(Controller* cntl,
             return;
         }
     }
-    
+
     std::ostringstream cmd_builder;
 
     std::string pprof_tool{GeneratePerlScriptPath(PPROF_FILENAME)};
@@ -491,9 +497,11 @@ static void DisplayResult(Controller* cntl,
     cmd_builder << GetProgramName() << " " << prof_name;
 
     if (display_type == DisplayType::kFlameGraph) {
-        // For flamegraph, we don't care about pprof error msg, 
+        // For flamegraph, we don't care about pprof error msg,
         // which will cause confusing messages in the final result.
-        cmd_builder << " 2>/dev/null " << " | " << "perl " << flamegraph_tool;
+        cmd_builder << " 2>/dev/null "
+                    << " | "
+                    << "perl " << flamegraph_tool;
     }
     cmd_builder << " 2>&1 ";
 #elif defined(OS_MACOSX)
@@ -519,8 +527,8 @@ static void DisplayResult(Controller* cntl,
             }
             g_written_pprof_perl = true;
         }
-        errno = 0; // read_command_output may not set errno, clear it to make sure if
-                   // we see non-zero errno, it's real error.
+        errno = 0;  // read_command_output may not set errno, clear it to make
+                    // sure if we see non-zero errno, it's real error.
         butil::IOBufBuilder pprof_output;
         RPC_VLOG << "Running cmd=" << cmd;
         const int rc = butil::read_command_output(pprof_output, cmd.c_str());
@@ -541,7 +549,7 @@ static void DisplayResult(Controller* cntl,
                     HTTP_STATUS_INTERNAL_SERVER_ERROR);
                 return;
             }
-            // cmd returns non zero, quit normally 
+            // cmd returns non zero, quit normally
         }
         pprof_output.move_to(prof_result);
         // Cache result in file.
@@ -580,7 +588,7 @@ static void DisplayResult(Controller* cntl,
             tmp.append(prof_result);
             tmp.swap(prof_result);
         }
-        
+
         if (!WriteSmallFile(result_name, prof_result)) {
             LOG(ERROR) << "Fail to write " << result_name;
             CHECK(butil::DeleteFile(butil::FilePath(result_name), false));
@@ -603,23 +611,26 @@ static void DoProfiling(ProfilingType type,
                         ::google::protobuf::RpcController* cntl_base,
                         ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
-    butil::IOBuf& resp = cntl->response_attachment();
+    Controller* cntl    = static_cast<Controller*>(cntl_base);
+    butil::IOBuf& resp  = cntl->response_attachment();
     const bool use_html = UseHTML(cntl->http_request());
-    cntl->http_response().set_content_type(use_html ? "text/html" : "text/plain");
+    cntl->http_response().set_content_type(use_html ? "text/html"
+                                                    : "text/plain");
 
     butil::IOBufBuilder os;
     if (use_html) {
         os << "<!DOCTYPE html><html><head>\n"
-            "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n"
-            "<script language=\"javascript\" type=\"text/javascript\" src=\"/js/jquery_min\"></script>\n"
-            << TabsHead()
-            << "<style type=\"text/css\">\n"
-            ".logo {position: fixed; bottom: 0px; right: 0px; }\n"
-            ".logo_text {color: #B0B0B0; }\n"
-            "</style>\n"
-            "</head>\n"
-            "<body>\n";
+              "<meta http-equiv=\"Content-Type\" content=\"text/html; "
+              "charset=UTF-8\" />\n"
+              "<script language=\"javascript\" type=\"text/javascript\" "
+              "src=\"/js/jquery_min\"></script>\n"
+           << TabsHead()
+           << "<style type=\"text/css\">\n"
+              ".logo {position: fixed; bottom: 0px; right: 0px; }\n"
+              ".logo_text {color: #B0B0B0; }\n"
+              "</style>\n"
+              "</head>\n"
+              "<body>\n";
         cntl->server()->PrintTabsBody(os, ProfilingType2String(type));
     }
 
@@ -665,7 +676,7 @@ static void DoProfiling(ProfilingType type,
         cntl->http_request().uri().GetQuery("profiling_id");
     if (prof_id_str != NULL) {
         char* endptr = NULL;
-        prof_id = strtoll(prof_id_str->c_str(), &endptr, 10);
+        prof_id      = strtoll(prof_id_str->c_str(), &endptr, 10);
         LOG_IF(ERROR, *endptr != '\0') << "Invalid profiling_id=" << prof_id;
     }
 
@@ -675,7 +686,7 @@ static void DoProfiling(ProfilingType type,
             if (NULL == g_env[type].waiters) {
                 g_env[type].waiters = new std::vector<ProfilingWaiter>;
             }
-            ProfilingWaiter waiter = { cntl, done_guard.release() };
+            ProfilingWaiter waiter = {cntl, done_guard.release()};
             g_env[type].waiters->push_back(waiter);
             RPC_VLOG << "Queue request from " << cntl->remote_side();
             return;
@@ -691,7 +702,8 @@ static void DoProfiling(ProfilingType type,
         }
         CHECK(NULL == g_env[type].client);
         g_env[type].client = new ProfilingClient;
-        g_env[type].client->end_us = butil::cpuwide_time_us() + seconds * 1000000L;
+        g_env[type].client->end_us =
+            butil::cpuwide_time_us() + seconds * 1000000L;
         g_env[type].client->seconds = seconds;
         // This id work arounds an issue of chrome (or jquery under chrome) that
         // the ajax call in another tab may be delayed until ajax call in
@@ -701,10 +713,10 @@ static void DoProfiling(ProfilingType type,
         // id matching the id in cached result, then the result will be returned
         // directly instead of running another profiling which may take long
         // time.
-        if (0 == ++ g_env[type].cur_id) { // skip 0
-            ++ g_env[type].cur_id;
+        if (0 == ++g_env[type].cur_id) {  // skip 0
+            ++g_env[type].cur_id;
         }
-        g_env[type].client->id = g_env[type].cur_id;
+        g_env[type].client->id    = g_env[type].cur_id;
         g_env[type].client->point = cntl->remote_side();
     }
 
@@ -715,7 +727,8 @@ static void DoProfiling(ProfilingType type,
         os << "Fail to create prof name: " << berror()
            << (use_html ? "</body></html>" : "\n");
         os.move_to(resp);
-        cntl->http_response().set_status_code(HTTP_STATUS_INTERNAL_SERVER_ERROR);
+        cntl->http_response().set_status_code(
+            HTTP_STATUS_INTERNAL_SERVER_ERROR);
         return NotifyWaiters(type, cntl, view);
     }
 
@@ -739,8 +752,8 @@ static void DoProfiling(ProfilingType type,
         butil::File::Error error;
         const butil::FilePath dir = butil::FilePath(prof_name).DirName();
         if (!butil::CreateDirectoryAndGetError(dir, &error)) {
-            os << "Fail to create directory=`" << dir.value() << ", "
-               << error << (use_html ? "</body></html>" : "\n");
+            os << "Fail to create directory=`" << dir.value() << ", " << error
+               << (use_html ? "</body></html>" : "\n");
             os.move_to(resp);
             cntl->http_response().set_status_code(
                 HTTP_STATUS_INTERNAL_SERVER_ERROR);
@@ -748,9 +761,11 @@ static void DoProfiling(ProfilingType type,
         }
         if (!ProfilerStart(prof_name)) {
             os << "Another profiler (not via /hotspots/cpu) is running, "
-                "try again later" << (use_html ? "</body></html>" : "\n");
+                  "try again later"
+               << (use_html ? "</body></html>" : "\n");
             os.move_to(resp);
-            cntl->http_response().set_status_code(HTTP_STATUS_SERVICE_UNAVAILABLE);
+            cntl->http_response().set_status_code(
+                HTTP_STATUS_SERVICE_UNAVAILABLE);
             return NotifyWaiters(type, cntl, view);
         }
         if (bthread_usleep(seconds * 1000000L) != 0) {
@@ -760,9 +775,11 @@ static void DoProfiling(ProfilingType type,
     } else if (type == PROFILING_CONTENTION) {
         if (!bthread::ContentionProfilerStart(prof_name)) {
             os << "Another profiler (not via /hotspots/contention) is running, "
-                "try again later" << (use_html ? "</body></html>" : "\n");
+                  "try again later"
+               << (use_html ? "</body></html>" : "\n");
             os.move_to(resp);
-            cntl->http_response().set_status_code(HTTP_STATUS_SERVICE_UNAVAILABLE);
+            cntl->http_response().set_status_code(
+                HTTP_STATUS_SERVICE_UNAVAILABLE);
             return NotifyWaiters(type, cntl, view);
         }
         if (bthread_usleep(seconds * 1000000L) != 0) {
@@ -822,7 +839,7 @@ static void DoProfiling(ProfilingType type,
     std::vector<ProfilingWaiter> waiters;
     // NOTE: Must be called before DisplayResult which calls done->Run() and
     // deletes cntl.
-    ConsumeWaiters(type, cntl, &waiters);    
+    ConsumeWaiters(type, cntl, &waiters);
     DisplayResult(cntl, done_guard.release(), prof_name, os.buf());
 
     for (size_t i = 0; i < waiters.size(); ++i) {
@@ -834,11 +851,11 @@ static void StartProfiling(ProfilingType type,
                            ::google::protobuf::RpcController* cntl_base,
                            ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
-    butil::IOBuf& resp = cntl->response_attachment();
+    Controller* cntl    = static_cast<Controller*>(cntl_base);
+    butil::IOBuf& resp  = cntl->response_attachment();
     const bool use_html = UseHTML(cntl->http_request());
     butil::IOBufBuilder os;
-    bool enabled = false;
+    bool enabled           = false;
     const char* extra_desc = "";
     if (type == PROFILING_CPU) {
         enabled = cpu_profiler_enabled;
@@ -847,7 +864,7 @@ static void StartProfiling(ProfilingType type,
     } else if (type == PROFILING_HEAP) {
         enabled = IsHeapProfilerEnabled();
         if (enabled && !has_TCMALLOC_SAMPLE_PARAMETER()) {
-            enabled = false;
+            enabled    = false;
             extra_desc = " (no TCMALLOC_SAMPLE_PARAMETER in env)";
         }
     } else if (type == PROFILING_GROWTH) {
@@ -857,16 +874,17 @@ static void StartProfiling(ProfilingType type,
 
 #if defined(OS_MACOSX)
     if (!has_GOOGLE_PPROF_BINARY_PATH()) {
-        enabled = false;
+        enabled    = false;
         extra_desc = "(no GOOGLE_PPROF_BINARY_PATH in env)";
     }
 #endif
-    
+
     if (!use_html) {
         if (!enabled) {
             os << "Error: " << type_str << " profiler is not enabled."
-               << extra_desc << "\n"
-                "Read the docs: docs/cn/{cpu_profiler.md,heap_profiler.md}\n";
+               << extra_desc
+               << "\n"
+                  "Read the docs: docs/cn/{cpu_profiler.md,heap_profiler.md}\n";
             os.move_to(cntl->response_attachment());
             cntl->http_response().set_status_code(HTTP_STATUS_FORBIDDEN);
             return;
@@ -876,115 +894,122 @@ static void StartProfiling(ProfilingType type,
         return DoProfiling(type, cntl, done_guard.release());
     }
 
-    const int seconds = ReadSeconds(cntl);
+    const int seconds       = ReadSeconds(cntl);
     const std::string* view = cntl->http_request().uri().GetQuery("view");
-    const bool show_ccount = cntl->http_request().uri().GetQuery("ccount");
+    const bool show_ccount  = cntl->http_request().uri().GetQuery("ccount");
     const std::string* base_name = cntl->http_request().uri().GetQuery("base");
-    const std::string* display_type_query = cntl->http_request().uri().GetQuery("display_type");
+    const std::string* display_type_query =
+        cntl->http_request().uri().GetQuery("display_type");
     DisplayType display_type = DisplayType::kDot;
     if (display_type_query) {
         display_type = StringToDisplayType(*display_type_query);
         if (display_type == DisplayType::kUnknown) {
-            return cntl->SetFailed(EINVAL, "Invalid display_type=%s", display_type_query->c_str());
+            return cntl->SetFailed(EINVAL, "Invalid display_type=%s",
+                                   display_type_query->c_str());
         }
 #if defined(OS_LINUX)
-        if (display_type == DisplayType::kFlameGraph && !getenv("FLAMEGRAPH_PL_PATH")) {
-            return cntl->SetFailed(EINVAL, "Failed to find environment variable "
+        if (display_type == DisplayType::kFlameGraph &&
+            !getenv("FLAMEGRAPH_PL_PATH")) {
+            return cntl->SetFailed(
+                EINVAL,
+                "Failed to find environment variable "
                 "FLAMEGRAPH_PL_PATH, please read cpu_profiler doc"
-                "(https://github.com/brpc/brpc/blob/master/docs/cn/cpu_profiler.md)");
+                "(https://github.com/brpc/brpc/blob/master/docs/cn/"
+                "cpu_profiler.md)");
         }
 #endif
     }
 
     ProfilingClient profiling_client;
-    size_t nwaiters = 0;
-    ProfilingEnvironment & env = g_env[type];
+    size_t nwaiters           = 0;
+    ProfilingEnvironment& env = g_env[type];
     if (view == NULL) {
         BAIDU_SCOPED_LOCK(env.mutex);
         if (env.client) {
             profiling_client = *env.client;
-            nwaiters = (env.waiters ? env.waiters->size() : 0);
+            nwaiters         = (env.waiters ? env.waiters->size() : 0);
         }
     }
-    
+
     cntl->http_response().set_content_type("text/html");
     os << "<!DOCTYPE html><html><head>\n"
-        "<script language=\"javascript\" type=\"text/javascript\""
-        " src=\"/js/jquery_min\"></script>\n"
+          "<script language=\"javascript\" type=\"text/javascript\""
+          " src=\"/js/jquery_min\"></script>\n"
        << TabsHead()
        << "<style type=\"text/css\">\n"
-        ".logo {position: fixed; bottom: 0px; right: 0px; }\n"
-        ".logo_text {color: #B0B0B0; }\n"
-        " </style>\n"
-        "<script type=\"text/javascript\">\n"
-        "function generateURL() {\n"
-        "  var past_prof = document.getElementById('view_prof').value;\n"
-        "  var base_prof = document.getElementById('base_prof').value;\n"
-        "  var display_type = document.getElementById('display_type').value;\n";
+          ".logo {position: fixed; bottom: 0px; right: 0px; }\n"
+          ".logo_text {color: #B0B0B0; }\n"
+          " </style>\n"
+          "<script type=\"text/javascript\">\n"
+          "function generateURL() {\n"
+          "  var past_prof = document.getElementById('view_prof').value;\n"
+          "  var base_prof = document.getElementById('base_prof').value;\n"
+          "  var display_type = "
+          "document.getElementById('display_type').value;\n";
     if (type == PROFILING_CONTENTION) {
-        os << "  var show_ccount = document.getElementById('ccount_cb').checked;\n";
+        os << "  var show_ccount = "
+              "document.getElementById('ccount_cb').checked;\n";
     }
-    os << "  var targetURL = '/hotspots/" << type_str << "';\n"
-        "  targetURL += '?display_type=' + display_type;\n"
-        "  if (past_prof != '') {\n"
-        "    targetURL += '&view=' + past_prof;\n"
-        "  }\n"
-        "  if (base_prof != '') {\n"
-        "    targetURL += '&base=' + base_prof;\n"
-        "  }\n";
+    os << "  var targetURL = '/hotspots/" << type_str
+       << "';\n"
+          "  targetURL += '?display_type=' + display_type;\n"
+          "  if (past_prof != '') {\n"
+          "    targetURL += '&view=' + past_prof;\n"
+          "  }\n"
+          "  if (base_prof != '') {\n"
+          "    targetURL += '&base=' + base_prof;\n"
+          "  }\n";
     if (type == PROFILING_CONTENTION) {
-        os <<
-        "  if (show_ccount) {\n"
-        "    targetURL += '&ccount';\n"
-        "  }\n";
+        os << "  if (show_ccount) {\n"
+              "    targetURL += '&ccount';\n"
+              "  }\n";
     }
     os << "  return targetURL;\n"
-        "}\n"
-        "$(function() {\n"
-        "  function onDataReceived(data) {\n";
+          "}\n"
+          "$(function() {\n"
+          "  function onDataReceived(data) {\n";
     if (view == NULL) {
-        os <<
-        "    var selEnd = data.indexOf('[addToProfEnd]');\n"
-        "    if (selEnd != -1) {\n"
-        "      var sel = document.getElementById('view_prof');\n"
-        "      var option = document.createElement('option');\n"
-        "      option.value = data.substring(0, selEnd);\n"
-        "      option.text = option.value;\n"
-        "      var slash_index = option.value.lastIndexOf('/');\n"
-        "      if (slash_index != -1) {\n"
-        "        option.text = option.value.substring(slash_index + 1);\n"
-        "      }\n"
-        "      var option1 = sel.options[1];\n"
-        "      if (option1 == null || option1.text != option.text) {\n"
-        "        sel.add(option, 1);\n"
-        "      } else if (option1 != null) {\n"
-        "        console.log('merged ' + option.text);\n"
-        "      }\n"
-        "      sel.selectedIndex = 1;\n"
-        "      window.history.pushState('', '', generateURL());\n"
-        "      data = data.substring(selEnd + '[addToProfEnd]'.length);\n"
-        "   }\n";
+        os << "    var selEnd = data.indexOf('[addToProfEnd]');\n"
+              "    if (selEnd != -1) {\n"
+              "      var sel = document.getElementById('view_prof');\n"
+              "      var option = document.createElement('option');\n"
+              "      option.value = data.substring(0, selEnd);\n"
+              "      option.text = option.value;\n"
+              "      var slash_index = option.value.lastIndexOf('/');\n"
+              "      if (slash_index != -1) {\n"
+              "        option.text = option.value.substring(slash_index + 1);\n"
+              "      }\n"
+              "      var option1 = sel.options[1];\n"
+              "      if (option1 == null || option1.text != option.text) {\n"
+              "        sel.add(option, 1);\n"
+              "      } else if (option1 != null) {\n"
+              "        console.log('merged ' + option.text);\n"
+              "      }\n"
+              "      sel.selectedIndex = 1;\n"
+              "      window.history.pushState('', '', generateURL());\n"
+              "      data = data.substring(selEnd + '[addToProfEnd]'.length);\n"
+              "   }\n";
     }
-    os <<
-        "    var index = data.indexOf('digraph ');\n"
-        "    if (index == -1) {\n"
-        "      var selEnd = data.indexOf('[addToProfEnd]');\n"
-        "      if (selEnd != -1) {\n"
-        "        data = data.substring(selEnd + '[addToProfEnd]'.length);\n"
-        "      }\n"
-        "      $(\"#profiling-result\").html('<pre>' + data + '</pre>');\n"
-        "      if (data.indexOf('FlameGraph') != -1) { init(); }"
-        "    } else {\n"
-        "      $(\"#profiling-result\").html('Plotting ...');\n"
-        "      var svg = Viz(data.substring(index), \"svg\");\n"
-        "      $(\"#profiling-result\").html(svg);\n"
-        "    }\n"
-        "  }\n"
-        "  function onErrorReceived(xhr, ajaxOptions, thrownError) {\n"
-        "    $(\"#profiling-result\").html(xhr.responseText);\n"
-        "  }\n"
-        "  $.ajax({\n"
-        "    url: \"/hotspots/" << type_str << "_non_responsive?console=1";
+    os << "    var index = data.indexOf('digraph ');\n"
+          "    if (index == -1) {\n"
+          "      var selEnd = data.indexOf('[addToProfEnd]');\n"
+          "      if (selEnd != -1) {\n"
+          "        data = data.substring(selEnd + '[addToProfEnd]'.length);\n"
+          "      }\n"
+          "      $(\"#profiling-result\").html('<pre>' + data + '</pre>');\n"
+          "      if (data.indexOf('FlameGraph') != -1) { init(); }"
+          "    } else {\n"
+          "      $(\"#profiling-result\").html('Plotting ...');\n"
+          "      var svg = Viz(data.substring(index), \"svg\");\n"
+          "      $(\"#profiling-result\").html(svg);\n"
+          "    }\n"
+          "  }\n"
+          "  function onErrorReceived(xhr, ajaxOptions, thrownError) {\n"
+          "    $(\"#profiling-result\").html(xhr.responseText);\n"
+          "  }\n"
+          "  $.ajax({\n"
+          "    url: \"/hotspots/"
+       << type_str << "_non_responsive?console=1";
     if (type == PROFILING_CPU || type == PROFILING_CONTENTION) {
         os << "&seconds=" << seconds;
     }
@@ -1002,21 +1027,21 @@ static void StartProfiling(ProfilingType type,
         os << "&base=" << *base_name;
     }
     os << "\",\n"
-        "    type: \"GET\",\n"
-        "    dataType: \"html\",\n"
-        "    success: onDataReceived,\n"
-        "    error: onErrorReceived\n"
-        "  });\n"
-        "});\n"
-        "function onSelectProf() {\n"
-        "  window.location.href = generateURL();\n"
-        "}\n"
-        "function onChangedCB(cb) {\n"
-        "  onSelectProf();\n"
-        "}\n"
-        "</script>\n"
-        "</head>\n"
-        "<body>\n";
+          "    type: \"GET\",\n"
+          "    dataType: \"html\",\n"
+          "    success: onDataReceived,\n"
+          "    error: onErrorReceived\n"
+          "  });\n"
+          "});\n"
+          "function onSelectProf() {\n"
+          "  window.location.href = generateURL();\n"
+          "}\n"
+          "function onChangedCB(cb) {\n"
+          "  onSelectProf();\n"
+          "}\n"
+          "</script>\n"
+          "</head>\n"
+          "<body>\n";
     cntl->server()->PrintTabsBody(os, type_str);
 
     TRACEPRINTF("Begin to enumerate profiles");
@@ -1027,12 +1052,11 @@ static void StartProfiling(ProfilingType type,
     file_pattern.reserve(15);
     file_pattern.append("*.");
     file_pattern.append(type_str);
-    butil::FileEnumerator prof_enum(prof_dir, false/*non recursive*/,
-                                   butil::FileEnumerator::FILES,
-                                   file_pattern);
+    butil::FileEnumerator prof_enum(prof_dir, false /*non recursive*/,
+                                    butil::FileEnumerator::FILES, file_pattern);
     std::string file_path;
     for (butil::FilePath name = prof_enum.Next(); !name.empty();
-         name = prof_enum.Next()) {
+         name                 = prof_enum.Next()) {
         // NOTE: name already includes dir.
         if (past_profs.empty()) {
             past_profs.reserve(16);
@@ -1041,8 +1065,9 @@ static void StartProfiling(ProfilingType type,
     }
     if (!past_profs.empty()) {
         TRACEPRINTF("Sort %lu profiles in decending order", past_profs.size());
-        std::sort(past_profs.begin(), past_profs.end(), std::greater<std::string>());
-        int max_profiles = FLAGS_max_profiles_kept/*may be reloaded*/;
+        std::sort(past_profs.begin(), past_profs.end(),
+                  std::greater<std::string>());
+        int max_profiles = FLAGS_max_profiles_kept /*may be reloaded*/;
         if (max_profiles < 0) {
             max_profiles = 0;
         }
@@ -1063,7 +1088,7 @@ static void StartProfiling(ProfilingType type,
     TRACEPRINTF("End enumeration");
 
     os << "<pre style='display:inline'>View: </pre>"
-        "<select id='view_prof' onchange='onSelectProf()'>";
+          "<select id='view_prof' onchange='onSelectProf()'>";
     os << "<option value=''>&lt;new profile&gt;</option>";
     for (size_t i = 0; i < past_profs.size(); ++i) {
         os << "<option value='" << past_profs[i] << "' ";
@@ -1074,21 +1099,27 @@ static void StartProfiling(ProfilingType type,
     }
     os << "</select>";
     os << "<div><pre style='display:inline'>Display: </pre>"
-        "<select id='display_type' onchange='onSelectProf()'>"
-        "<option value=dot" << (display_type == DisplayType::kDot ? " selected" : "") << ">dot</option>"
+          "<select id='display_type' onchange='onSelectProf()'>"
+          "<option value=dot"
+       << (display_type == DisplayType::kDot ? " selected" : "")
+       << ">dot</option>"
 #if defined(OS_LINUX)
-        "<option value=flame" << (display_type == DisplayType::kFlameGraph ? " selected" : "") << ">flame</option>"
+          "<option value=flame"
+       << (display_type == DisplayType::kFlameGraph ? " selected" : "")
+       << ">flame</option>"
 #endif
-        "<option value=text" << (display_type == DisplayType::kText ? " selected" : "") << ">text</option></select>";
+          "<option value=text"
+       << (display_type == DisplayType::kText ? " selected" : "")
+       << ">text</option></select>";
     if (type == PROFILING_CONTENTION) {
         os << "&nbsp;&nbsp;&nbsp;<label for='ccount_cb'>"
-            "<input id='ccount_cb' type='checkbox'"
-           << (show_ccount ? " checked=''" : "") <<
-            " onclick='onChangedCB(this);'>count</label>";
+              "<input id='ccount_cb' type='checkbox'"
+           << (show_ccount ? " checked=''" : "")
+           << " onclick='onChangedCB(this);'>count</label>";
     }
     os << "</div><div><pre style='display:inline'>Diff: </pre>"
-        "<select id='base_prof' onchange='onSelectProf()'>"
-        "<option value=''>&lt;none&gt;</option>";
+          "<select id='base_prof' onchange='onSelectProf()'>"
+          "<option value=''>&lt;none&gt;</option>";
     for (size_t i = 0; i < past_profs.size(); ++i) {
         os << "<option value='" << past_profs[i] << "' ";
         if (base_name != NULL && past_profs[i] == *base_name) {
@@ -1097,20 +1128,27 @@ static void StartProfiling(ProfilingType type,
         os << '>' << GetBaseName(&past_profs[i]);
     }
     os << "</select></div>";
-    
+
     if (!enabled && view == NULL) {
-        os << "<p><span style='color:red'>Error:</span> "
-           << type_str << " profiler is not enabled." << extra_desc << "</p>"
-            "<p>To enable all profilers, link tcmalloc and define macros BRPC_ENABLE_CPU_PROFILER"
-            "</p><p>Or read docs: <a href='https://github.com/brpc/brpc/blob/master/docs/cn/cpu_profiler.md'>cpu_profiler</a>"
-            " and <a href='https://github.com/brpc/brpc/blob/master/docs/cn/heap_profiler.md'>heap_profiler</a>"
-            "</p></body></html>";
+        os << "<p><span style='color:red'>Error:</span> " << type_str
+           << " profiler is not enabled." << extra_desc
+           << "</p>"
+              "<p>To enable all profilers, link tcmalloc and define macros "
+              "BRPC_ENABLE_CPU_PROFILER"
+              "</p><p>Or read docs: <a "
+              "href='https://github.com/brpc/brpc/blob/master/docs/cn/"
+              "cpu_profiler.md'>cpu_profiler</a>"
+              " and <a "
+              "href='https://github.com/brpc/brpc/blob/master/docs/cn/"
+              "heap_profiler.md'>heap_profiler</a>"
+              "</p></body></html>";
         os.move_to(cntl->response_attachment());
         cntl->http_response().set_status_code(HTTP_STATUS_FORBIDDEN);
         return;
     }
 
-    if ((type == PROFILING_CPU || type == PROFILING_CONTENTION) && view == NULL) {
+    if ((type == PROFILING_CPU || type == PROFILING_CONTENTION) &&
+        view == NULL) {
         if (seconds < 0) {
             os << "Invalid seconds</body></html>";
             os.move_to(cntl->response_attachment());
@@ -1121,7 +1159,7 @@ static void StartProfiling(ProfilingType type,
 
     if (nwaiters >= CONCURRENT_PROFILING_LIMIT) {
         os << "Your profiling request is rejected because of "
-            "too many concurrent profiling requests</body></html>";
+              "too many concurrent profiling requests</body></html>";
         os.move_to(cntl->response_attachment());
         cntl->http_response().set_status_code(HTTP_STATUS_SERVICE_UNAVAILABLE);
         return;
@@ -1129,16 +1167,16 @@ static void StartProfiling(ProfilingType type,
 
     os << "<div id=\"profiling-result\">";
     if (profiling_client.seconds != 0) {
-        const int wait_seconds =
-            (int)ceil((profiling_client.end_us - butil::cpuwide_time_us())
-                      / 1000000.0);
+        const int wait_seconds = (int)ceil(
+            (profiling_client.end_us - butil::cpuwide_time_us()) / 1000000.0);
         os << "Your request is merged with the request from "
            << profiling_client.point;
         if (type == PROFILING_CPU || type == PROFILING_CONTENTION) {
             os << ", showing in about " << wait_seconds << " seconds ...";
         }
     } else {
-        if ((type == PROFILING_CPU || type == PROFILING_CONTENTION) && view == NULL) {
+        if ((type == PROFILING_CPU || type == PROFILING_CONTENTION) &&
+            view == NULL) {
             os << "Profiling " << ProfilingType2String(type) << " for "
                << seconds << " seconds ...";
         } else {
@@ -1150,89 +1188,81 @@ static void StartProfiling(ProfilingType type,
     if (display_type == DisplayType::kDot) {
         // don't need viz.js in text mode.
         os << "<script language=\"javascript\" type=\"text/javascript\""
-            " src=\"/js/viz_min\"></script>\n";
+              " src=\"/js/viz_min\"></script>\n";
     }
     os << "</html>";
     os.move_to(resp);
 }
 
-void HotspotsService::cpu(
-    ::google::protobuf::RpcController* cntl_base,
-    const ::brpc::HotspotsRequest*,
-    ::brpc::HotspotsResponse*,
-    ::google::protobuf::Closure* done) {
+void HotspotsService::cpu(::google::protobuf::RpcController* cntl_base,
+                          const ::brpc::HotspotsRequest*,
+                          ::brpc::HotspotsResponse*,
+                          ::google::protobuf::Closure* done) {
     return StartProfiling(PROFILING_CPU, cntl_base, done);
 }
 
-void HotspotsService::heap(
-    ::google::protobuf::RpcController* cntl_base,
-    const ::brpc::HotspotsRequest*,
-    ::brpc::HotspotsResponse*,
-    ::google::protobuf::Closure* done) {
+void HotspotsService::heap(::google::protobuf::RpcController* cntl_base,
+                           const ::brpc::HotspotsRequest*,
+                           ::brpc::HotspotsResponse*,
+                           ::google::protobuf::Closure* done) {
     return StartProfiling(PROFILING_HEAP, cntl_base, done);
 }
 
-void HotspotsService::growth(
-    ::google::protobuf::RpcController* cntl_base,
-    const ::brpc::HotspotsRequest*,
-    ::brpc::HotspotsResponse*,
-    ::google::protobuf::Closure* done) {
+void HotspotsService::growth(::google::protobuf::RpcController* cntl_base,
+                             const ::brpc::HotspotsRequest*,
+                             ::brpc::HotspotsResponse*,
+                             ::google::protobuf::Closure* done) {
     return StartProfiling(PROFILING_GROWTH, cntl_base, done);
 }
 
-void HotspotsService::contention(
-    ::google::protobuf::RpcController* cntl_base,
-    const ::brpc::HotspotsRequest*,
-    ::brpc::HotspotsResponse*,
-    ::google::protobuf::Closure* done) {
+void HotspotsService::contention(::google::protobuf::RpcController* cntl_base,
+                                 const ::brpc::HotspotsRequest*,
+                                 ::brpc::HotspotsResponse*,
+                                 ::google::protobuf::Closure* done) {
     return StartProfiling(PROFILING_CONTENTION, cntl_base, done);
 }
 
 void HotspotsService::cpu_non_responsive(
     ::google::protobuf::RpcController* cntl_base,
-    const ::brpc::HotspotsRequest*,
-    ::brpc::HotspotsResponse*,
+    const ::brpc::HotspotsRequest*, ::brpc::HotspotsResponse*,
     ::google::protobuf::Closure* done) {
     return DoProfiling(PROFILING_CPU, cntl_base, done);
 }
 
 void HotspotsService::heap_non_responsive(
     ::google::protobuf::RpcController* cntl_base,
-    const ::brpc::HotspotsRequest*,
-    ::brpc::HotspotsResponse*,
+    const ::brpc::HotspotsRequest*, ::brpc::HotspotsResponse*,
     ::google::protobuf::Closure* done) {
     return DoProfiling(PROFILING_HEAP, cntl_base, done);
 }
 
 void HotspotsService::growth_non_responsive(
     ::google::protobuf::RpcController* cntl_base,
-    const ::brpc::HotspotsRequest*,
-    ::brpc::HotspotsResponse*,
+    const ::brpc::HotspotsRequest*, ::brpc::HotspotsResponse*,
     ::google::protobuf::Closure* done) {
     return DoProfiling(PROFILING_GROWTH, cntl_base, done);
 }
 
 void HotspotsService::contention_non_responsive(
     ::google::protobuf::RpcController* cntl_base,
-    const ::brpc::HotspotsRequest*,
-    ::brpc::HotspotsResponse*,
+    const ::brpc::HotspotsRequest*, ::brpc::HotspotsResponse*,
     ::google::protobuf::Closure* done) {
     return DoProfiling(PROFILING_CONTENTION, cntl_base, done);
 }
 
 void HotspotsService::GetTabInfo(TabInfoList* info_list) const {
-    TabInfo* info = info_list->add();
-    info->path = "/hotspots/cpu";
+    TabInfo* info  = info_list->add();
+    info->path     = "/hotspots/cpu";
     info->tab_name = "cpu";
-    info = info_list->add();
-    info->path = "/hotspots/heap";
+    info           = info_list->add();
+    info->path     = "/hotspots/heap";
     info->tab_name = "heap";
-    info = info_list->add();
-    info->path = "/hotspots/growth";
+    info           = info_list->add();
+    info->path     = "/hotspots/growth";
     info->tab_name = "growth";
-    info = info_list->add();
-    info->path = "/hotspots/contention";
+    info           = info_list->add();
+    info->path     = "/hotspots/contention";
     info->tab_name = "contention";
 }
 
-} // namespace brpc
+}  // namespace brpc

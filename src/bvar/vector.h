@@ -17,11 +17,11 @@
 
 // Date: Sun Sep 20 12:25:11 CST 2015
 
-#ifndef  BVAR_VECTOR_H
-#define  BVAR_VECTOR_H
+#ifndef BVAR_VECTOR_H
+#define BVAR_VECTOR_H
 
-#include <ostream>
 #include <gflags/gflags_declare.h>
+#include <ostream>
 
 namespace bvar {
 
@@ -38,19 +38,19 @@ public:
             _data[i] = T();
         }
     }
-    
+
     Vector(const T& initial_value) {
         for (size_t i = 0; i < N; ++i) {
             _data[i] = initial_value;
         }
     }
-    
+
     void operator+=(const Vector& rhs) {
         for (size_t i = 0; i < N; ++i) {
             _data[i] += rhs._data[i];
         }
     }
-    
+
     void operator-=(const Vector& rhs) {
         for (size_t i = 0; i < N; ++i) {
             _data[i] -= rhs._data[i];
@@ -80,10 +80,8 @@ public:
         return true;
     }
 
-    bool operator!=(const Vector& rhs) const {
-        return !operator==(rhs);
-    }
-    
+    bool operator!=(const Vector& rhs) const { return !operator==(rhs); }
+
     T& operator[](int index) { return _data[index]; }
     const T& operator[](int index) const { return _data[index]; }
 
@@ -114,8 +112,8 @@ template <typename T>
 struct is_vector : public butil::false_type {};
 
 template <typename T, size_t N>
-struct is_vector<Vector<T,N> > : public butil::true_type {};
+struct is_vector<Vector<T, N> > : public butil::true_type {};
 
 }  // namespace bvar
 
-#endif  //BVAR_VECTOR_H
+#endif  // BVAR_VECTOR_H

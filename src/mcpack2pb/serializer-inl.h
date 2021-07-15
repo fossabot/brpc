@@ -22,19 +22,19 @@
 #ifndef MCPACK2PB_MCPACK_SERIALIZER_INL_H
 #define MCPACK2PB_MCPACK_SERIALIZER_INL_H
 
-void* fast_memcpy(void *__restrict dest, const void *__restrict src, size_t n);
+void* fast_memcpy(void* __restrict dest, const void* __restrict src, size_t n);
 
 namespace mcpack2pb {
 
-inline OutputStream::Area::Area(const Area& rhs) 
+inline OutputStream::Area::Area(const Area& rhs)
     : _addr1(rhs._addr1)
     , _addr2(rhs._addr2)
     , _size1(rhs._size1)
     , _size2(rhs._size2)
     , _addional_area(NULL) {
-
     if (rhs._addional_area) {
-        _addional_area = new std::vector<butil::StringPiece>(*rhs._addional_area);
+        _addional_area =
+            new std::vector<butil::StringPiece>(*rhs._addional_area);
     }
 }
 
@@ -45,7 +45,8 @@ inline OutputStream::Area::~Area() {
     }
 }
 
-inline OutputStream::Area& OutputStream::Area::operator=(const OutputStream::Area& rhs) {
+inline OutputStream::Area& OutputStream::Area::operator=(
+    const OutputStream::Area& rhs) {
     if (this == &rhs) {
         return *this;
     }
@@ -84,8 +85,10 @@ inline void OutputStream::Area::assign(const void* data) const {
         }
         size_t offset = _size1 + _size2;
         for (std::vector<butil::StringPiece>::const_iterator iter =
-                _addional_area->begin(); iter != _addional_area->end(); ++iter) {
-            fast_memcpy((void*)iter->data(), (const char*)data + offset, iter->size());
+                 _addional_area->begin();
+             iter != _addional_area->end(); ++iter) {
+            fast_memcpy((void*)iter->data(), (const char*)data + offset,
+                        iter->size());
             offset += iter->size();
         }
     }
@@ -94,7 +97,7 @@ inline void OutputStream::Area::assign(const void* data) const {
 inline void OutputStream::done() {
     if (_good && _size) {
         _zc_stream->BackUp(_size);
-        _size = 0;
+        _size     = 0;
         _fullsize = 0;
     }
 }
@@ -117,8 +120,8 @@ inline void OutputStream::append(const void* data, int n) {
         }
         _fullsize = _size;
     } while (1);
-    _data = NULL;
-    _size = 0;
+    _data     = NULL;
+    _size     = 0;
     _fullsize = 0;
     _pushed_bytes += (saved_n - n);
     if (n) {
@@ -142,7 +145,7 @@ inline void OutputStream::push_back(char c) {
     do {
         if (_size > 0) {
             *(char*)_data = c;
-            _data = (char*)_data + 1;
+            _data         = (char*)_data + 1;
             --_size;
             ++_pushed_bytes;
             return;
@@ -152,8 +155,8 @@ inline void OutputStream::push_back(char c) {
         }
         _fullsize = _size;
     } while (1);
-    _data = NULL;
-    _size = 0;
+    _data     = NULL;
+    _size     = 0;
     _fullsize = 0;
     set_bad();
 }
@@ -161,7 +164,7 @@ inline void OutputStream::push_back(char c) {
 inline void* OutputStream::skip_continuous(int n) {
     if (_size >= n) {
         void* ret = _data;
-        _data = (char*)_data + n;
+        _data     = (char*)_data + n;
         _size -= n;
         _pushed_bytes += n;
         return ret;
@@ -187,8 +190,8 @@ inline OutputStream::Area OutputStream::reserve(int n) {
         }
         _fullsize = _size;
     } while (1);
-    _data = NULL;
-    _size = 0;
+    _data     = NULL;
+    _size     = 0;
     _fullsize = 0;
     _pushed_bytes += (saved_n - n);
     if (n) {
@@ -217,9 +220,9 @@ inline void OutputStream::backup(int n) {
         CHECK(false) << "Expect output stream backward for " << n + _size
                      << " bytes, actually " << nbackup << " bytes";
     }
-    _size = 0;
+    _size     = 0;
     _fullsize = 0;
-    _data = NULL;
+    _data     = NULL;
     _pushed_bytes -= n;
 }
 
@@ -231,9 +234,8 @@ inline Serializer::GroupInfo* Serializer::push_group_info() {
         return NULL;
     }
     if (_group_info_more == NULL) {
-        _group_info_more =
-            (GroupInfo*)malloc((MAX_DEPTH + 1 - arraysize(_group_info_fast))
-                               * sizeof(GroupInfo));
+        _group_info_more = (GroupInfo*)malloc(
+            (MAX_DEPTH + 1 - arraysize(_group_info_fast)) * sizeof(GroupInfo));
         if (_group_info_more == NULL) {
             return NULL;
         }
@@ -252,52 +254,62 @@ inline Serializer::GroupInfo& Serializer::peek_group_info() {
 inline void Serializer::add_multiple_int8(const uint8_t* values, size_t count) {
     return add_multiple_int8((const int8_t*)values, count);
 }
-inline void Serializer::add_multiple_int16(const uint16_t* values, size_t count) {
+inline void Serializer::add_multiple_int16(const uint16_t* values,
+                                           size_t count) {
     return add_multiple_int16((const int16_t*)values, count);
 }
-inline void Serializer::add_multiple_int32(const uint32_t* values, size_t count) {
+inline void Serializer::add_multiple_int32(const uint32_t* values,
+                                           size_t count) {
     return add_multiple_int32((const int32_t*)values, count);
 }
-inline void Serializer::add_multiple_int64(const uint64_t* values, size_t count) {
+inline void Serializer::add_multiple_int64(const uint64_t* values,
+                                           size_t count) {
     return add_multiple_int64((const int64_t*)values, count);
 }
 
 inline void Serializer::add_multiple_uint8(const int8_t* values, size_t count) {
     return add_multiple_uint8((const uint8_t*)values, count);
 }
-inline void Serializer::add_multiple_uint16(const int16_t* values, size_t count) {
+inline void Serializer::add_multiple_uint16(const int16_t* values,
+                                            size_t count) {
     return add_multiple_uint16((const uint16_t*)values, count);
 }
-inline void Serializer::add_multiple_uint32(const int32_t* values, size_t count) {
+inline void Serializer::add_multiple_uint32(const int32_t* values,
+                                            size_t count) {
     return add_multiple_uint32((const uint32_t*)values, count);
 }
-inline void Serializer::add_multiple_uint64(const int64_t* values, size_t count) {
+inline void Serializer::add_multiple_uint64(const int64_t* values,
+                                            size_t count) {
     return add_multiple_uint64((const uint64_t*)values, count);
 }
 
-inline void Serializer::begin_mcpack_array(const StringWrapper& name, FieldType item_type)
-{ begin_array_internal(name, item_type, false); }
+inline void Serializer::begin_mcpack_array(const StringWrapper& name,
+                                           FieldType item_type) {
+    begin_array_internal(name, item_type, false);
+}
 
-inline void Serializer::begin_mcpack_array(FieldType item_type)
-{ begin_array_internal(item_type, false); }
+inline void Serializer::begin_mcpack_array(FieldType item_type) {
+    begin_array_internal(item_type, false);
+}
 
-inline void Serializer::begin_compack_array(const StringWrapper& name, FieldType item_type)
-{ begin_array_internal(name, item_type, true); }
+inline void Serializer::begin_compack_array(const StringWrapper& name,
+                                            FieldType item_type) {
+    begin_array_internal(name, item_type, true);
+}
 
-inline void Serializer::begin_compack_array(FieldType item_type)
-{ begin_array_internal(item_type, true); }
+inline void Serializer::begin_compack_array(FieldType item_type) {
+    begin_array_internal(item_type, true);
+}
 
-inline void Serializer::begin_object(const StringWrapper& name)
-{ begin_object_internal(name); }
+inline void Serializer::begin_object(const StringWrapper& name) {
+    begin_object_internal(name);
+}
 
-inline void Serializer::begin_object()
-{ begin_object_internal(); }
+inline void Serializer::begin_object() { begin_object_internal(); }
 
-inline void Serializer::end_object()
-{ end_object_internal(false); }
+inline void Serializer::end_object() { end_object_internal(false); }
 
-inline void Serializer::end_object_iso()
-{ end_object_internal(true); }
+inline void Serializer::end_object_iso() { end_object_internal(true); }
 
 }  // namespace mcpack2pb
 

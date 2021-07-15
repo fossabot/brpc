@@ -15,42 +15,40 @@
 // removes the object as an observer from all sources it has been added to.
 template <class Source, class Observer>
 class ScopedObserver {
- public:
-  explicit ScopedObserver(Observer* observer) : observer_(observer) {}
+public:
+    explicit ScopedObserver(Observer* observer) : observer_(observer) {}
 
-  ~ScopedObserver() {
-    RemoveAll();
-  }
+    ~ScopedObserver() { RemoveAll(); }
 
-  // Adds the object passed to the constructor as an observer on |source|.
-  void Add(Source* source) {
-    sources_.push_back(source);
-    source->AddObserver(observer_);
-  }
+    // Adds the object passed to the constructor as an observer on |source|.
+    void Add(Source* source) {
+        sources_.push_back(source);
+        source->AddObserver(observer_);
+    }
 
-  // Remove the object passed to the constructor as an observer from |source|.
-  void Remove(Source* source) {
-    sources_.erase(std::find(sources_.begin(), sources_.end(), source));
-    source->RemoveObserver(observer_);
-  }
+    // Remove the object passed to the constructor as an observer from |source|.
+    void Remove(Source* source) {
+        sources_.erase(std::find(sources_.begin(), sources_.end(), source));
+        source->RemoveObserver(observer_);
+    }
 
-  void RemoveAll() {
-    for (size_t i = 0; i < sources_.size(); ++i)
-      sources_[i]->RemoveObserver(observer_);
-    sources_.clear();
-  }
+    void RemoveAll() {
+        for (size_t i = 0; i < sources_.size(); ++i)
+            sources_[i]->RemoveObserver(observer_);
+        sources_.clear();
+    }
 
-  bool IsObserving(Source* source) const {
-    return std::find(sources_.begin(), sources_.end(), source) !=
-        sources_.end();
-  }
+    bool IsObserving(Source* source) const {
+        return std::find(sources_.begin(), sources_.end(), source) !=
+               sources_.end();
+    }
 
- private:
-  Observer* observer_;
+private:
+    Observer* observer_;
 
-  std::vector<Source*> sources_;
+    std::vector<Source*> sources_;
 
-  DISALLOW_COPY_AND_ASSIGN(ScopedObserver);
+    DISALLOW_COPY_AND_ASSIGN(ScopedObserver);
 };
 
 #endif  // BUTIL_SCOPED_OBSERVER_H_

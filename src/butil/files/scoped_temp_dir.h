@@ -21,40 +21,40 @@
 namespace butil {
 
 class BUTIL_EXPORT ScopedTempDir {
- public:
-  // No directory is owned/created initially.
-  ScopedTempDir();
+public:
+    // No directory is owned/created initially.
+    ScopedTempDir();
 
-  // Recursively delete path.
-  ~ScopedTempDir();
+    // Recursively delete path.
+    ~ScopedTempDir();
 
-  // Creates a unique directory in TempPath, and takes ownership of it.
-  // See file_util::CreateNewTemporaryDirectory.
-  bool CreateUniqueTempDir() WARN_UNUSED_RESULT;
+    // Creates a unique directory in TempPath, and takes ownership of it.
+    // See file_util::CreateNewTemporaryDirectory.
+    bool CreateUniqueTempDir() WARN_UNUSED_RESULT;
 
-  // Creates a unique directory under a given path, and takes ownership of it.
-  bool CreateUniqueTempDirUnderPath(const FilePath& path) WARN_UNUSED_RESULT;
+    // Creates a unique directory under a given path, and takes ownership of it.
+    bool CreateUniqueTempDirUnderPath(const FilePath& path) WARN_UNUSED_RESULT;
 
-  // Takes ownership of directory at |path|, creating it if necessary.
-  // Don't call multiple times unless Take() has been called first.
-  bool Set(const FilePath& path) WARN_UNUSED_RESULT;
+    // Takes ownership of directory at |path|, creating it if necessary.
+    // Don't call multiple times unless Take() has been called first.
+    bool Set(const FilePath& path) WARN_UNUSED_RESULT;
 
-  // Deletes the temporary directory wrapped by this object.
-  bool Delete() WARN_UNUSED_RESULT;
+    // Deletes the temporary directory wrapped by this object.
+    bool Delete() WARN_UNUSED_RESULT;
 
-  // Caller takes ownership of the temporary directory so it won't be destroyed
-  // when this object goes out of scope.
-  FilePath Take();
+    // Caller takes ownership of the temporary directory so it won't be
+    // destroyed when this object goes out of scope.
+    FilePath Take();
 
-  const FilePath& path() const { return path_; }
+    const FilePath& path() const { return path_; }
 
-  // Returns true if path_ is non-empty and exists.
-  bool IsValid() const;
+    // Returns true if path_ is non-empty and exists.
+    bool IsValid() const;
 
- private:
-  FilePath path_;
+private:
+    FilePath path_;
 
-  DISALLOW_COPY_AND_ASSIGN(ScopedTempDir);
+    DISALLOW_COPY_AND_ASSIGN(ScopedTempDir);
 };
 
 }  // namespace butil

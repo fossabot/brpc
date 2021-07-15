@@ -15,20 +15,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_EXTENSION_H
 #define BRPC_EXTENSION_H
 
 #include <string>
-#include "butil/scoped_lock.h"
-#include "butil/logging.h"
 #include "butil/containers/case_ignored_flat_map.h"
+#include "butil/logging.h"
 #include "butil/memory/singleton_on_pthread_once.h"
+#include "butil/scoped_lock.h"
 
 namespace butil {
-template <typename T> class GetLeakySingleton;
+template <typename T>
+class GetLeakySingleton;
 }
-
 
 namespace brpc {
 
@@ -48,15 +47,14 @@ public:
     void List(std::ostream& os, char separator);
 
 private:
-friend class butil::GetLeakySingleton<Extension<T> >;
+    friend class butil::GetLeakySingleton<Extension<T> >;
     Extension();
     ~Extension();
     butil::CaseIgnoredFlatMap<T*> _instance_map;
     butil::Mutex _map_mutex;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #include "brpc/extension_inl.h"
 

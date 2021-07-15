@@ -22,9 +22,9 @@
 #ifndef MCPACK2PB_MCPACK_SERIALIZER_H
 #define MCPACK2PB_MCPACK_SERIALIZER_H
 
+#include <google/protobuf/io/zero_copy_stream.h>
 #include <limits>
 #include <vector>
-#include <google/protobuf/io/zero_copy_stream.h>
 #include "butil/logging.h"
 #include "butil/strings/string_piece.h"
 #include "mcpack2pb/field_type.h"
@@ -39,17 +39,19 @@ class OutputStream {
 public:
     class Area {
     public:
-        Area() : _addr1(NULL)
-               , _addr2(NULL)
-               , _size1(0)
-               , _size2(0)
-               , _addional_area(NULL) {}
+        Area()
+            : _addr1(NULL)
+            , _addr2(NULL)
+            , _size1(0)
+            , _size2(0)
+            , _addional_area(NULL) {}
         Area(const butil::LinkerInitialized&) {}
         Area(const Area& rhs);
         Area& operator=(const Area& rhs);
         ~Area();
         void add(void* data, size_t n);
         void assign(const void* data) const;
+
     private:
         void* _addr1;
         void* _addr2;
@@ -67,8 +69,7 @@ public:
         , _size(0)
         , _data(NULL)
         , _zc_stream(stream)
-        , _pushed_bytes(0)
-    {}
+        , _pushed_bytes(0) {}
 
     ~OutputStream() { done(); }
 
@@ -76,9 +77,11 @@ public:
     void append(const void* data, int n);
 
     // Append a pod.
-    template <typename T> void append_packed_pod(const T& packed_pod);
+    template <typename T>
+    void append_packed_pod(const T& packed_pod);
 
-    template <typename T> T* append_packed_pod();
+    template <typename T>
+    T* append_packed_pod();
 
     // Append a byte.
     void push_back(char c);
@@ -96,7 +99,7 @@ public:
 
     // Go back for n bytes.
     void backup(int n);
-    
+
     // Returns bytes pushed and cut since creation of this stream.
     size_t pushed_bytes() const { return _pushed_bytes; }
 
@@ -107,7 +110,7 @@ public:
 
     // Optionally called to backup buffered bytes to zero-copy stream.
     void done();
-    
+
 private:
     bool _good;
     int _fullsize;
@@ -135,10 +138,11 @@ public:
             _size = 0;
         }
     }
-    ~StringWrapper() { }
+    ~StringWrapper() {}
     const char* data() const { return _data; }
     size_t size() const { return _size; }
     bool empty() const { return !_size; }
+
 private:
     const char* _data;
     size_t _size;
@@ -268,18 +272,18 @@ private:
     DISALLOW_COPY_AND_ASSIGN(Serializer);
 
     GroupInfo* push_group_info();
-    GroupInfo & peek_group_info();
+    GroupInfo& peek_group_info();
     void begin_object_internal(const StringWrapper& name);
     void begin_object_internal();
     void end_object_internal(bool objectisoarray);
     void begin_array_internal(FieldType item_type, bool compack);
-    void begin_array_internal(const StringWrapper& name,
-                              FieldType item_type, bool compack);
+    void begin_array_internal(const StringWrapper& name, FieldType item_type,
+                              bool compack);
 
     OutputStream* _stream;
     int _ndepth;
     GroupInfo _group_info_fast[15];
-    GroupInfo *_group_info_more;
+    GroupInfo* _group_info_more;
 };
 
 }  // namespace mcpack2pb

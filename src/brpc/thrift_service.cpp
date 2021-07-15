@@ -15,10 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "butil/class_name.h"
 #include "brpc/thrift_service.h"
 #include "brpc/details/method_status.h"
+#include "butil/class_name.h"
 
 namespace brpc {
 
@@ -32,7 +31,7 @@ ThriftService::~ThriftService() {
     _status = NULL;
 }
 
-void ThriftService::Describe(std::ostream &os, const DescribeOptions&) const {
+void ThriftService::Describe(std::ostream& os, const DescribeOptions&) const {
     os << butil::class_name_str(*this);
 }
 
@@ -49,5 +48,4 @@ void ThriftService::Expose(const butil::StringPiece& prefix) {
     _status->Expose(s);
 }
 
-} // namespace brpc
-
+}  // namespace brpc

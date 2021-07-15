@@ -32,16 +32,12 @@ extern "C" {
 
 extern int *__errno_location() __attribute__((__const__));
 
-int *bthread_errno_location() {
-    return __errno_location();
-}
+int *bthread_errno_location() { return __errno_location(); }
 #elif defined(OS_MACOSX)
 
-extern int * __error(void);
+extern int *__error(void);
 
-int *bthread_errno_location() {
-    return __error();
-}
+int *bthread_errno_location() { return __error(); }
 #endif
 
 }  // extern "C"

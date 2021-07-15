@@ -15,26 +15,24 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #include <cstdlib>
 
-#include <string>                               // std::string
-#include <iostream>
 #include <gflags/gflags.h>
-#include "butil/macros.h"
-#include "butil/logging.h"                       // LOG
-#include "butil/scoped_lock.h"
-#include "butil/endpoint.h"
-#include "butil/base64.h"
-#include "bthread/bthread.h"                    // bthread_usleep
+#include <iostream>
+#include <string>  // std::string
+#include "brpc/details/http_message.h"
 #include "brpc/log.h"
 #include "brpc/reloadable_flags.h"
-#include "brpc/details/http_message.h"
+#include "bthread/bthread.h"  // bthread_usleep
+#include "butil/base64.h"
+#include "butil/endpoint.h"
+#include "butil/logging.h"  // LOG
+#include "butil/macros.h"
+#include "butil/scoped_lock.h"
 
 namespace brpc {
 
-DEFINE_bool(http_verbose, false,
-            "[DEBUG] Print EVERY http request/response");
+DEFINE_bool(http_verbose, false, "[DEBUG] Print EVERY http request/response");
 DEFINE_int32(http_verbose_max_body_length, 512,
              "[DEBUG] Max body length printed when -http_verbose is on");
 DECLARE_int64(socket_max_unwritten_bytes);
@@ -43,15 +41,15 @@ DECLARE_int64(socket_max_unwritten_bytes);
 
 int HttpMessage::on_message_begin(http_parser *parser) {
     HttpMessage *http_message = (HttpMessage *)parser->data;
-    http_message->_stage = HTTP_ON_MESSAGE_BEGIN;
+    http_message->_stage      = HTTP_ON_MESSAGE_BEGIN;
     return 0;
 }
 
 // For request
-int HttpMessage::on_url(http_parser *parser, 
-                        const char *at, const size_t length) {
+int HttpMessage::on_url(http_parser *parser, const char *at,
+                        const size_t length) {
     HttpMessage *http_message = (HttpMessage *)parser->data;
-    http_message->_stage = HTTP_ON_URL;
+    http_message->_stage      = HTTP_ON_URL;
     http_message->_url.append(at, length);
     return 0;
 }
@@ -59,7 +57,7 @@ int HttpMessage::on_url(http_parser *parser,
 // For response
 int HttpMessage::on_status(http_parser *parser, const char *, const size_t) {
     HttpMessage *http_message = (HttpMessage *)parser->data;
-    http_message->_stage = HTTP_ON_STATUS;
+    http_message->_stage      = HTTP_ON_STATUS;
     // According to https://www.w3.org/Protocols/rfc2616/rfc2616-sec6.html
     // Client is not required to examine or display the Reason-Phrase
     return 0;
@@ -74,9 +72,9 @@ int HttpMessage::on_status(http_parser *parser, const char *, const size_t) {
 // field-value to the first, each separated by a comma. The order in which
 // header fields with the same field-name are received is therefore significant
 // to the interpretation of the combined field value, and thus a proxy MUST NOT
-// change the order of these field values when a message is forwarded. 
-int HttpMessage::on_header_field(http_parser *parser,
-                                 const char *at, const size_t length) {
+// change the order of these field values when a message is forwarded.
+int HttpMessage::on_header_field(http_parser *parser, const char *at,
+                                 const size_t length) {
     HttpMessage *http_message = (HttpMessage *)parser->data;
     if (http_message->_stage != HTTP_ON_HEADER_FIELD) {
         http_message->_stage = HTTP_ON_HEADER_FIELD;
@@ -86,13 +84,13 @@ int HttpMessage::on_header_field(http_parser *parser,
     return 0;
 }
 
-int HttpMessage::on_header_value(http_parser *parser,
-                                 const char *at, const size_t length) {
+int HttpMessage::on_header_value(http_parser *parser, const char *at,
+                                 const size_t length) {
     HttpMessage *http_message = (HttpMessage *)parser->data;
-    bool first_entry = false;
+    bool first_entry          = false;
     if (http_message->_stage != HTTP_ON_HEADER_VALUE) {
         http_message->_stage = HTTP_ON_HEADER_VALUE;
-        first_entry = true;
+        first_entry          = true;
         if (http_message->_cur_header.empty()) {
             LOG(ERROR) << "Header name is empty";
             return -1;
@@ -107,9 +105,9 @@ int HttpMessage::on_header_value(http_parser *parser,
         http_message->_cur_value->append(at, length);
     }
     if (FLAGS_http_verbose) {
-        butil::IOBufBuilder* vs = http_message->_vmsgbuilder;
+        butil::IOBufBuilder *vs = http_message->_vmsgbuilder;
         if (vs == NULL) {
-            vs = new butil::IOBufBuilder;
+            vs                         = new butil::IOBufBuilder;
             http_message->_vmsgbuilder = vs;
             if (parser->type == HTTP_REQUEST) {
                 *vs << "[ HTTP REQUEST @" << butil::my_ip() << " ]\n< "
@@ -117,11 +115,12 @@ int HttpMessage::on_header_value(http_parser *parser,
                     << http_message->_url << " HTTP/" << parser->http_major
                     << '.' << parser->http_minor;
             } else {
-                // NOTE: http_message->header().status_code() may not be set yet.
+                // NOTE: http_message->header().status_code() may not be set
+                // yet.
                 *vs << "[ HTTP RESPONSE @" << butil::my_ip() << " ]\n< HTTP/"
-                    << parser->http_major
-                    << '.' << parser->http_minor << ' ' << parser->status_code
-                    << ' ' << HttpReasonPhrase(parser->status_code);
+                    << parser->http_major << '.' << parser->http_minor << ' '
+                    << parser->status_code << ' '
+                    << HttpReasonPhrase(parser->status_code);
             }
         }
         if (first_entry) {
@@ -134,9 +133,10 @@ int HttpMessage::on_header_value(http_parser *parser,
 
 int HttpMessage::on_headers_complete(http_parser *parser) {
     HttpMessage *http_message = (HttpMessage *)parser->data;
-    http_message->_stage = HTTP_ON_HEADERS_COMPLETE;
+    http_message->_stage      = HTTP_ON_HEADERS_COMPLETE;
     // Move content-type into the member field.
-    const std::string* content_type = http_message->header().GetHeader("content-type");
+    const std::string *content_type =
+        http_message->header().GetHeader("content-type");
     if (content_type) {
         http_message->header().set_content_type(*content_type);
         http_message->header().RemoveHeader("content-type");
@@ -163,16 +163,17 @@ int HttpMessage::on_headers_complete(http_parser *parser) {
         LOG(ERROR) << "Fail to parse url=`" << http_message->_url << '\'';
         return -1;
     }
-    //rfc2616-sec5.2
-    //1. If Request-URI is an absoluteURI, the host is part of the Request-URI.
-    //Any Host header field value in the request MUST be ignored.
-    //2. If the Request-URI is not an absoluteURI, and the request includes a
-    //Host header field, the host is determined by the Host header field value.
-    //3. If the host as determined by rule 1 or 2 is not a valid host on the
-    //server, the responce MUST be a 400 error messsage.
-    URI & uri = http_message->header().uri();
+    // rfc2616-sec5.2
+    // 1. If Request-URI is an absoluteURI, the host is part of the Request-URI.
+    // Any Host header field value in the request MUST be ignored.
+    // 2. If the Request-URI is not an absoluteURI, and the request includes a
+    // Host header field, the host is determined by the Host header field value.
+    // 3. If the host as determined by rule 1 or 2 is not a valid host on the
+    // server, the responce MUST be a 400 error messsage.
+    URI &uri = http_message->header().uri();
     if (uri._host.empty()) {
-        const std::string* host_header = http_message->header().GetHeader("host");
+        const std::string *host_header =
+            http_message->header().GetHeader("host");
         if (host_header != NULL) {
             uri.SetHostAndPort(*host_header);
         }
@@ -180,17 +181,18 @@ int HttpMessage::on_headers_complete(http_parser *parser) {
     return 0;
 }
 
-int HttpMessage::UnlockAndFlushToBodyReader(std::unique_lock<butil::Mutex>& mu) {
+int HttpMessage::UnlockAndFlushToBodyReader(
+    std::unique_lock<butil::Mutex> &mu) {
     if (_body.empty()) {
         mu.unlock();
         return 0;
     }
     butil::IOBuf body_seen = _body.movable();
-    ProgressiveReader* r = _body_reader;
+    ProgressiveReader *r   = _body_reader;
     mu.unlock();
     for (size_t i = 0; i < body_seen.backing_block_num(); ++i) {
         butil::StringPiece blk = body_seen.backing_block(i);
-        butil::Status st = r->OnReadOnePart(blk.data(), blk.size());
+        butil::Status st       = r->OnReadOnePart(blk.data(), blk.size());
         if (!st.ok()) {
             mu.lock();
             _body_reader = NULL;
@@ -202,13 +204,13 @@ int HttpMessage::UnlockAndFlushToBodyReader(std::unique_lock<butil::Mutex>& mu) 
     return 0;
 }
 
-int HttpMessage::on_body_cb(http_parser *parser,
-                            const char *at, const size_t length) {
-    return static_cast<HttpMessage*>(parser->data)->OnBody(at, length);
+int HttpMessage::on_body_cb(http_parser *parser, const char *at,
+                            const size_t length) {
+    return static_cast<HttpMessage *>(parser->data)->OnBody(at, length);
 }
 
 int HttpMessage::on_message_complete_cb(http_parser *parser) {
-    return static_cast<HttpMessage*>(parser->data)->OnMessageComplete();
+    return static_cast<HttpMessage *>(parser->data)->OnMessageComplete();
 }
 
 int HttpMessage::OnBody(const char *at, const size_t length) {
@@ -227,8 +229,9 @@ int HttpMessage::OnBody(const char *at, const size_t length) {
             _vmsgbuilder = NULL;
         } else {
             if (_vbodylen < (size_t)FLAGS_http_verbose_max_body_length) {
-                int plen = std::min(length, (size_t)FLAGS_http_verbose_max_body_length
-                                    - _vbodylen);
+                int plen = std::min(
+                    length,
+                    (size_t)FLAGS_http_verbose_max_body_length - _vbodylen);
                 std::string str = butil::ToPrintableString(
                     at, plen, std::numeric_limits<size_t>::max());
                 _vmsgbuilder->write(str.data(), str.size());
@@ -248,7 +251,7 @@ int HttpMessage::OnBody(const char *at, const size_t length) {
     }
     // Progressive read.
     std::unique_lock<butil::Mutex> mu(_body_mutex);
-    ProgressiveReader* r = _body_reader;
+    ProgressiveReader *r = _body_reader;
     while (r == NULL) {
         // When _body is full, the sleep-waiting may block parse handler
         // of the protocol. A more efficient solution is to remove the
@@ -261,7 +264,7 @@ int HttpMessage::OnBody(const char *at, const size_t length) {
             return 0;
         }
         mu.unlock();
-        bthread_usleep(10000/*10ms*/);
+        bthread_usleep(10000 /*10ms*/);
         mu.lock();
         r = _body_reader;
     }
@@ -284,8 +287,10 @@ int HttpMessage::OnBody(const char *at, const size_t length) {
 int HttpMessage::OnMessageComplete() {
     if (_vmsgbuilder) {
         if (_vbodylen > (size_t)FLAGS_http_verbose_max_body_length) {
-            *_vmsgbuilder << "\n<skipped " << _vbodylen
-                - (size_t)FLAGS_http_verbose_max_body_length << " bytes>";
+            *_vmsgbuilder << "\n<skipped "
+                          << _vbodylen -
+                                 (size_t)FLAGS_http_verbose_max_body_length
+                          << " bytes>";
         }
         LOG(INFO) << '\n' << _vmsgbuilder->buf();
         delete _vmsgbuilder;
@@ -309,8 +314,8 @@ int HttpMessage::OnMessageComplete() {
             return -1;
         }
         mu.lock();
-        ProgressiveReader* r = _body_reader;
-        _body_reader = NULL;
+        ProgressiveReader *r = _body_reader;
+        _body_reader         = NULL;
         mu.unlock();
         r->OnEndOfMessage(butil::Status());
     }
@@ -320,25 +325,26 @@ int HttpMessage::OnMessageComplete() {
 class FailAllRead : public ProgressiveReader {
 public:
     // @ProgressiveReader
-    butil::Status OnReadOnePart(const void* /*data*/, size_t /*length*/) {
-        return butil::Status(-1, "Trigger by FailAllRead at %s:%d",
-                            __FILE__, __LINE__);
+    butil::Status OnReadOnePart(const void * /*data*/, size_t /*length*/) {
+        return butil::Status(-1, "Trigger by FailAllRead at %s:%d", __FILE__,
+                             __LINE__);
     }
-    void OnEndOfMessage(const butil::Status&) {}
+    void OnEndOfMessage(const butil::Status &) {}
 };
 
-static FailAllRead* s_fail_all_read = NULL;
+static FailAllRead *s_fail_all_read        = NULL;
 static pthread_once_t s_fail_all_read_once = PTHREAD_ONCE_INIT;
 static void CreateFailAllRead() { s_fail_all_read = new FailAllRead; }
 
-void HttpMessage::SetBodyReader(ProgressiveReader* r) {
+void HttpMessage::SetBodyReader(ProgressiveReader *r) {
     if (!_read_body_progressively) {
         return r->OnEndOfMessage(
-            butil::Status(EPERM, "Call SetBodyReader on HttpMessage with"
-                         " read_body_progressively=false"));
+            butil::Status(EPERM,
+                          "Call SetBodyReader on HttpMessage with"
+                          " read_body_progressively=false"));
     }
     const int MAX_TRY = 3;
-    int ntry = 0;
+    int ntry          = 0;
     do {
         std::unique_lock<butil::Mutex> mu(_body_mutex);
         if (_body_reader != NULL) {
@@ -366,14 +372,14 @@ void HttpMessage::SetBodyReader(ProgressiveReader* r) {
         mu.unlock();
         for (size_t i = 0; i < body_seen.backing_block_num(); ++i) {
             butil::StringPiece blk = body_seen.backing_block(i);
-            butil::Status st = r->OnReadOnePart(blk.data(), blk.size());
+            butil::Status st       = r->OnReadOnePart(blk.data(), blk.size());
             if (!st.ok()) {
                 r->OnEndOfMessage(st);
                 // Make OnBody() or OnMessageComplete() fail on next call to
                 // close the socket. If the message was already complete, the
                 // socket will not be closed.
                 pthread_once(&s_fail_all_read_once, CreateFailAllRead);
-                r = s_fail_all_read;
+                r    = s_fail_all_read;
                 ntry = MAX_TRY;
                 break;
             }
@@ -382,15 +388,10 @@ void HttpMessage::SetBodyReader(ProgressiveReader* r) {
 }
 
 const http_parser_settings g_parser_settings = {
-    &HttpMessage::on_message_begin,
-    &HttpMessage::on_url,
-    &HttpMessage::on_status,
-    &HttpMessage::on_header_field,
-    &HttpMessage::on_header_value,
-    &HttpMessage::on_headers_complete,
-    &HttpMessage::on_body_cb,
-    &HttpMessage::on_message_complete_cb
-};
+    &HttpMessage::on_message_begin, &HttpMessage::on_url,
+    &HttpMessage::on_status,        &HttpMessage::on_header_field,
+    &HttpMessage::on_header_value,  &HttpMessage::on_headers_complete,
+    &HttpMessage::on_body_cb,       &HttpMessage::on_message_complete_cb};
 
 HttpMessage::HttpMessage(bool read_body_progressively)
     : _parsed_length(0)
@@ -406,8 +407,8 @@ HttpMessage::HttpMessage(bool read_body_progressively)
 
 HttpMessage::~HttpMessage() {
     if (_body_reader) {
-        ProgressiveReader* saved_body_reader = _body_reader;
-        _body_reader = NULL;
+        ProgressiveReader *saved_body_reader = _body_reader;
+        _body_reader                         = NULL;
         // Successfully ended message is ended in OnMessageComplete() or
         // SetBodyReader() and _body_reader should be null-ed. Non-null
         // _body_reader here just means the socket is broken before completion
@@ -433,7 +434,7 @@ ssize_t HttpMessage::ParseFromArray(const char *data, const size_t length) {
         RPC_VLOG << "Fail to parse http message, parser=" << _parser
                  << ", buf=`" << butil::StringPiece(data, length) << '\'';
         return -1;
-    } 
+    }
     _parsed_length += nprocessed;
     return nprocessed;
 }
@@ -454,8 +455,8 @@ ssize_t HttpMessage::ParseFromIOBuf(const butil::IOBuf &buf) {
             // length=0 will be treated as EOF by http_parser, must skip.
             continue;
         }
-        nprocessed += http_parser_execute(
-            &_parser, &g_parser_settings, blk.data(), blk.size());
+        nprocessed += http_parser_execute(&_parser, &g_parser_settings,
+                                          blk.data(), blk.size());
         if (_parser.http_errno != 0) {
             // May try HTTP on other formats, failure is norm.
             RPC_VLOG << "Fail to parse http message, parser=" << _parser
@@ -470,7 +471,7 @@ ssize_t HttpMessage::ParseFromIOBuf(const butil::IOBuf &buf) {
     return (ssize_t)nprocessed;
 }
 
-static void DescribeHttpParserFlags(std::ostream& os, unsigned int flags) {
+static void DescribeHttpParserFlags(std::ostream &os, unsigned int flags) {
     if (flags & F_CHUNKED) {
         os << "F_CHUNKED|";
     }
@@ -491,17 +492,15 @@ static void DescribeHttpParserFlags(std::ostream& os, unsigned int flags) {
     }
 }
 
-std::ostream& operator<<(std::ostream& os, const http_parser& parser) {
+std::ostream &operator<<(std::ostream &os, const http_parser &parser) {
     os << "{type=" << http_parser_type_name((http_parser_type)parser.type)
        << " flags=`";
     DescribeHttpParserFlags(os, parser.flags);
     os << "' state=" << http_parser_state_name(parser.state)
-       << " header_state=" << http_parser_header_state_name(
-           parser.header_state)
-       << " http_errno=`" << http_errno_description(
-           (http_errno)parser.http_errno)
-       << "' index=" << parser.index
-       << " nread=" << parser.nread
+       << " header_state=" << http_parser_header_state_name(parser.header_state)
+       << " http_errno=`"
+       << http_errno_description((http_errno)parser.http_errno)
+       << "' index=" << parser.index << " nread=" << parser.nread
        << " content_length=" << parser.content_length
        << " http_major=" << parser.http_major
        << " http_minor=" << parser.http_minor;
@@ -511,8 +510,7 @@ std::ostream& operator<<(std::ostream& os, const http_parser& parser) {
     if (parser.type == HTTP_REQUEST || parser.type == HTTP_BOTH) {
         os << " method=" << HttpMethod2Str((HttpMethod)parser.method);
     }
-    os << " data=" << parser.data
-       << '}';
+    os << " data=" << parser.data << '}';
     return os;
 }
 
@@ -536,31 +534,30 @@ std::ostream& operator<<(std::ostream& os, const http_parser& parser) {
 //                | "CONNECT"                ; Section 9.9
 //                | extension-method
 // extension-method = token
-void MakeRawHttpRequest(butil::IOBuf* request,
-                        HttpHeader* h,
-                        const butil::EndPoint& remote_side,
-                        const butil::IOBuf* content) {
+void MakeRawHttpRequest(butil::IOBuf *request, HttpHeader *h,
+                        const butil::EndPoint &remote_side,
+                        const butil::IOBuf *content) {
     butil::IOBufBuilder os;
     os << HttpMethod2Str(h->method()) << ' ';
-    const URI& uri = h->uri();
-    uri.PrintWithoutHost(os); // host is sent by "Host" header.
-    os << " HTTP/" << h->major_version() << '.'
-       << h->minor_version() << BRPC_CRLF;
+    const URI &uri = h->uri();
+    uri.PrintWithoutHost(os);  // host is sent by "Host" header.
+    os << " HTTP/" << h->major_version() << '.' << h->minor_version()
+       << BRPC_CRLF;
     if (h->method() != HTTP_METHOD_GET) {
         h->RemoveHeader("Content-Length");
         // Never use "Content-Length" set by user.
         os << "Content-Length: " << (content ? content->length() : 0)
            << BRPC_CRLF;
     }
-    //rfc 7230#section-5.4:
-    //A client MUST send a Host header field in all HTTP/1.1 request
-    //messages. If the authority component is missing or undefined for
-    //the target URI, then a client MUST send a Host header field with an
-    //empty field-value.
-    //rfc 7231#sec4.3:
-    //the request-target consists of only the host name and port number of 
-    //the tunnel destination, seperated by a colon. For example,
-    //Host: server.example.com:80
+    // rfc 7230#section-5.4:
+    // A client MUST send a Host header field in all HTTP/1.1 request
+    // messages. If the authority component is missing or undefined for
+    // the target URI, then a client MUST send a Host header field with an
+    // empty field-value.
+    // rfc 7231#sec4.3:
+    // the request-target consists of only the host name and port number of
+    // the tunnel destination, seperated by a colon. For example,
+    // Host: server.example.com:80
     if (h->GetHeader("host") == NULL) {
         os << "Host: ";
         if (!uri.host().empty()) {
@@ -574,11 +571,10 @@ void MakeRawHttpRequest(butil::IOBuf* request,
         os << BRPC_CRLF;
     }
     if (!h->content_type().empty()) {
-        os << "Content-Type: " << h->content_type()
-           << BRPC_CRLF;
+        os << "Content-Type: " << h->content_type() << BRPC_CRLF;
     }
-    for (HttpHeader::HeaderIterator it = h->HeaderBegin();
-         it != h->HeaderEnd(); ++it) {
+    for (HttpHeader::HeaderIterator it = h->HeaderBegin(); it != h->HeaderEnd();
+         ++it) {
         os << it->first << ": " << it->second << BRPC_CRLF;
     }
     if (h->GetHeader("Accept") == NULL) {
@@ -588,7 +584,7 @@ void MakeRawHttpRequest(butil::IOBuf* request,
     if (h->GetHeader("User-Agent") == NULL) {
         os << "User-Agent: brpc/1.0 curl/7.0" BRPC_CRLF;
     }
-    const std::string& user_info = h->uri().user_info();
+    const std::string &user_info = h->uri().user_info();
     if (!user_info.empty() && h->GetHeader("Authorization") == NULL) {
         // NOTE: just assume user_info is well formatted, namely
         // "<user_name>:<password>". Users are very unlikely to add extra
@@ -613,13 +609,11 @@ void MakeRawHttpRequest(butil::IOBuf* request,
 //                CRLF
 //                [ message-body ]          ; Section 7.2
 // Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
-void MakeRawHttpResponse(butil::IOBuf* response,
-                         HttpHeader* h,
-                         butil::IOBuf* content) {
+void MakeRawHttpResponse(butil::IOBuf *response, HttpHeader *h,
+                         butil::IOBuf *content) {
     butil::IOBufBuilder os;
-    os << "HTTP/" << h->major_version() << '.'
-       << h->minor_version() << ' ' << h->status_code()
-       << ' ' << h->reason_phrase() << BRPC_CRLF;
+    os << "HTTP/" << h->major_version() << '.' << h->minor_version() << ' '
+       << h->status_code() << ' ' << h->reason_phrase() << BRPC_CRLF;
     if (content) {
         h->RemoveHeader("Content-Length");
         // Never use "Content-Length" set by user.
@@ -628,11 +622,10 @@ void MakeRawHttpResponse(butil::IOBuf* response,
         os << "Content-Length: " << content->length() << BRPC_CRLF;
     }
     if (!h->content_type().empty()) {
-        os << "Content-Type: " << h->content_type()
-           << BRPC_CRLF;
+        os << "Content-Type: " << h->content_type() << BRPC_CRLF;
     }
-    for (HttpHeader::HeaderIterator it = h->HeaderBegin();
-         it != h->HeaderEnd(); ++it) {
+    for (HttpHeader::HeaderIterator it = h->HeaderBegin(); it != h->HeaderEnd();
+         ++it) {
         os << it->first << ": " << it->second << BRPC_CRLF;
     }
     os << BRPC_CRLF;  // CRLF before content
@@ -643,4 +636,4 @@ void MakeRawHttpResponse(butil::IOBuf* response,
 }
 #undef BRPC_CRLF
 
-} // namespace brpc
+}  // namespace brpc

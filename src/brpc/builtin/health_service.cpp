@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "brpc/controller.h"           // Controller
-#include "brpc/server.h"               // Server
-#include "brpc/closure_guard.h"        // ClosureGuard
 #include "brpc/builtin/health_service.h"
 #include "brpc/builtin/common.h"
-
+#include "brpc/closure_guard.h"  // ClosureGuard
+#include "brpc/controller.h"     // Controller
+#include "brpc/server.h"         // Server
 
 namespace brpc {
 
@@ -30,15 +28,15 @@ void HealthService::default_method(::google::protobuf::RpcController* cntl_base,
                                    ::brpc::HealthResponse*,
                                    ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
+    Controller* cntl     = static_cast<Controller*>(cntl_base);
     const Server* server = cntl->server();
     if (server->options().health_reporter) {
-        server->options().health_reporter->GenerateReport(
-            cntl, done_guard.release());
+        server->options().health_reporter->GenerateReport(cntl,
+                                                          done_guard.release());
     } else {
         cntl->http_response().set_content_type("text/plain");
         cntl->response_attachment().append("OK");
     }
 }
 
-} // namespace brpc
+}  // namespace brpc

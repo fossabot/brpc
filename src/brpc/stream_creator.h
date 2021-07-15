@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_STREAM_CREATOR_H
 #define BRPC_STREAM_CREATOR_H
 
@@ -72,12 +71,10 @@ public:
     //   error_code: Use this instead of cntl->ErrorCode().
     //   end_of_rpc: true if the RPC is about to destroyed.
     virtual void DestroyStreamUserData(SocketUniquePtr& sending_sock,
-                                       Controller* cntl,
-                                       int error_code,
+                                       Controller* cntl, int error_code,
                                        bool end_of_rpc) = 0;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_STREAM_CREATOR_H

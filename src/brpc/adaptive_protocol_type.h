@@ -21,8 +21,8 @@
 // To brpc developers: This is a header included by user, don't depend
 // on internal structures, use opaque pointers instead.
 
-#include "butil/strings/string_piece.h"
 #include "brpc/options.pb.h"
+#include "butil/strings/string_piece.h"
 
 namespace brpc {
 
@@ -33,8 +33,9 @@ namespace brpc {
 // Returns: PROTOCOL_UNKNOWN on error.
 ProtocolType StringToProtocolType(const butil::StringPiece& type,
                                   bool print_log_on_unknown);
-inline ProtocolType StringToProtocolType(const butil::StringPiece& type)
-{ return StringToProtocolType(type, true); }
+inline ProtocolType StringToProtocolType(const butil::StringPiece& type) {
+    return StringToProtocolType(type, true);
+}
 
 // Convert a ProtocolType to a c-style string.
 const char* ProtocolTypeToString(ProtocolType);
@@ -87,6 +88,6 @@ private:
     std::string _param;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_ADAPTIVE_PROTOCOL_TYPE_H

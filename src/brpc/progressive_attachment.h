@@ -15,22 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_PROGRESSIVE_ATTACHMENT_H
 #define BRPC_PROGRESSIVE_ATTACHMENT_H
 
 #include "brpc/callback.h"
+#include "brpc/shared_object.h"  // SharedObject
+#include "brpc/socket_id.h"      // SocketUniquePtr
+#include "bthread/types.h"       // bthread_id_t
 #include "butil/atomicops.h"
+#include "butil/endpoint.h"  // butil::EndPoint
 #include "butil/iobuf.h"
-#include "butil/endpoint.h"       // butil::EndPoint
-#include "bthread/types.h"        // bthread_id_t
-#include "brpc/socket_id.h"       // SocketUniquePtr
-#include "brpc/shared_object.h"   // SharedObject
 
 namespace brpc {
 
 class ProgressiveAttachment : public SharedObject {
-friend class Controller;
+    friend class Controller;
+
 public:
     // [Thread-safe]
     // Write `data' as one HTTP chunk to peer ASAP.
@@ -49,7 +49,7 @@ public:
     // this attachment is destructed. In another word, the callback will
     // always be run.
     void NotifyOnStopped(google::protobuf::Closure* callback);
-    
+
 protected:
     // Transfer-Encoding is added since HTTP/1.1. If the protocol of the
     // response is before_http_1_1, we will write the data directly to the
@@ -62,7 +62,7 @@ protected:
 
     // Called by controller only.
     void MarkRPCAsDone(bool rpc_failed);
-    
+
     bool _before_http_1_1;
     bool _pause_from_mark_rpc_as_done;
     butil::atomic<int> _rpc_state;
@@ -77,7 +77,6 @@ private:
     static const int RPC_FAILED;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_PROGRESSIVE_ATTACHMENT_H

@@ -15,24 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <google/protobuf/descriptor.h>         // MethodDescriptor
-#include <google/protobuf/message.h>            // Message
 #include <gflags/gflags.h>
+#include <google/protobuf/descriptor.h>  // MethodDescriptor
+#include <google/protobuf/message.h>     // Message
 
-#include "butil/time.h"
-#include "butil/iobuf.h"                         // butil::IOBuf
-#include "brpc/controller.h"               // Controller
-#include "brpc/socket.h"                   // Socket
-#include "brpc/server.h"                   // Server
-#include "brpc/details/server_private_accessor.h"
-#include "brpc/span.h"
-#include "brpc/errno.pb.h"                 // EREQUEST, ERESPONSE
+#include "brpc/compress.h"
+#include "brpc/controller.h"  // Controller
 #include "brpc/details/controller_private_accessor.h"
+#include "brpc/details/server_private_accessor.h"
+#include "brpc/errno.pb.h"  // EREQUEST, ERESPONSE
 #include "brpc/policy/most_common_message.h"
 #include "brpc/policy/ubrpc2pb_protocol.h"
-#include "brpc/compress.h"
-
+#include "brpc/server.h"  // Server
+#include "brpc/socket.h"  // Socket
+#include "brpc/span.h"
+#include "butil/iobuf.h"  // butil::IOBuf
+#include "butil/time.h"
 
 namespace brpc {
 
@@ -42,16 +40,17 @@ namespace policy {
 
 static const unsigned int UBRPC_NSHEAD_VERSION = 1000;
 
-void UbrpcAdaptor::ParseNsheadMeta(
-    const Server&, const NsheadMessage& request, Controller* cntl,
-    NsheadMeta* out_meta) const {
+void UbrpcAdaptor::ParseNsheadMeta(const Server&, const NsheadMessage& request,
+                                   Controller* cntl,
+                                   NsheadMeta* out_meta) const {
     butil::IOBufAsZeroCopyInputStream zc_stream(request.body);
     mcpack2pb::InputStream stream(&zc_stream);
     if (!::mcpack2pb::unbox(&stream)) {
         cntl->SetFailed(EREQUEST, "Request is not a compack/mcpack2 object");
         return;
     }
-    mcpack2pb::ObjectIterator it1(&stream, request.body.size() - stream.popped_bytes());
+    mcpack2pb::ObjectIterator it1(&stream,
+                                  request.body.size() - stream.popped_bytes());
     bool found_content = false;
     for (; it1 != NULL; ++it1) {
         if (it1->name == "content") {
@@ -64,8 +63,10 @@ void UbrpcAdaptor::ParseNsheadMeta(
         return;
     }
     if (it1->value.type() != mcpack2pb::FIELD_ARRAY) {
-        cntl->SetFailed(EREQUEST, "Expect request.content to be array, "
-                        "actually %s", mcpack2pb::type2str(it1->value.type()));
+        cntl->SetFailed(EREQUEST,
+                        "Expect request.content to be array, "
+                        "actually %s",
+                        mcpack2pb::type2str(it1->value.type()));
         return;
     }
 
@@ -76,21 +77,24 @@ void UbrpcAdaptor::ParseNsheadMeta(
     }
     std::string service_name;
     std::string method_name;
-    bool has_params = false;
+    bool has_params        = false;
     size_t user_req_offset = 0;
-    size_t user_req_size = 0;
+    size_t user_req_size   = 0;
     for (mcpack2pb::ObjectIterator it3(*it2); it3 != NULL; ++it3) {
         if (it3->name == "service_name") {
             if (it3->value.type() != mcpack2pb::FIELD_STRING) {
-                cntl->SetFailed(EREQUEST, "Expect request.content[0].service_name"
+                cntl->SetFailed(EREQUEST,
+                                "Expect request.content[0].service_name"
                                 " to be string, actually %s",
                                 mcpack2pb::type2str(it3->value.type()));
                 return;
             }
-            it3->value.as_string(&service_name, "request.content[0].service_name");
+            it3->value.as_string(&service_name,
+                                 "request.content[0].service_name");
         } else if (it3->name == "method") {
             if (it3->value.type() != mcpack2pb::FIELD_STRING) {
-                cntl->SetFailed(EREQUEST, "Expect request.content[0].method"
+                cntl->SetFailed(EREQUEST,
+                                "Expect request.content[0].method"
                                 " to be string, actually %s",
                                 mcpack2pb::type2str(it3->value.type()));
                 return;
@@ -98,8 +102,10 @@ void UbrpcAdaptor::ParseNsheadMeta(
             it3->value.as_string(&method_name, "request.content[0].method");
         } else if (it3->name == "id") {
             if (!mcpack2pb::is_primitive(it3->value.type()) ||
-                !mcpack2pb::is_integral((mcpack2pb::PrimitiveFieldType)it3->value.type())) {
-                cntl->SetFailed(ERESPONSE, "request.content[0].id must be "
+                !mcpack2pb::is_integral(
+                    (mcpack2pb::PrimitiveFieldType)it3->value.type())) {
+                cntl->SetFailed(ERESPONSE,
+                                "request.content[0].id must be "
                                 "integer, actually %s",
                                 mcpack2pb::type2str(it3->value.type()));
                 return;
@@ -108,23 +114,25 @@ void UbrpcAdaptor::ParseNsheadMeta(
                 it3->value.as_int64("request.content[0].id"));
         } else if (it3->name == "params") {
             if (it3->value.type() != mcpack2pb::FIELD_OBJECT) {
-                cntl->SetFailed(EREQUEST, "Expect request.content[0].params "
+                cntl->SetFailed(EREQUEST,
+                                "Expect request.content[0].params "
                                 "to be object, actually %s",
                                 mcpack2pb::type2str(it3->value.type()));
                 return;
             }
-            has_params = true;
-            user_req_offset = stream.popped_bytes();
-            user_req_size = it3->value.size();
+            has_params              = true;
+            user_req_offset         = stream.popped_bytes();
+            user_req_size           = it3->value.size();
             const size_t stream_end = stream.popped_bytes() + it3->value.size();
             mcpack2pb::ObjectIterator it4(it3->value);
             if (it4 == NULL || it4.field_count() == 0) {
-                cntl->SetFailed(EREQUEST, "Nothing in request.content[0].params");
+                cntl->SetFailed(EREQUEST,
+                                "Nothing in request.content[0].params");
                 return;
             }
             if (it4.field_count() == 1) {
                 user_req_offset = stream.popped_bytes();
-                user_req_size = it4->value.size();
+                user_req_size   = it4->value.size();
             }
             // Pop left bytes, otherwise ++it3 may complain about
             // "not fully consumed".
@@ -134,7 +142,8 @@ void UbrpcAdaptor::ParseNsheadMeta(
         }
     }
     if (service_name.empty()) {
-        cntl->SetFailed(EREQUEST, "Fail to find request.content[0].service_name");
+        cntl->SetFailed(EREQUEST,
+                        "Fail to find request.content[0].service_name");
         return;
     }
     if (method_name.empty()) {
@@ -151,9 +160,11 @@ void UbrpcAdaptor::ParseNsheadMeta(
     buf.pop_front(user_req_offset);
     if (buf.size() != user_req_size) {
         if (buf.size() < user_req_size) {
-            cntl->SetFailed(EREQUEST, "request_size=%" PRIu64 " is shorter than"
-                            "specified=%" PRIu64, (uint64_t)buf.size(),
-                            (uint64_t)user_req_size);
+            cntl->SetFailed(EREQUEST,
+                            "request_size=%" PRIu64
+                            " is shorter than"
+                            "specified=%" PRIu64,
+                            (uint64_t)buf.size(), (uint64_t)user_req_size);
             return;
         }
         buf.pop_back(buf.size() - user_req_size);
@@ -167,10 +178,11 @@ void UbrpcAdaptor::ParseNsheadMeta(
 }
 
 void UbrpcAdaptor::ParseRequestFromIOBuf(
-    const NsheadMeta&, const NsheadMessage& raw_req,
-    Controller* cntl, google::protobuf::Message* pb_req) const {
+    const NsheadMeta&, const NsheadMessage& raw_req, Controller* cntl,
+    google::protobuf::Message* pb_req) const {
     const std::string& msg_name = pb_req->GetDescriptor()->full_name();
-    mcpack2pb::MessageHandler handler = mcpack2pb::find_message_handler(msg_name);
+    mcpack2pb::MessageHandler handler =
+        mcpack2pb::find_message_handler(msg_name);
     if (handler.parse_body == NULL) {
         return cntl->SetFailed(EREQUEST, "Fail to find parser of %s",
                                msg_name.c_str());
@@ -182,8 +194,8 @@ void UbrpcAdaptor::ParseRequestFromIOBuf(
     }
 }
 
-static void AppendError(const NsheadMeta& meta,
-                        Controller* cntl, butil::IOBuf& buf) {
+static void AppendError(const NsheadMeta& meta, Controller* cntl,
+                        butil::IOBuf& buf) {
     butil::IOBufAsZeroCopyOutputStream wrapper(&buf);
     mcpack2pb::OutputStream ostream(&wrapper);
     mcpack2pb::Serializer sr(&ostream);
@@ -228,7 +240,8 @@ void UbrpcAdaptor::SerializeResponseToIOBuf(
     // }
 
     const std::string& msg_name = pb_res->GetDescriptor()->full_name();
-    mcpack2pb::MessageHandler handler = mcpack2pb::find_message_handler(msg_name);
+    mcpack2pb::MessageHandler handler =
+        mcpack2pb::find_message_handler(msg_name);
     if (handler.serialize_body == NULL) {
         cntl->SetFailed(ERESPONSE, "Fail to find serializer of %s",
                         msg_name.c_str());
@@ -280,7 +293,8 @@ static void ParseResponse(Controller* cntl, butil::IOBuf& buf,
         return;
     }
     const std::string& msg_name = res->GetDescriptor()->full_name();
-    mcpack2pb::MessageHandler handler = mcpack2pb::find_message_handler(msg_name);
+    mcpack2pb::MessageHandler handler =
+        mcpack2pb::find_message_handler(msg_name);
     if (handler.parse_body == NULL) {
         return cntl->SetFailed(ERESPONSE, "Fail to find parser of %s",
                                msg_name.c_str());
@@ -304,8 +318,10 @@ static void ParseResponse(Controller* cntl, butil::IOBuf& buf,
         return;
     }
     if (it1->value.type() != mcpack2pb::FIELD_ARRAY) {
-        cntl->SetFailed(ERESPONSE, "Expect response.content to be array,"
-                        " actually %s", mcpack2pb::type2str(it1->value.type()));
+        cntl->SetFailed(ERESPONSE,
+                        "Expect response.content to be array,"
+                        " actually %s",
+                        mcpack2pb::type2str(it1->value.type()));
         return;
     }
     mcpack2pb::ArrayIterator it2(it1->value);
@@ -313,32 +329,35 @@ static void ParseResponse(Controller* cntl, butil::IOBuf& buf,
         cntl->SetFailed("Fail to parse response.content as array");
         return;
     }
-    bool has_result_params = false;
-    size_t user_res_offset = 0;
-    size_t user_res_size = 0;
+    bool has_result_params    = false;
+    size_t user_res_offset    = 0;
+    size_t user_res_size      = 0;
     const char* response_name = "result_params";
     for (mcpack2pb::ObjectIterator it3(*it2); it3 != NULL; ++it3) {
         if (it3->name == "error") {
             if (it3->value.type() != mcpack2pb::FIELD_OBJECT) {
-                cntl->SetFailed(ERESPONSE, "Expect response.content[0].error"
+                cntl->SetFailed(ERESPONSE,
+                                "Expect response.content[0].error"
                                 " to be object, actually %s",
                                 mcpack2pb::type2str(it3->value.type()));
                 return;
             }
             int32_t code = 0;
             std::string msg;
-            for (mcpack2pb::ObjectIterator it4(it3->value); it4 != NULL; ++it4) {
+            for (mcpack2pb::ObjectIterator it4(it3->value); it4 != NULL;
+                 ++it4) {
                 if (it4->name == "code") {
                     if (!mcpack2pb::is_primitive(it4->value.type()) ||
                         !mcpack2pb::is_integral(
                             (mcpack2pb::PrimitiveFieldType)it4->value.type())) {
-                        cntl->SetFailed(
-                            ERESPONSE, "Expect response.content[0].error.code "
-                            "to be integer, actually %s",
-                            mcpack2pb::type2str(it4->value.type()));
+                        cntl->SetFailed(ERESPONSE,
+                                        "Expect response.content[0].error.code "
+                                        "to be integer, actually %s",
+                                        mcpack2pb::type2str(it4->value.type()));
                         return;
                     }
-                    code = it4->value.as_int32("response.content[0].error.code");
+                    code =
+                        it4->value.as_int32("response.content[0].error.code");
                     if (code == 0) {
                         cntl->SetFailed(ERESPONSE,
                                         "response.content[0].error.code is 0");
@@ -346,14 +365,15 @@ static void ParseResponse(Controller* cntl, butil::IOBuf& buf,
                     }
                 } else if (it4->name == "message") {
                     if (it4->value.type() != mcpack2pb::FIELD_STRING) {
-                        cntl->SetFailed(
-                            ERESPONSE, "Expect response.content[0].error."
-                            "message to be string, actually %s",
-                            mcpack2pb::type2str(it4->value.type()));
+                        cntl->SetFailed(ERESPONSE,
+                                        "Expect response.content[0].error."
+                                        "message to be string, actually %s",
+                                        mcpack2pb::type2str(it4->value.type()));
                         return;
                     }
-                    it4->value.as_string(&msg, "response.content[0].error.message");
-                } // else field "data" (probably non-ASCII) is ignored.
+                    it4->value.as_string(&msg,
+                                         "response.content[0].error.message");
+                }  // else field "data" (probably non-ASCII) is ignored.
             }
             if (code == 0) {
                 cntl->SetFailed(ERESPONSE,
@@ -361,31 +381,36 @@ static void ParseResponse(Controller* cntl, butil::IOBuf& buf,
                 return;
             }
             if (msg.empty()) {
-                cntl->SetFailed(ERESPONSE,
-                                "Fail to find response.content[0].error.message");
+                cntl->SetFailed(
+                    ERESPONSE,
+                    "Fail to find response.content[0].error.message");
                 return;
             }
             cntl->SetFailed(code, "%s", msg.c_str());
-            return; // no need to parse left fields.
+            return;  // no need to parse left fields.
         } else if (it3->name == "result") {
             if (!mcpack2pb::is_primitive(it3->value.type()) ||
-                !mcpack2pb::is_integral((mcpack2pb::PrimitiveFieldType)it3->value.type())) {
-                cntl->SetFailed(ERESPONSE, "Expect response.content[0].result"
+                !mcpack2pb::is_integral(
+                    (mcpack2pb::PrimitiveFieldType)it3->value.type())) {
+                cntl->SetFailed(ERESPONSE,
+                                "Expect response.content[0].result"
                                 " to be integer, actually %s",
                                 mcpack2pb::type2str(it3->value.type()));
                 return;
             }
-            cntl->set_idl_result(it3->value.as_int64("response.content[0].result"));
+            cntl->set_idl_result(
+                it3->value.as_int64("response.content[0].result"));
         } else if (it3->name == "result_params") {
             if (it3->value.type() != mcpack2pb::FIELD_OBJECT) {
-                cntl->SetFailed(ERESPONSE, "Expect response.content[0].result_params"
+                cntl->SetFailed(ERESPONSE,
+                                "Expect response.content[0].result_params"
                                 " to be object, actually %s",
                                 mcpack2pb::type2str(it3->value.type()));
                 return;
             }
-            has_result_params = true;
-            user_res_offset = stream.popped_bytes();
-            user_res_size = it3->value.size();
+            has_result_params       = true;
+            user_res_offset         = stream.popped_bytes();
+            user_res_size           = it3->value.size();
             const size_t stream_end = stream.popped_bytes() + it3->value.size();
             const char* const expname = cntl->idl_names().response_name;
             if (expname != NULL && *expname) {
@@ -398,13 +423,15 @@ static void ParseResponse(Controller* cntl, butil::IOBuf& buf,
                     }
                 }
                 if (!found_response_name) {
-                    cntl->SetFailed(ERESPONSE, "Fail to find response."
-                                    "content[0].result_params.%s", expname);
+                    cntl->SetFailed(ERESPONSE,
+                                    "Fail to find response."
+                                    "content[0].result_params.%s",
+                                    expname);
                     return;
                 }
-                response_name = expname;
+                response_name   = expname;
                 user_res_offset = stream.popped_bytes();
-                user_res_size = it4->value.size();
+                user_res_size   = it4->value.size();
             }
             // Pop left bytes, otherwise ++it3 may complain about
             // "not fully consumed".
@@ -422,36 +449,41 @@ static void ParseResponse(Controller* cntl, butil::IOBuf& buf,
     buf.pop_front(user_res_offset);
     if (buf.size() != user_res_size) {
         if (buf.size() < user_res_size) {
-            cntl->SetFailed(ERESPONSE, "response_size=%" PRIu64 " is shorter "
-                            "than specified=%" PRIu64, (uint64_t)buf.size(),
-                            (uint64_t)user_res_size);
+            cntl->SetFailed(ERESPONSE,
+                            "response_size=%" PRIu64
+                            " is shorter "
+                            "than specified=%" PRIu64,
+                            (uint64_t)buf.size(), (uint64_t)user_res_size);
             return;
         }
         buf.pop_back(buf.size() - user_res_size);
     }
     butil::IOBufAsZeroCopyInputStream bufstream(buf);
     if (!handler.parse_body(res, &bufstream, buf.size())) {
-        cntl->SetFailed(ERESPONSE, "Fail to parse %s from response.content[0]."
-                        "result_params.%s", msg_name.c_str(), response_name);
+        cntl->SetFailed(ERESPONSE,
+                        "Fail to parse %s from response.content[0]."
+                        "result_params.%s",
+                        msg_name.c_str(), response_name);
         return;
     }
 }
 
 void ProcessUbrpcResponse(InputMessageBase* msg_base) {
     const int64_t start_parse_us = butil::cpuwide_time_us();
-    DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
+    DestroyingPtr<MostCommonMessage> msg(
+        static_cast<MostCommonMessage*>(msg_base));
     Socket* socket = msg->socket();
-    
+
     // Fetch correlation id that we saved before in `PackUbrpcRequest'
-    const bthread_id_t cid = { static_cast<uint64_t>(socket->correlation_id()) };
-    Controller* cntl = NULL;
-    const int rc = bthread_id_lock(cid, (void**)&cntl);
+    const bthread_id_t cid = {static_cast<uint64_t>(socket->correlation_id())};
+    Controller* cntl       = NULL;
+    const int rc           = bthread_id_lock(cid, (void**)&cntl);
     if (rc != 0) {
         LOG_IF(ERROR, rc != EINVAL && rc != EPERM)
             << "Fail to lock correlation_id=" << cid << ": " << berror(rc);
         return;
     }
-    
+
     ControllerPrivateAccessor accessor(cntl);
     Span* span = accessor.span();
     if (span) {
@@ -462,26 +494,27 @@ void ProcessUbrpcResponse(InputMessageBase* msg_base) {
     }
     const int saved_error = cntl->ErrorCode();
     ParseResponse(cntl, msg->payload, cntl->response());
-    
+
     // Unlocks correlation_id inside. Revert controller's
     // error code if it version check of `cid' fails
     msg.reset();  // optional, just release resourse ASAP
     accessor.OnResponse(cid, saved_error);
-} 
+}
 
 static void SerializeUbrpcRequest(butil::IOBuf* buf, Controller* cntl,
                                   const google::protobuf::Message* request,
                                   mcpack2pb::SerializationFormat format) {
     CompressType type = cntl->request_compress_type();
     if (type != COMPRESS_TYPE_NONE) {
-        return cntl->SetFailed(
-            EREQUEST, "ubrpc protocol doesn't support compression");
+        return cntl->SetFailed(EREQUEST,
+                               "ubrpc protocol doesn't support compression");
     }
     if (cntl->method() == NULL) {
         return cntl->SetFailed(ENOMETHOD, "method is NULL");
     }
     const std::string& msg_name = request->GetDescriptor()->full_name();
-    mcpack2pb::MessageHandler handler = mcpack2pb::find_message_handler(msg_name);
+    mcpack2pb::MessageHandler handler =
+        mcpack2pb::find_message_handler(msg_name);
     if (handler.serialize_body == NULL) {
         return cntl->SetFailed(EREQUEST, "Fail to find serializer of %s",
                                msg_name.c_str());
@@ -532,15 +565,14 @@ void SerializeUbrpcCompackRequest(butil::IOBuf* buf, Controller* cntl,
 
 void SerializeUbrpcMcpack2Request(butil::IOBuf* buf, Controller* cntl,
                                   const google::protobuf::Message* request) {
-    return SerializeUbrpcRequest(buf, cntl, request, mcpack2pb::FORMAT_MCPACK_V2);
+    return SerializeUbrpcRequest(buf, cntl, request,
+                                 mcpack2pb::FORMAT_MCPACK_V2);
 }
 
-void PackUbrpcRequest(butil::IOBuf* buf,
-                      SocketMessage**,
+void PackUbrpcRequest(butil::IOBuf* buf, SocketMessage**,
                       uint64_t correlation_id,
                       const google::protobuf::MethodDescriptor*,
-                      Controller* controller,
-                      const butil::IOBuf& request,
+                      Controller* controller, const butil::IOBuf& request,
                       const Authenticator* /*not supported*/) {
     ControllerPrivateAccessor accessor(controller);
     if (controller->connection_type() == CONNECTION_TYPE_SINGLE) {
@@ -550,13 +582,13 @@ void PackUbrpcRequest(butil::IOBuf* buf,
     // Store `correlation_id' into Socket since ubrpc protocol doesn't
     // contain this field
     accessor.get_sending_socket()->set_correlation_id(correlation_id);
-        
+
     nshead_t nshead;
     memset(&nshead, 0, sizeof(nshead_t));
-    nshead.log_id = controller->log_id();
+    nshead.log_id    = controller->log_id();
     nshead.magic_num = NSHEAD_MAGICNUM;
-    nshead.body_len = request.size();
-    nshead.version = UBRPC_NSHEAD_VERSION;
+    nshead.body_len  = request.size();
+    nshead.version   = UBRPC_NSHEAD_VERSION;
     buf->append(&nshead, sizeof(nshead));
 
     // Span* span = accessor.span();
@@ -569,4 +601,4 @@ void PackUbrpcRequest(butil::IOBuf* buf,
 }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc

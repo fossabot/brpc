@@ -15,12 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#ifndef  BRPC_POLICY_LIST_NAMING_SERVICE
-#define  BRPC_POLICY_LIST_NAMING_SERVICE
+#ifndef BRPC_POLICY_LIST_NAMING_SERVICE
+#define BRPC_POLICY_LIST_NAMING_SERVICE
 
 #include "brpc/naming_service.h"
-
 
 namespace brpc {
 namespace policy {
@@ -32,19 +30,18 @@ private:
 
     // We don't need a dedicated bthread to run this static NS.
     bool RunNamingServiceReturnsQuickly() override { return true; }
-    
-    int GetServers(const char *service_name,
-                   std::vector<ServerNode>* servers);
 
-    void Describe(std::ostream& os, const DescribeOptions& options) const override;
+    int GetServers(const char* service_name, std::vector<ServerNode>* servers);
+
+    void Describe(std::ostream& os,
+                  const DescribeOptions& options) const override;
 
     NamingService* New() const override;
-    
+
     void Destroy() override;
 };
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif  //BRPC_POLICY_LIST_NAMING_SERVICE
+#endif  // BRPC_POLICY_LIST_NAMING_SERVICE

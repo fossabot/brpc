@@ -23,8 +23,8 @@
 // TEST_F(MyClassTest, MyMethod) {
 //   // Can call MyClass::MyMethod() here.
 // }
-#define GTEST_FRIEND_TEST(test_case_name, test_name)\
-friend class test_case_name##_##test_name##_Test
+#define GTEST_FRIEND_TEST(test_case_name, test_name) \
+    friend class test_case_name##_##test_name##_Test
 
 // This is a wrapper for gtest's FRIEND_TEST macro that friends
 // test with all possible prefixes. This is very helpful when changing the test
@@ -37,10 +37,10 @@ friend class test_case_name##_##test_name##_Test
 //   void MyMethod();
 //   FRIEND_TEST_ALL_PREFIXES(MyClassTest, MyMethod);
 // };
-#define FRIEND_TEST_ALL_PREFIXES(test_case_name, test_name) \
-  GTEST_FRIEND_TEST(test_case_name, test_name); \
-  GTEST_FRIEND_TEST(test_case_name, DISABLED_##test_name); \
-  GTEST_FRIEND_TEST(test_case_name, FLAKY_##test_name)
+#define FRIEND_TEST_ALL_PREFIXES(test_case_name, test_name)  \
+    GTEST_FRIEND_TEST(test_case_name, test_name);            \
+    GTEST_FRIEND_TEST(test_case_name, DISABLED_##test_name); \
+    GTEST_FRIEND_TEST(test_case_name, FLAKY_##test_name)
 
 // C++ compilers will refuse to compile the following code:
 //
@@ -77,9 +77,9 @@ friend class test_case_name##_##test_name##_Test
 //   foo_class.private_var = true;
 // }
 
-#define FORWARD_DECLARE_TEST(test_case_name, test_name) \
-  class test_case_name##_##test_name##_Test; \
-  class test_case_name##_##DISABLED_##test_name##_Test; \
-  class test_case_name##_##FLAKY_##test_name##_Test
+#define FORWARD_DECLARE_TEST(test_case_name, test_name)   \
+    class test_case_name##_##test_name##_Test;            \
+    class test_case_name##_##DISABLED_##test_name##_Test; \
+    class test_case_name##_##FLAKY_##test_name##_Test
 
 #endif  // BUTIL_GTEST_PROD_UTIL_H_

@@ -34,12 +34,12 @@ typedef HANDLE MutexHandle;
 // Windows doesn't define STDERR_FILENO.  Define it here.
 #define STDERR_FILENO 2
 #elif defined(OS_MACOSX)
+#include <mach-o/dyld.h>
 #include <mach/mach.h>
 #include <mach/mach_time.h>
-#include <mach-o/dyld.h>
 #elif defined(OS_POSIX)
 #if defined(OS_NACL) || defined(OS_LINUX)
-#include <sys/time.h> // timespec doesn't seem to be in <time.h>
+#include <sys/time.h>  // timespec doesn't seem to be in <time.h>
 #else
 #include <sys/syscall.h>
 #endif
@@ -64,10 +64,10 @@ typedef pthread_mutex_t* MutexHandle;
 #include <ostream>
 #include <string>
 
-#include "butil/file_util.h"
 #include "butil/debug/alias.h"
 #include "butil/debug/debugger.h"
 #include "butil/debug/stack_trace.h"
+#include "butil/file_util.h"
 #include "butil/posix/eintr_wrapper.h"
 #include "butil/strings/string_util.h"
 #include "butil/strings/stringprintf.h"
@@ -86,18 +86,18 @@ typedef pthread_mutex_t* MutexHandle;
 #include <android/log.h>
 #endif
 
-#include <map>
-#include <vector>
 #include <deque>
 #include <limits>
+#include <map>
+#include <vector>
 #include "butil/atomicops.h"
-#include "butil/thread_local.h"
-#include "butil/scoped_lock.h"                        // BAIDU_SCOPED_LOCK
-#include "butil/string_splitter.h"
-#include "butil/time.h"
 #include "butil/containers/doubly_buffered_data.h"
-#include "butil/memory/singleton.h"
 #include "butil/endpoint.h"
+#include "butil/memory/singleton.h"
+#include "butil/scoped_lock.h"  // BAIDU_SCOPED_LOCK
+#include "butil/string_splitter.h"
+#include "butil/thread_local.h"
+#include "butil/time.h"
 #ifdef BAIDU_INTERNAL
 #include "butil/comlog_sink.h"
 #endif
@@ -121,21 +121,26 @@ DEFINE_bool(crash_on_fatal_log, false,
 DEFINE_bool(print_stack_on_check, true,
             "Print the stack trace when a CHECK was failed");
 
-DEFINE_int32(v, 0, "Show all VLOG(m) messages for m <= this."
+DEFINE_int32(v, 0,
+             "Show all VLOG(m) messages for m <= this."
              " Overridable by --vmodule.");
-DEFINE_string(vmodule, "", "per-module verbose level."
-              " Argument is a comma-separated list of MODULE_NAME=LOG_LEVEL."
-              " MODULE_NAME is a glob pattern, matched against the filename base"
-              " (that is, name ignoring .cpp/.h)."
-              " LOG_LEVEL overrides any value given by --v.");
+DEFINE_string(
+    vmodule, "",
+    "per-module verbose level."
+    " Argument is a comma-separated list of MODULE_NAME=LOG_LEVEL."
+    " MODULE_NAME is a glob pattern, matched against the filename base"
+    " (that is, name ignoring .cpp/.h)."
+    " LOG_LEVEL overrides any value given by --v.");
 
 DEFINE_bool(log_pid, false, "Log process id");
 
-DEFINE_int32(minloglevel, 0, "Any log at or above this level will be "
+DEFINE_int32(minloglevel, 0,
+             "Any log at or above this level will be "
              "displayed. Anything below this level will be silently ignored. "
              "0=INFO 1=NOTICE 2=WARNING 3=ERROR 4=FATAL");
 
-DEFINE_bool(log_hostname, false, "Add host after pid in each log so"
+DEFINE_bool(log_hostname, false,
+            "Add host after pid in each log so"
             " that we know where logs came from when using aggregation tools"
             " like ELK.");
 
@@ -181,7 +186,7 @@ int32_t CurrentProcessId() {
 void DeleteFilePath(const PathString& log_name) {
 #if defined(OS_WIN)
     DeleteFile(log_name.c_str());
-#elif defined (OS_NACL)
+#elif defined(OS_NACL)
     // Do nothing; unlink() isn't supported on NaCl.
 #else
     unlink(log_name.c_str());
@@ -215,13 +220,12 @@ PathString GetDefaultLogFile() {
     PathString log_file = module_name;
     PathString::size_type last_backslash =
         log_file.rfind('\\', log_file.size());
-    if (last_backslash != PathString::npos)
-        log_file.erase(last_backslash + 1);
+    if (last_backslash != PathString::npos) log_file.erase(last_backslash + 1);
     log_file += L"debug.log";
     return log_file;
 #elif defined(OS_LINUX)
     return GetProcessName() + ".log";
-#elif defined(OS_POSIX)    
+#elif defined(OS_POSIX)
     // On other platforms we just use the current directory.
     return PathString("debug.log");
 #endif
@@ -235,17 +239,12 @@ PathString GetDefaultLogFile() {
 // LoggingLocks can not be nested.
 class LoggingLock {
 public:
-    LoggingLock() {
-        LockLogging();
-    }
+    LoggingLock() { LockLogging(); }
 
-    ~LoggingLock() {
-        UnlockLogging();
-    }
+    ~LoggingLock() { UnlockLogging(); }
 
     static void Init(LogLockingState lock_log, const PathChar* new_log_file) {
-        if (initialized)
-            return;
+        if (initialized) return;
         lock_log_file = lock_log;
         if (lock_log_file == LOCK_LOG_FILE) {
 #if defined(OS_WIN)
@@ -255,7 +254,8 @@ public:
                     safe_name = new_log_file;
                 else
                     safe_name = GetDefaultLogFile();
-                // \ is not a legal character in mutex names so we replace \ with /
+                // \ is not a legal character in mutex names so we replace \
+                // with /
                 std::replace(safe_name.begin(), safe_name.end(), '\\', '/');
                 std::wstring t(L"Global\\");
                 t.append(safe_name);
@@ -286,8 +286,8 @@ private:
             // WaitForSingleObject could have returned WAIT_ABANDONED. We don't
             // abort the process here. UI tests might be crashy sometimes,
             // and aborting the test binary only makes the problem worse.
-            // We also don't use LOG macros because that might lead to an infinite
-            // loop. For more info see http://crbug.com/18028.
+            // We also don't use LOG macros because that might lead to an
+            // infinite loop. For more info see http://crbug.com/18028.
 #elif defined(OS_POSIX)
             pthread_mutex_lock(&log_mutex);
 #endif
@@ -343,8 +343,7 @@ pthread_mutex_t LoggingLock::log_mutex = PTHREAD_MUTEX_INITIALIZER;
 // and can be used for writing. Returns false if the file could not be
 // initialized. debug_file will be NULL in this case.
 bool InitializeLogFileHandle() {
-    if (log_file)
-        return true;
+    if (log_file) return true;
 
     if (!log_file_name) {
         // Nobody has called InitLogging to specify a debug log file, so here we
@@ -389,8 +388,7 @@ void CloseFile(FileHandle log) {
 }
 
 void CloseLogFileUnlocked() {
-    if (!log_file)
-        return;
+    if (!log_file) return;
 
     CloseFile(log_file);
     log_file = NULL;
@@ -399,10 +397,10 @@ void CloseLogFileUnlocked() {
 }  // namespace
 
 LoggingSettings::LoggingSettings()
-    : logging_dest(LOG_DEFAULT),
-      log_file(NULL),
-      lock_log(LOCK_LOG_FILE),
-      delete_old(APPEND_TO_OLD_LOG_FILE) {}
+    : logging_dest(LOG_DEFAULT)
+    , log_file(NULL)
+    , lock_log(LOCK_LOG_FILE)
+    , delete_old(APPEND_TO_OLD_LOG_FILE) {}
 
 bool BaseInitLoggingImpl(const LoggingSettings& settings) {
 #if defined(OS_NACL)
@@ -413,8 +411,7 @@ bool BaseInitLoggingImpl(const LoggingSettings& settings) {
     logging_destination = settings.logging_dest;
 
     // ignore file options unless logging to file is set.
-    if ((logging_destination & LOG_TO_FILE) == 0)
-        return true;
+    if ((logging_destination & LOG_TO_FILE) == 0) return true;
 
     LoggingLock::Init(settings.lock_log, settings.log_file);
     LoggingLock logging_lock;
@@ -423,8 +420,7 @@ bool BaseInitLoggingImpl(const LoggingSettings& settings) {
     // default log file will re-initialize to the new options.
     CloseLogFileUnlocked();
 
-    if (!log_file_name)
-        log_file_name = new PathString();
+    if (!log_file_name) log_file_name = new PathString();
     if (settings.log_file) {
         *log_file_name = settings.log_file;
     } else {
@@ -440,9 +436,7 @@ void SetMinLogLevel(int level) {
     FLAGS_minloglevel = std::min(BLOG_FATAL, level);
 }
 
-int GetMinLogLevel() {
-    return FLAGS_minloglevel;
-}
+int GetMinLogLevel() { return FLAGS_minloglevel; }
 
 void SetShowErrorDialogs(bool enable_dialogs) {
     show_error_dialogs = enable_dialogs;
@@ -453,7 +447,7 @@ void SetLogAssertHandler(LogAssertHandler handler) {
 }
 
 const char* const log_severity_names[LOG_NUM_SEVERITIES] = {
-    "INFO", "NOTICE", "WARNING", "ERROR", "FATAL" };
+    "INFO", "NOTICE", "WARNING", "ERROR", "FATAL"};
 
 static void PrintLogSeverity(std::ostream& os, int severity) {
     if (severity < 0) {
@@ -466,8 +460,8 @@ static void PrintLogSeverity(std::ostream& os, int severity) {
     }
 }
 
-static void PrintLogPrefix(
-    std::ostream& os, int severity, const char* file, int line) {
+static void PrintLogPrefix(std::ostream& os, int severity, const char* file,
+                           int line) {
     PrintLogSeverity(os, severity);
 #if defined(OS_LINUX)
     timeval tv;
@@ -486,11 +480,10 @@ static void PrintLogPrefix(
     if (FLAGS_log_year) {
         os << std::setw(4) << local_tm.tm_year + 1900;
     }
-    os << std::setw(2) << local_tm.tm_mon + 1
-       << std::setw(2) << local_tm.tm_mday << ' '
-       << std::setw(2) << local_tm.tm_hour << ':'
-       << std::setw(2) << local_tm.tm_min << ':'
-       << std::setw(2) << local_tm.tm_sec;
+    os << std::setw(2) << local_tm.tm_mon + 1 << std::setw(2)
+       << local_tm.tm_mday << ' ' << std::setw(2) << local_tm.tm_hour << ':'
+       << std::setw(2) << local_tm.tm_min << ':' << std::setw(2)
+       << local_tm.tm_sec;
 #if defined(OS_LINUX)
     os << '.' << std::setw(6) << tv.tv_usec;
 #endif
@@ -501,7 +494,7 @@ static void PrintLogPrefix(
        << butil::PlatformThread::CurrentId() << std::setfill('0');
     if (FLAGS_log_hostname) {
         butil::StringPiece hostname(butil::my_hostname());
-        if (hostname.ends_with(".baidu.com")) { // make it shorter
+        if (hostname.ends_with(".baidu.com")) {  // make it shorter
             hostname.remove_suffix(10);
         }
         os << ' ' << hostname;
@@ -510,8 +503,8 @@ static void PrintLogPrefix(
     os.fill(prev_fill);
 }
 
-static void PrintLogPrefixAsJSON(
-    std::ostream& os, int severity, const char* file, int line) {
+static void PrintLogPrefixAsJSON(std::ostream& os, int severity,
+                                 const char* file, int line) {
     // severity
     os << "\"L\":\"";
     if (severity < 0) {
@@ -540,11 +533,10 @@ static void PrintLogPrefixAsJSON(
     if (FLAGS_log_year) {
         os << std::setw(4) << local_tm.tm_year + 1900;
     }
-    os << std::setw(2) << local_tm.tm_mon + 1
-       << std::setw(2) << local_tm.tm_mday << ' '
-       << std::setw(2) << local_tm.tm_hour << ':'
-       << std::setw(2) << local_tm.tm_min << ':'
-       << std::setw(2) << local_tm.tm_sec;
+    os << std::setw(2) << local_tm.tm_mon + 1 << std::setw(2)
+       << local_tm.tm_mday << ' ' << std::setw(2) << local_tm.tm_hour << ':'
+       << std::setw(2) << local_tm.tm_min << ':' << std::setw(2)
+       << local_tm.tm_sec;
 #if defined(OS_LINUX)
     os << '.' << std::setw(6) << tv.tv_usec;
 #endif
@@ -557,7 +549,7 @@ static void PrintLogPrefixAsJSON(
     os << "\"tid\":\"" << butil::PlatformThread::CurrentId() << "\",";
     if (FLAGS_log_hostname) {
         butil::StringPiece hostname(butil::my_hostname());
-        if (hostname.ends_with(".baidu.com")) { // make it shorter
+        if (hostname.ends_with(".baidu.com")) {  // make it shorter
             hostname.remove_suffix(10);
         }
         os << "\"host\":\"" << hostname << "\",";
@@ -565,8 +557,7 @@ static void PrintLogPrefixAsJSON(
     os << "\"C\":\"" << file << ':' << line << "\"";
 }
 
-static void PrintLog(std::ostream& os,
-                     int severity, const char* file, int line,
+static void PrintLog(std::ostream& os, int severity, const char* file, int line,
                      const butil::StringPiece& content) {
     if (!FLAGS_log_as_json) {
         PrintLogPrefix(os, severity, file, line);
@@ -585,7 +576,7 @@ static void PrintLog(std::ostream& os,
         os.write(content.data(), content.size());
         if (pair_quote) {
             os << '"';
-        } else if (!content.empty() && content[content.size()-1] != '"') {
+        } else if (!content.empty() && content[content.size() - 1] != '"') {
             // Controller may write `"M":"...` which misses the last quote
             os << '"';
         }
@@ -598,8 +589,9 @@ class DoublyBufferedLogSink : public butil::DoublyBufferedData<LogSink*> {
 public:
     DoublyBufferedLogSink() {}
     static DoublyBufferedLogSink* GetInstance();
+
 private:
-friend struct DefaultSingletonTraits<DoublyBufferedLogSink>;
+    friend struct DefaultSingletonTraits<DoublyBufferedLogSink>;
     DISALLOW_COPY_AND_ASSIGN(DoublyBufferedLogSink);
 };
 
@@ -614,13 +606,13 @@ struct SetLogSinkFn {
 
     bool operator()(LogSink*& ptr) {
         old_sink = ptr;
-        ptr = new_sink;
+        ptr      = new_sink;
         return true;
     }
 };
 
 LogSink* SetLogSink(LogSink* sink) {
-    SetLogSinkFn fn = { sink, NULL };
+    SetLogSinkFn fn = {sink, NULL};
     CHECK(DoublyBufferedLogSink::GetInstance()->Modify(fn));
     return fn.old_sink;
 }
@@ -628,8 +620,8 @@ LogSink* SetLogSink(LogSink* sink) {
 // MSVC doesn't like complex extern templates and DLLs.
 #if !defined(COMPILER_MSVC)
 // Explicit instantiations for commonly used comparisons.
-template std::string* MakeCheckOpString<int, int>(
-    const int&, const int&, const char* names);
+template std::string* MakeCheckOpString<int, int>(const int&, const int&,
+                                                  const char* names);
 template std::string* MakeCheckOpString<unsigned long, unsigned long>(
     const unsigned long&, const unsigned long&, const char* names);
 template std::string* MakeCheckOpString<unsigned long, unsigned int>(
@@ -647,11 +639,9 @@ template std::string* MakeCheckOpString<std::string, std::string>(
 // (like release builds) where users could see it, since users don't
 // understand these messages anyway.
 void DisplayDebugMessageInDialog(const std::string& str) {
-    if (str.empty())
-        return;
+    if (str.empty()) return;
 
-    if (!show_error_dialogs)
-        return;
+    if (!show_error_dialogs) return;
 
 #if defined(OS_WIN)
     // For Windows programs, it's possible that the message loop is
@@ -663,21 +653,19 @@ void DisplayDebugMessageInDialog(const std::string& str) {
     wchar_t prog_name[MAX_PATH];
     GetModuleFileNameW(NULL, prog_name, MAX_PATH);
     wchar_t* backslash = wcsrchr(prog_name, '\\');
-    if (backslash)
-        backslash[1] = 0;
+    if (backslash) backslash[1] = 0;
     wcscat_s(prog_name, MAX_PATH, L"debug_message.exe");
 
     std::wstring cmdline = butil::UTF8ToWide(str);
-    if (cmdline.empty())
-        return;
+    if (cmdline.empty()) return;
 
     STARTUPINFO startup_info;
     memset(&startup_info, 0, sizeof(startup_info));
     startup_info.cb = sizeof(startup_info);
 
     PROCESS_INFORMATION process_info;
-    if (CreateProcessW(prog_name, &cmdline[0], NULL, NULL, false, 0, NULL,
-                       NULL, &startup_info, &process_info)) {
+    if (CreateProcessW(prog_name, &cmdline[0], NULL, NULL, false, 0, NULL, NULL,
+                       &startup_info, &process_info)) {
         WaitForSingleObject(process_info.hProcess, INFINITE);
         CloseHandle(process_info.hThread);
         CloseHandle(process_info.hProcess);
@@ -687,14 +675,13 @@ void DisplayDebugMessageInDialog(const std::string& str) {
                     MB_OK | MB_ICONHAND | MB_TOPMOST);
     }
 #else
-    // We intentionally don't implement a dialog on other platforms.
-    // You can just look at stderr.
+        // We intentionally don't implement a dialog on other platforms.
+        // You can just look at stderr.
 #endif
 }
 #endif  // !defined(NDEBUG)
 
-
-bool StringSink::OnLogMessage(int severity, const char* file, int line, 
+bool StringSink::OnLogMessage(int severity, const char* file, int line,
                               const butil::StringPiece& content) {
     std::ostringstream os;
     PrintLog(os, severity, file, line, content);
@@ -706,25 +693,23 @@ bool StringSink::OnLogMessage(int severity, const char* file, int line,
     return true;
 }
 
-CharArrayStreamBuf::~CharArrayStreamBuf() {
-    free(_data);
-}
+CharArrayStreamBuf::~CharArrayStreamBuf() { free(_data); }
 
 int CharArrayStreamBuf::overflow(int ch) {
     if (ch == std::streambuf::traits_type::eof()) {
         return ch;
     }
     size_t new_size = std::max(_size * 3 / 2, (size_t)64);
-    char* new_data = (char*)malloc(new_size);
+    char* new_data  = (char*)malloc(new_size);
     if (BAIDU_UNLIKELY(new_data == NULL)) {
         setp(NULL, NULL);
         return std::streambuf::traits_type::eof();
     }
     memcpy(new_data, _data, _size);
     free(_data);
-    _data = new_data;
+    _data                 = new_data;
     const size_t old_size = _size;
-    _size = new_size;
+    _size                 = new_size;
     setp(_data, _data + new_size);
     pbump(old_size);
     // if size == 1, this function will call overflow again.
@@ -736,14 +721,12 @@ int CharArrayStreamBuf::sync() {
     return 0;
 }
 
-void CharArrayStreamBuf::reset() {
-    setp(_data, _data + _size);
-}
+void CharArrayStreamBuf::reset() { setp(_data, _data + _size); }
 
 LogStream& LogStream::SetPosition(const PathChar* file, int line,
                                   LogSeverity severity) {
-    _file = file;
-    _line = line;
+    _file     = file;
+    _line     = line;
     _severity = severity;
     return *this;
 }
@@ -807,11 +790,11 @@ inline LogStream* CreateLogStream(const PathChar* file, int line,
     if (severity >= 0) {
         DCHECK_LT(severity, LOG_NUM_SEVERITIES);
         slot = severity + 1;
-    } // else vlog
+    }  // else vlog
     LogStream** stream_array = get_or_new_tls_stream_array();
-    LogStream* stream = stream_array[slot];
+    LogStream* stream        = stream_array[slot];
     if (stream == NULL) {
-        stream = new LogStream;
+        stream             = new LogStream;
         stream_array[slot] = stream;
     }
     if (stream->empty()) {
@@ -835,9 +818,7 @@ inline LogStream* CreateLogStream(const PathChar* file, int line,
     return stream;
 }
 
-inline void DestroyLogStream(LogStream* stream) {
-    delete stream;
-}
+inline void DestroyLogStream(LogStream* stream) { delete stream; }
 
 #endif  // __GNUC__
 
@@ -858,38 +839,36 @@ public:
         PrintLog(os, severity, file, line, content);
         os << '\n';
         std::string log = os.str();
-        
+
         if ((logging_destination & LOG_TO_SYSTEM_DEBUG_LOG) != 0) {
             fwrite(log.data(), log.size(), 1, stderr);
             fflush(stderr);
         } else if (severity >= kAlwaysPrintErrorLevel) {
-            // When we're only outputting to a log file, above a certain log level, we
-            // should still output to stderr so that we can better detect and diagnose
-            // problems with unit tests, especially on the buildbots.
+            // When we're only outputting to a log file, above a certain log
+            // level, we should still output to stderr so that we can better
+            // detect and diagnose problems with unit tests, especially on the
+            // buildbots.
             fwrite(log.data(), log.size(), 1, stderr);
             fflush(stderr);
         }
 
         // write to log file
         if ((logging_destination & LOG_TO_FILE) != 0) {
-            // We can have multiple threads and/or processes, so try to prevent them
-            // from clobbering each other's writes.
-            // If the client app did not call InitLogging, and the lock has not
-            // been created do it now. We do this on demand, but if two threads try
-            // to do this at the same time, there will be a race condition to create
-            // the lock. This is why InitLogging should be called from the main
-            // thread at the beginning of execution.
+            // We can have multiple threads and/or processes, so try to prevent
+            // them from clobbering each other's writes. If the client app did
+            // not call InitLogging, and the lock has not been created do it
+            // now. We do this on demand, but if two threads try to do this at
+            // the same time, there will be a race condition to create the lock.
+            // This is why InitLogging should be called from the main thread at
+            // the beginning of execution.
             LoggingLock::Init(LOCK_LOG_FILE, NULL);
             LoggingLock logging_lock;
             if (InitializeLogFileHandle()) {
 #if defined(OS_WIN)
                 SetFilePointer(log_file, 0, 0, SEEK_END);
                 DWORD num_written;
-                WriteFile(log_file,
-                          static_cast<const void*>(log.data()),
-                          static_cast<DWORD>(log.size()),
-                          &num_written,
-                          NULL);
+                WriteFile(log_file, static_cast<const void*>(log.data()),
+                          static_cast<DWORD>(log.size()), &num_written, NULL);
 #else
                 fwrite(log.data(), log.size(), 1, log_file);
                 fflush(log_file);
@@ -898,10 +877,11 @@ public:
         }
         return true;
     }
+
 private:
     DefaultLogSink() {}
     ~DefaultLogSink() {}
-friend struct DefaultSingletonTraits<DefaultLogSink>;
+    friend struct DefaultSingletonTraits<DefaultLogSink>;
 };
 
 void LogStream::FlushWithoutReset() {
@@ -914,7 +894,7 @@ void LogStream::FlushWithoutReset() {
     if (FLAGS_print_stack_on_check && _is_check && _severity == BLOG_FATAL) {
         // Include a stack trace on a fatal.
         butil::debug::StackTrace trace;
-        size_t count = 0;
+        size_t count             = 0;
         const void* const* addrs = trace.Addresses(&count);
 
         *this << std::endl;  // Newline to separate from log message.
@@ -934,7 +914,7 @@ void LogStream::FlushWithoutReset() {
     // End the data with zero because sink is likely to assume this.
     *this << std::ends;
     // Move back one step because we don't want to count the zero.
-    pbump(-1); 
+    pbump(-1);
 
     // Give any logsink first dibs on the message.
 #ifdef BAIDU_INTERNAL
@@ -958,15 +938,15 @@ void LogStream::FlushWithoutReset() {
 
 #ifdef BAIDU_INTERNAL
     if (!tried_comlog) {
-        if (ComlogSink::GetInstance()->OnLogMessage(
-                _severity, _file, _line, content())) {
+        if (ComlogSink::GetInstance()->OnLogMessage(_severity, _file, _line,
+                                                    content())) {
             goto FINISH_LOGGING;
         }
     }
 #endif
     if (!tried_default) {
-        DefaultLogSink::GetInstance()->OnLogMessage(
-            _severity, _file, _line, content());
+        DefaultLogSink::GetInstance()->OnLogMessage(_severity, _file, _line,
+                                                    content());
     }
 
 FINISH_LOGGING:
@@ -982,11 +962,11 @@ FINISH_LOGGING:
             // Make a copy of the string for the handler out of paranoia.
             log_assert_handler(str.as_string());
         } else {
-            // Don't use the string with the newline, get a fresh version to send to
-            // the debug message process. We also don't display assertions to the
-            // user in release mode. The enduser can't do anything with this
-            // information, and displaying message boxes when the application is
-            // hosed can cause additional problems.
+            // Don't use the string with the newline, get a fresh version to
+            // send to the debug message process. We also don't display
+            // assertions to the user in release mode. The enduser can't do
+            // anything with this information, and displaying message boxes when
+            // the application is hosed can cause additional problems.
 #ifndef NDEBUG
             DisplayDebugMessageInDialog(str.as_string());
 #endif
@@ -1013,9 +993,7 @@ LogMessage::LogMessage(const char* file, int line, LogSeverity severity,
     delete result;
 }
 
-LogMessage::~LogMessage() {
-    DestroyLogStream(_stream);
-}
+LogMessage::~LogMessage() { DestroyLogStream(_stream); }
 
 #if defined(OS_WIN)
 // This has already been defined in the header, but defining it again as DWORD
@@ -1049,15 +1027,15 @@ BUTIL_EXPORT std::string SystemErrorCodeToString(SystemErrorCode error_code) {
     const int error_message_buffer_size = 256;
     char msgbuf[error_message_buffer_size];
     DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
-    DWORD len = FormatMessageA(flags, NULL, error_code, 0, msgbuf,
+    DWORD len   = FormatMessageA(flags, NULL, error_code, 0, msgbuf,
                                arraysize(msgbuf), NULL);
     if (len) {
         // Messages returned by system end with line breaks.
         return butil::CollapseWhitespaceASCII(msgbuf, true) +
-            butil::StringPrintf(" (0x%X)", error_code);
+               butil::StringPrintf(" (0x%X)", error_code);
     }
     return butil::StringPrintf("Error (0x%X) while retrieving error. (0x%X)",
-                              GetLastError(), error_code);
+                               GetLastError(), error_code);
 }
 #elif defined(OS_POSIX)
 BUTIL_EXPORT std::string SystemErrorCodeToString(SystemErrorCode error_code) {
@@ -1067,15 +1045,11 @@ BUTIL_EXPORT std::string SystemErrorCodeToString(SystemErrorCode error_code) {
 #error Not implemented
 #endif
 
-
 #if defined(OS_WIN)
-Win32ErrorLogMessage::Win32ErrorLogMessage(const char* file,
-                                           int line,
+Win32ErrorLogMessage::Win32ErrorLogMessage(const char* file, int line,
                                            LogSeverity severity,
                                            SystemErrorCode err)
-    : err_(err),
-      log_message_(file, line, severity) {
-}
+    : err_(err), log_message_(file, line, severity) {}
 
 Win32ErrorLogMessage::~Win32ErrorLogMessage() {
     stream() << ": " << SystemErrorCodeToString(err_);
@@ -1085,13 +1059,9 @@ Win32ErrorLogMessage::~Win32ErrorLogMessage() {
     butil::debug::Alias(&last_error);
 }
 #elif defined(OS_POSIX)
-ErrnoLogMessage::ErrnoLogMessage(const char* file,
-                                 int line,
-                                 LogSeverity severity,
-                                 SystemErrorCode err)
-    : err_(err),
-      log_message_(file, line, severity) {
-}
+ErrnoLogMessage::ErrnoLogMessage(const char* file, int line,
+                                 LogSeverity severity, SystemErrorCode err)
+    : err_(err), log_message_(file, line, severity) {}
 
 ErrnoLogMessage::~ErrnoLogMessage() {
     stream() << ": " << SystemErrorCodeToString(err_);
@@ -1105,13 +1075,12 @@ void CloseLogFile() {
 
 void RawLog(int level, const char* message) {
     if (level >= FLAGS_minloglevel) {
-        size_t bytes_written = 0;
+        size_t bytes_written     = 0;
         const size_t message_len = strlen(message);
         int rv;
         while (bytes_written < message_len) {
-            rv = HANDLE_EINTR(
-                write(STDERR_FILENO, message + bytes_written,
-                      message_len - bytes_written));
+            rv = HANDLE_EINTR(write(STDERR_FILENO, message + bytes_written,
+                                    message_len - bytes_written));
             if (rv < 0) {
                 // Give up, nothing we can do now.
                 break;
@@ -1139,12 +1108,10 @@ void RawLog(int level, const char* message) {
 
 #if defined(OS_WIN)
 std::wstring GetLogFileFullPath() {
-    if (log_file_name)
-        return *log_file_name;
+    if (log_file_name) return *log_file_name;
     return std::wstring();
 }
 #endif
-
 
 // ----------- VLOG stuff -----------------
 struct VLogSite;
@@ -1153,14 +1120,14 @@ struct VModuleList;
 extern const int VLOG_UNINITIALIZED = std::numeric_limits<int>::max();
 
 static pthread_mutex_t vlog_site_list_mutex = PTHREAD_MUTEX_INITIALIZER;
-static VLogSite* vlog_site_list = NULL;
-static VModuleList* vmodule_list = NULL;
+static VLogSite* vlog_site_list             = NULL;
+static VModuleList* vmodule_list            = NULL;
 
 static pthread_mutex_t reset_vmodule_and_v_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static const int64_t DELAY_DELETION_SEC = 10;
-static std::deque<std::pair<VModuleList*, int64_t> >*
-deleting_vmodule_list = NULL;
+static std::deque<std::pair<VModuleList*, int64_t> >* deleting_vmodule_list =
+    NULL;
 
 struct VLogSite {
     VLogSite(const char* filename, int required_v, int line_no)
@@ -1180,10 +1147,10 @@ struct VLogSite {
                 _full_module.assign(s.data(), s.size());
                 s.remove_prefix(pos + 1);
             }
-        } // else keep _full_module empty when it equals _module
+        }  // else keep _full_module empty when it equals _module
         _module.assign(s.data(), s.size());
-        std::transform(_module.begin(), _module.end(),
-                       _module.begin(), ::tolower);
+        std::transform(_module.begin(), _module.end(), _module.begin(),
+                       ::tolower);
         if (!_full_module.empty()) {
             std::transform(_full_module.begin(), _full_module.end(),
                            _full_module.begin(), ::tolower);
@@ -1193,33 +1160,35 @@ struct VLogSite {
     // The consume/release fence makes the iteration outside lock see
     // newly added VLogSite correctly.
     VLogSite* next() { return (VLogSite*)butil::subtle::Acquire_Load(&_next); }
-    const VLogSite* next() const
-    { return (VLogSite*)butil::subtle::Acquire_Load(&_next); }
-    void set_next(VLogSite* next)
-    { butil::subtle::Release_Store(&_next, (butil::subtle::AtomicWord)next); }
+    const VLogSite* next() const {
+        return (VLogSite*)butil::subtle::Acquire_Load(&_next);
+    }
+    void set_next(VLogSite* next) {
+        butil::subtle::Release_Store(&_next, (butil::subtle::AtomicWord)next);
+    }
 
     int v() const { return _v; }
     int& v() { return _v; }
 
-    int required_v() const { return  _required_v; }
+    int required_v() const { return _required_v; }
     int line_no() const { return _line_no; }
 
     const std::string& module() const { return _module; }
     const std::string& full_module() const { return _full_module; }
-    
+
 private:
     // Next site in the list. NULL means no next.
     butil::subtle::AtomicWord _next;
 
     // --vmodule > --v
     int _v;
-    
+
     // vlog is on iff _v >= _required_v
     int _required_v;
 
     // line nubmer of the vlog.
     int _line_no;
-    
+
     // Lowered, dirname & extname removed.
     std::string _module;
     // Lowered, extname removed. Empty when it equals to _module.
@@ -1246,13 +1215,13 @@ bool wildcmp(const char* wild, const char* str) {
                 return true;
             }
             mp = wild;
-            cp = str+1;
+            cp = str + 1;
         } else if (*wild == *str || *wild == '?') {
             ++wild;
             ++str;
         } else {
             wild = mp;
-            str = cp++;
+            str  = cp++;
         }
     }
 
@@ -1268,21 +1237,23 @@ struct VModuleList {
     int init(const char* vmodules) {
         _exact_names.clear();
         _wild_names.clear();
-                           
+
         for (butil::StringSplitter sp(vmodules, ','); sp; ++sp) {
             int verbose_level = std::numeric_limits<int>::max();
-            size_t off = 0;
-            for (; off < sp.length() && sp.field()[off] != '='; ++off) {}
+            size_t off        = 0;
+            for (; off < sp.length() && sp.field()[off] != '='; ++off) {
+            }
             if (off + 1 < sp.length()) {
                 verbose_level = strtol(sp.field() + off + 1, NULL, 10);
-                
             }
             const char* name_begin = sp.field();
-            const char* name_end = sp.field() + off - 1;
+            const char* name_end   = sp.field() + off - 1;
             for (; isspace(*name_begin) && name_begin < sp.field() + off;
-                 ++name_begin) {}
-            for (; isspace(*name_end) && name_end >= sp.field(); --name_end) {}
-            
+                 ++name_begin) {
+            }
+            for (; isspace(*name_end) && name_end >= sp.field(); --name_end) {
+            }
+
             if (name_begin > name_end) {  // only has spaces
                 continue;
             }
@@ -1304,8 +1275,8 @@ struct VModuleList {
     bool find_verbose_level(const std::string& module,
                             const std::string& full_module, int* v) const {
         if (!_exact_names.empty()) {
-            std::map<std::string, int>::const_iterator
-                it = _exact_names.find(module);
+            std::map<std::string, int>::const_iterator it =
+                _exact_names.find(module);
             if (it != _exact_names.end()) {
                 *v = it->second;
                 return true;
@@ -1335,8 +1306,9 @@ struct VModuleList {
 
     void print(std::ostream& os) const {
         os << "exact:";
-        for (std::map<std::string, int>::const_iterator
-                 it = _exact_names.begin(); it != _exact_names.end(); ++it) {
+        for (std::map<std::string, int>::const_iterator it =
+                 _exact_names.begin();
+             it != _exact_names.end(); ++it) {
             os << ' ' << it->first << '=' << it->second;
         }
         os << ", wild:";
@@ -1350,7 +1322,7 @@ private:
     std::vector<std::pair<std::string, int> > _wild_names;
 };
 
-// [ The idea ] 
+// [ The idea ]
 // Each callsite creates a VLogSite and inserts the site into singly-linked
 // vlog_site_list. To keep the critical area small, we use optimistic
 // locking : Assign local site w/o locking, then insert the site into
@@ -1386,12 +1358,12 @@ bool add_vlog_site(const int** v, const char* filename, int line_no,
         return false;
     }
     VModuleList* module_list = vmodule_list;
-    int default_v = FLAGS_v;
+    int default_v            = FLAGS_v;
     do {
         site->v() = default_v;
         if (module_list) {
-            module_list->find_verbose_level(
-                site->module(), site->full_module(), &site->v());
+            module_list->find_verbose_level(site->module(), site->full_module(),
+                                            &site->v());
         }
     } while (vlog_site_list_add(site, &module_list, &default_v) != 0);
     *v = &site->v();
@@ -1406,10 +1378,10 @@ void print_vlog_sites(VLogSitePrinter* printer) {
     }
     VLogSitePrinter::Site site;
     for (const VLogSite* p = head; p; p = p->next()) {
-        site.current_verbose_level = p->v();
+        site.current_verbose_level  = p->v();
         site.required_verbose_level = p->required_v();
-        site.line_no = p->line_no();
-        site.full_module = p->full_module();
+        site.line_no                = p->line_no();
+        site.full_module            = p->full_module();
         printer->print(site);
     }
 }
@@ -1418,7 +1390,7 @@ void print_vlog_sites(VLogSitePrinter* printer) {
 static int on_reset_vmodule(const char* vmodule) {
     // resetting must be serialized.
     BAIDU_SCOPED_LOCK(reset_vmodule_and_v_mutex);
-    
+
     VModuleList* module_list = new (std::nothrow) VModuleList;
     if (NULL == module_list) {
         LOG(FATAL) << "Fail to new VModuleList";
@@ -1429,34 +1401,35 @@ static int on_reset_vmodule(const char* vmodule) {
         LOG(FATAL) << "Fail to init VModuleList";
         return -1;
     }
-    
+
     VModuleList* old_module_list = NULL;
     VLogSite* old_vlog_site_list = NULL;
     {
         {
             BAIDU_SCOPED_LOCK(vlog_site_list_mutex);
-            old_module_list = vmodule_list;
-            vmodule_list = module_list;
+            old_module_list    = vmodule_list;
+            vmodule_list       = module_list;
             old_vlog_site_list = vlog_site_list;
         }
         for (VLogSite* p = old_vlog_site_list; p; p = p->next()) {
             p->v() = FLAGS_v;
-            module_list->find_verbose_level(
-                p->module(), p->full_module(), &p->v());
+            module_list->find_verbose_level(p->module(), p->full_module(),
+                                            &p->v());
         }
     }
-    
+
     if (old_module_list) {
-        //delay the deletion.
+        // delay the deletion.
         if (NULL == deleting_vmodule_list) {
             deleting_vmodule_list =
                 new std::deque<std::pair<VModuleList*, int64_t> >;
         }
-        deleting_vmodule_list->push_back(
-            std::make_pair(old_module_list,
-                           butil::gettimeofday_us() + DELAY_DELETION_SEC * 1000000L));
+        deleting_vmodule_list->push_back(std::make_pair(
+            old_module_list,
+            butil::gettimeofday_us() + DELAY_DELETION_SEC * 1000000L));
         while (!deleting_vmodule_list->empty() &&
-               deleting_vmodule_list->front().second <= butil::gettimeofday_us()) {
+               deleting_vmodule_list->front().second <=
+                   butil::gettimeofday_us()) {
             delete deleting_vmodule_list->front().first;
             deleting_vmodule_list->pop_front();
         }
@@ -1468,8 +1441,8 @@ static bool validate_vmodule(const char*, const std::string& vmodule) {
     return on_reset_vmodule(vmodule.c_str()) == 0;
 }
 
-const bool ALLOW_UNUSED validate_vmodule_dummy = GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_vmodule, &validate_vmodule);
+const bool ALLOW_UNUSED validate_vmodule_dummy =
+    GFLAGS_NS::RegisterFlagValidator(&FLAGS_vmodule, &validate_vmodule);
 
 // [Thread-safe] Reset FLAGS_v.
 static void on_reset_verbose(int default_v) {
@@ -1480,14 +1453,14 @@ static void on_reset_verbose(int default_v) {
         BAIDU_SCOPED_LOCK(reset_vmodule_and_v_mutex);
         {
             BAIDU_SCOPED_LOCK(vlog_site_list_mutex);
-            cur_module_list = vmodule_list;
+            cur_module_list    = vmodule_list;
             cur_vlog_site_list = vlog_site_list;
         }
         for (VLogSite* p = cur_vlog_site_list; p; p = p->next()) {
             p->v() = default_v;
             if (cur_module_list) {
-                cur_module_list->find_verbose_level(
-                    p->module(), p->full_module(), &p->v());
+                cur_module_list->find_verbose_level(p->module(),
+                                                    p->full_module(), &p->v());
             }
         }
     }
@@ -1498,12 +1471,10 @@ static bool validate_v(const char*, int32_t v) {
     return true;
 }
 
-const bool ALLOW_UNUSED validate_v_dummy = GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_v, &validate_v);
+const bool ALLOW_UNUSED validate_v_dummy =
+    GFLAGS_NS::RegisterFlagValidator(&FLAGS_v, &validate_v);
 
-static bool PassValidate(const char*, bool) {
-    return true;
-}
+static bool PassValidate(const char*, bool) { return true; }
 
 const bool ALLOW_UNUSED validate_crash_on_fatal_log =
     GFLAGS_NS::RegisterFlagValidator(&FLAGS_crash_on_fatal_log, PassValidate);
@@ -1511,12 +1482,10 @@ const bool ALLOW_UNUSED validate_crash_on_fatal_log =
 const bool ALLOW_UNUSED validate_print_stack_on_check =
     GFLAGS_NS::RegisterFlagValidator(&FLAGS_print_stack_on_check, PassValidate);
 
-static bool NonNegativeInteger(const char*, int32_t v) {
-    return v >= 0;
-}
+static bool NonNegativeInteger(const char*, int32_t v) { return v >= 0; }
 
-const bool ALLOW_UNUSED validate_min_log_level = GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_minloglevel, NonNegativeInteger);
+const bool ALLOW_UNUSED validate_min_log_level =
+    GFLAGS_NS::RegisterFlagValidator(&FLAGS_minloglevel, NonNegativeInteger);
 
 }  // namespace logging
 

@@ -15,16 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <stdio.h>                                      // getline
-#include <string>                                       // std::string
-#include <set>                                          // std::set
-#include "butil/files/file_watcher.h"                    // FileWatcher
-#include "butil/files/scoped_file.h"                     // ScopedFILE
-#include "bthread/bthread.h"                            // bthread_usleep
-#include "brpc/log.h"
 #include "brpc/policy/file_naming_service.h"
-
+#include <stdio.h>  // getline
+#include <set>      // std::set
+#include <string>   // std::string
+#include "brpc/log.h"
+#include "bthread/bthread.h"           // bthread_usleep
+#include "butil/files/file_watcher.h"  // FileWatcher
+#include "butil/files/scoped_file.h"   // ScopedFILE
 
 namespace brpc {
 namespace policy {
@@ -33,27 +31,32 @@ bool SplitIntoServerAndTag(const butil::StringPiece& line,
                            butil::StringPiece* server_addr,
                            butil::StringPiece* tag) {
     size_t i = 0;
-    for (; i < line.size() && isspace(line[i]); ++i) {}
+    for (; i < line.size() && isspace(line[i]); ++i) {
+    }
     if (i == line.size() || line[i] == '#') {  // blank line or comments
         return false;
     }
     const char* const addr_start = line.data() + i;
-    const char* tag_start = NULL;
-    ssize_t tag_size = 0;
-    for (; i < line.size() && !isspace(line[i]); ++i) {}
+    const char* tag_start        = NULL;
+    ssize_t tag_size             = 0;
+    for (; i < line.size() && !isspace(line[i]); ++i) {
+    }
     if (server_addr) {
         server_addr->set(addr_start, line.data() + i - addr_start);
     }
     if (i != line.size()) {
-        for (++i; i < line.size() && isspace(line[i]); ++i) {}
+        for (++i; i < line.size() && isspace(line[i]); ++i) {
+        }
         if (i < line.size()) {
             tag_start = line.data() + i;
-            tag_size = 1;
+            tag_size  = 1;
             // find start of comments.
-            for (++i; i < line.size() && line[i] != '#'; ++i, ++tag_size) {}
+            for (++i; i < line.size() && line[i] != '#'; ++i, ++tag_size) {
+            }
             // trim ending blanks
             for (; tag_size > 0 && isspace(tag_start[tag_size - 1]);
-                 --tag_size) {}
+                 --tag_size) {
+            }
         }
         if (tag) {
             if (tag_size) {
@@ -66,12 +69,12 @@ bool SplitIntoServerAndTag(const butil::StringPiece& line,
     return true;
 }
 
-int FileNamingService::GetServers(const char *service_name,
+int FileNamingService::GetServers(const char* service_name,
                                   std::vector<ServerNode>* servers) {
     servers->clear();
-    char* line = NULL;
+    char* line      = NULL;
     size_t line_len = 0;
-    ssize_t nr = 0;
+    ssize_t nr      = 0;
     // Sort/unique the inserted vector is faster, but may have a different order
     // of addresses from the file. To make assertions in tests easier, we use
     // set to de-duplicate and keep the order.
@@ -83,16 +86,15 @@ int FileNamingService::GetServers(const char *service_name,
         return errno;
     }
     while ((nr = getline(&line, &line_len, fp.get())) != -1) {
-        if (line[nr - 1] == '\n') { // remove ending newline
+        if (line[nr - 1] == '\n') {  // remove ending newline
             --nr;
         }
         butil::StringPiece addr;
         butil::StringPiece tag;
-        if (!SplitIntoServerAndTag(butil::StringPiece(line, nr),
-                                   &addr, &tag)) {
+        if (!SplitIntoServerAndTag(butil::StringPiece(line, nr), &addr, &tag)) {
             continue;
         }
-        const_cast<char*>(addr.data())[addr.size()] = '\0'; // safe
+        const_cast<char*>(addr.data())[addr.size()] = '\0';  // safe
         butil::EndPoint point;
         if (str2endpoint(addr.data(), &point) != 0 &&
             hostname2endpoint(addr.data(), &point) != 0) {
@@ -137,7 +139,7 @@ int FileNamingService::RunNamingService(const char* service_name,
             if (change < 0) {
                 LOG(ERROR) << "`" << service_name << "' was deleted";
             }
-            if (bthread_usleep(100000L/*100ms*/) < 0) {
+            if (bthread_usleep(100000L /*100ms*/) < 0) {
                 if (errno == ESTOP) {
                     return 0;
                 }
@@ -156,13 +158,9 @@ void FileNamingService::Describe(std::ostream& os,
     return;
 }
 
-NamingService* FileNamingService::New() const {
-    return new FileNamingService;
-}
+NamingService* FileNamingService::New() const { return new FileNamingService; }
 
-void FileNamingService::Destroy() {
-    delete this;
-}
+void FileNamingService::Destroy() { delete this; }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc

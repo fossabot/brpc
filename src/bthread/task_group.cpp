@@ -19,43 +19,44 @@
 
 // Date: Tue Jul 10 17:40:58 CST 2012
 
-#include <sys/types.h>
-#include <stddef.h>                         // size_t
-#include <gflags/gflags.h>
-#include "butil/compat.h"                   // OS_MACOSX
-#include "butil/macros.h"                   // ARRAY_SIZE
-#include "butil/scoped_lock.h"              // BAIDU_SCOPED_LOCK
-#include "butil/fast_rand.h"
-#include "butil/unique_ptr.h"
-#include "butil/third_party/murmurhash3/murmurhash3.h" // fmix64
-#include "bthread/errno.h"                  // ESTOP
-#include "bthread/butex.h"                  // butex_*
-#include "bthread/sys_futex.h"              // futex_wake_private
-#include "bthread/processor.h"              // cpu_relax
-#include "bthread/task_control.h"
 #include "bthread/task_group.h"
-#include "bthread/timer_thread.h"
+#include <gflags/gflags.h>
+#include <stddef.h>  // size_t
+#include <sys/types.h>
+#include "bthread/butex.h"  // butex_*
+#include "bthread/errno.h"  // ESTOP
 #include "bthread/errno.h"
+#include "bthread/processor.h"  // cpu_relax
+#include "bthread/sys_futex.h"  // futex_wake_private
+#include "bthread/task_control.h"
+#include "bthread/timer_thread.h"
+#include "butil/compat.h"  // OS_MACOSX
+#include "butil/fast_rand.h"
+#include "butil/macros.h"                               // ARRAY_SIZE
+#include "butil/scoped_lock.h"                          // BAIDU_SCOPED_LOCK
+#include "butil/third_party/murmurhash3/murmurhash3.h"  // fmix64
+#include "butil/unique_ptr.h"
 
 namespace bthread {
 
-static const bthread_attr_t BTHREAD_ATTR_TASKGROUP = {
-    BTHREAD_STACKTYPE_UNKNOWN, 0, NULL };
+static const bthread_attr_t BTHREAD_ATTR_TASKGROUP = {BTHREAD_STACKTYPE_UNKNOWN,
+                                                      0, NULL};
 
 static bool pass_bool(const char*, bool) { return true; }
 
-DEFINE_bool(show_bthread_creation_in_vars, false, "When this flags is on, The time "
+DEFINE_bool(show_bthread_creation_in_vars, false,
+            "When this flags is on, The time "
             "from bthread creation to first run will be recorded and shown "
             "in /vars");
 const bool ALLOW_UNUSED dummy_show_bthread_creation_in_vars =
     ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_show_bthread_creation_in_vars,
-                                    pass_bool);
+                                       pass_bool);
 
 DEFINE_bool(show_per_worker_usage_in_vars, false,
             "Show per-worker usage in /vars/bthread_per_worker_usage_<tid>");
 const bool ALLOW_UNUSED dummy_show_per_worker_usage_in_vars =
     ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_show_per_worker_usage_in_vars,
-                                    pass_bool);
+                                       pass_bool);
 
 __thread TaskGroup* tls_task_group = NULL;
 // Sync with TaskMeta::local_storage when a bthread is created or destroyed.
@@ -70,7 +71,7 @@ extern void return_keytable(bthread_keytable_pool_t*, KeyTable*);
 // overhead of creation keytable, may be removed later.
 BAIDU_THREAD_LOCAL void* tls_unique_user_ptr = NULL;
 
-const TaskStatistics EMPTY_STAT = { 0, 0 };
+const TaskStatistics EMPTY_STAT = {0, 0};
 
 const size_t OFFSET_TABLE[] = {
 #include "bthread/offset_inl.list"
@@ -154,7 +155,7 @@ void TaskGroup::run_main_task() {
         DCHECK_EQ(this, dummy);
         DCHECK_EQ(_cur_meta->stack, _main_stack);
         if (_cur_meta->tid != _main_tid) {
-            TaskGroup::task_runner(1/*skip remained*/);
+            TaskGroup::task_runner(1 /*skip remained*/);
         }
         if (FLAGS_show_per_worker_usage_in_vars && !usage_bvar) {
             char name[32];
@@ -165,8 +166,8 @@ void TaskGroup::run_main_task() {
             snprintf(name, sizeof(name), "bthread_worker_usage_%ld",
                      (long)syscall(SYS_gettid));
 #endif
-            usage_bvar.reset(new bvar::PerSecond<bvar::PassiveStatus<double> >
-                             (name, &cumulated_cputime, 1));
+            usage_bvar.reset(new bvar::PerSecond<bvar::PassiveStatus<double> >(
+                name, &cumulated_cputime, 1));
         }
     }
     // Don't forget to add elapse of last wait_task.
@@ -176,7 +177,8 @@ void TaskGroup::run_main_task() {
 TaskGroup::TaskGroup(TaskControl* c)
     :
 #ifndef NDEBUG
-    _sched_recursive_guard(0),
+    _sched_recursive_guard(0)
+    ,
 #endif
     _cur_meta(NULL)
     , _control(c)
@@ -191,11 +193,11 @@ TaskGroup::TaskGroup(TaskControl* c)
     , _main_stack(NULL)
     , _main_tid(0)
     , _remote_num_nosignal(0)
-    , _remote_nsignaled(0)
-{
-    _steal_seed = butil::fast_rand();
+    , _remote_nsignaled(0) {
+    _steal_seed   = butil::fast_rand();
     _steal_offset = OFFSET_TABLE[_steal_seed % ARRAY_SIZE(OFFSET_TABLE)];
-    _pl = &c->_pl[butil::fmix64(pthread_numeric_id()) % TaskControl::PARKING_LOT_NUM];
+    _pl           = &c->_pl[butil::fmix64(pthread_numeric_id()) %
+                  TaskControl::PARKING_LOT_NUM];
     CHECK(c);
 }
 
@@ -229,21 +231,21 @@ int TaskGroup::init(size_t runqueue_capacity) {
         LOG(FATAL) << "Fail to get TaskMeta";
         return -1;
     }
-    m->stop = false;
-    m->interrupted = false;
-    m->about_to_quit = false;
-    m->fn = NULL;
-    m->arg = NULL;
-    m->local_storage = LOCAL_STORAGE_INIT;
+    m->stop             = false;
+    m->interrupted      = false;
+    m->about_to_quit    = false;
+    m->fn               = NULL;
+    m->arg              = NULL;
+    m->local_storage    = LOCAL_STORAGE_INIT;
     m->cpuwide_start_ns = butil::cpuwide_time_ns();
-    m->stat = EMPTY_STAT;
-    m->attr = BTHREAD_ATTR_TASKGROUP;
-    m->tid = make_tid(*m->version_butex, slot);
+    m->stat             = EMPTY_STAT;
+    m->attr             = BTHREAD_ATTR_TASKGROUP;
+    m->tid              = make_tid(*m->version_butex, slot);
     m->set_stack(stk);
 
-    _cur_meta = m;
-    _main_tid = m->tid;
-    _main_stack = stk;
+    _cur_meta    = m;
+    _main_tid    = m->tid;
+    _main_stack  = stk;
     _last_run_ns = butil::cpuwide_time_ns();
     return 0;
 }
@@ -255,7 +257,7 @@ void TaskGroup::task_runner(intptr_t skip_remained) {
 
     if (!skip_remained) {
         while (g->_last_context_remained) {
-            RemainedFn fn = g->_last_context_remained;
+            RemainedFn fn             = g->_last_context_remained;
             g->_last_context_remained = NULL;
             fn(g->_last_context_remained_arg);
             g = tls_task_group;
@@ -282,8 +284,8 @@ void TaskGroup::task_runner(intptr_t skip_remained) {
             // NOTE: the thread triggering exposure of pending time may spend
             // considerable time because a single bvar::LatencyRecorder
             // contains many bvar.
-            g->_control->exposed_pending_time() <<
-                (butil::cpuwide_time_ns() - m->cpuwide_start_ns) / 1000L;
+            g->_control->exposed_pending_time()
+                << (butil::cpuwide_time_ns() - m->cpuwide_start_ns) / 1000L;
         }
 
         // Not catch exceptions except ExitException which is for implementing
@@ -303,12 +305,12 @@ void TaskGroup::task_runner(intptr_t skip_remained) {
         // TODO: Save thread_return
         (void)thread_return;
 
-        // Logging must be done before returning the keytable, since the logging lib
-        // use bthread local storage internally, or will cause memory leak.
+        // Logging must be done before returning the keytable, since the logging
+        // lib use bthread local storage internally, or will cause memory leak.
         // FIXME: the time from quiting fn to here is not counted into cputime
         if (m->attr.flags & BTHREAD_LOG_START_AND_FINISH) {
-            LOG(INFO) << "Finished bthread " << m->tid << ", cputime="
-                      << m->stat.cputime_ns / 1000000.0 << "ms";
+            LOG(INFO) << "Finished bthread " << m->tid
+                      << ", cputime=" << m->stat.cputime_ns / 1000000.0 << "ms";
         }
 
         // Clean tls variables, must be done before changing version_butex
@@ -318,8 +320,8 @@ void TaskGroup::task_runner(intptr_t skip_remained) {
         if (kt != NULL) {
             return_keytable(m->attr.keytable_pool, kt);
             // After deletion: tls may be set during deletion.
-            tls_bls.keytable = NULL;
-            m->local_storage.keytable = NULL; // optional
+            tls_bls.keytable          = NULL;
+            m->local_storage.keytable = NULL;  // optional
         }
 
         // Increase the version and wake up all joiners, if resulting version
@@ -347,7 +349,7 @@ void TaskGroup::task_runner(intptr_t skip_remained) {
 void TaskGroup::_release_last_context(void* arg) {
     TaskMeta* m = static_cast<TaskMeta*>(arg);
     if (m->stack_type() != STACK_TYPE_PTHREAD) {
-        return_stack(m->release_stack()/*may be NULL*/);
+        return_stack(m->release_stack() /*may be NULL*/);
     } else {
         // it's _main_stack, don't return.
         m->set_stack(NULL);
@@ -355,15 +357,13 @@ void TaskGroup::_release_last_context(void* arg) {
     return_resource(get_slot(m->tid));
 }
 
-int TaskGroup::start_foreground(TaskGroup** pg,
-                                bthread_t* __restrict th,
+int TaskGroup::start_foreground(TaskGroup** pg, bthread_t* __restrict th,
                                 const bthread_attr_t* __restrict attr,
-                                void * (*fn)(void*),
-                                void* __restrict arg) {
+                                void* (*fn)(void*), void* __restrict arg) {
     if (__builtin_expect(!fn, 0)) {
         return EINVAL;
     }
-    const int64_t start_ns = butil::cpuwide_time_ns();
+    const int64_t start_ns          = butil::cpuwide_time_ns();
     const bthread_attr_t using_attr = (attr ? *attr : BTHREAD_ATTR_NORMAL);
     butil::ResourceId<TaskMeta> slot;
     TaskMeta* m = butil::get_resource(&slot);
@@ -371,18 +371,18 @@ int TaskGroup::start_foreground(TaskGroup** pg,
         return ENOMEM;
     }
     CHECK(m->current_waiter.load(butil::memory_order_relaxed) == NULL);
-    m->stop = false;
-    m->interrupted = false;
+    m->stop          = false;
+    m->interrupted   = false;
     m->about_to_quit = false;
-    m->fn = fn;
-    m->arg = arg;
+    m->fn            = fn;
+    m->arg           = arg;
     CHECK(m->stack == NULL);
-    m->attr = using_attr;
-    m->local_storage = LOCAL_STORAGE_INIT;
+    m->attr             = using_attr;
+    m->local_storage    = LOCAL_STORAGE_INIT;
     m->cpuwide_start_ns = start_ns;
-    m->stat = EMPTY_STAT;
-    m->tid = make_tid(*m->version_butex, slot);
-    *th = m->tid;
+    m->stat             = EMPTY_STAT;
+    m->tid              = make_tid(*m->version_butex, slot);
+    *th                 = m->tid;
     if (using_attr.flags & BTHREAD_LOG_START_AND_FINISH) {
         LOG(INFO) << "Started bthread " << m->tid;
     }
@@ -400,10 +400,8 @@ int TaskGroup::start_foreground(TaskGroup** pg,
         } else {
             fn = ready_to_run_in_worker;
         }
-        ReadyToRunArgs args = {
-            g->current_tid(),
-            (bool)(using_attr.flags & BTHREAD_NOSIGNAL)
-        };
+        ReadyToRunArgs args = {g->current_tid(),
+                               (bool)(using_attr.flags & BTHREAD_NOSIGNAL)};
         g->set_remained(fn, &args);
         TaskGroup::sched_to(pg, m->tid);
     }
@@ -413,12 +411,11 @@ int TaskGroup::start_foreground(TaskGroup** pg,
 template <bool REMOTE>
 int TaskGroup::start_background(bthread_t* __restrict th,
                                 const bthread_attr_t* __restrict attr,
-                                void * (*fn)(void*),
-                                void* __restrict arg) {
+                                void* (*fn)(void*), void* __restrict arg) {
     if (__builtin_expect(!fn, 0)) {
         return EINVAL;
     }
-    const int64_t start_ns = butil::cpuwide_time_ns();
+    const int64_t start_ns          = butil::cpuwide_time_ns();
     const bthread_attr_t using_attr = (attr ? *attr : BTHREAD_ATTR_NORMAL);
     butil::ResourceId<TaskMeta> slot;
     TaskMeta* m = butil::get_resource(&slot);
@@ -426,18 +423,18 @@ int TaskGroup::start_background(bthread_t* __restrict th,
         return ENOMEM;
     }
     CHECK(m->current_waiter.load(butil::memory_order_relaxed) == NULL);
-    m->stop = false;
-    m->interrupted = false;
+    m->stop          = false;
+    m->interrupted   = false;
     m->about_to_quit = false;
-    m->fn = fn;
-    m->arg = arg;
+    m->fn            = fn;
+    m->arg           = arg;
     CHECK(m->stack == NULL);
-    m->attr = using_attr;
-    m->local_storage = LOCAL_STORAGE_INIT;
+    m->attr             = using_attr;
+    m->local_storage    = LOCAL_STORAGE_INIT;
     m->cpuwide_start_ns = start_ns;
-    m->stat = EMPTY_STAT;
-    m->tid = make_tid(*m->version_butex, slot);
-    *th = m->tid;
+    m->stat             = EMPTY_STAT;
+    m->tid              = make_tid(*m->version_butex, slot);
+    *th                 = m->tid;
     if (using_attr.flags & BTHREAD_LOG_START_AND_FINISH) {
         LOG(INFO) << "Started bthread " << m->tid;
     }
@@ -451,16 +448,12 @@ int TaskGroup::start_background(bthread_t* __restrict th,
 }
 
 // Explicit instantiations.
-template int
-TaskGroup::start_background<true>(bthread_t* __restrict th,
-                                  const bthread_attr_t* __restrict attr,
-                                  void * (*fn)(void*),
-                                  void* __restrict arg);
-template int
-TaskGroup::start_background<false>(bthread_t* __restrict th,
-                                   const bthread_attr_t* __restrict attr,
-                                   void * (*fn)(void*),
-                                   void* __restrict arg);
+template int TaskGroup::start_background<true>(
+    bthread_t* __restrict th, const bthread_attr_t* __restrict attr,
+    void* (*fn)(void*), void* __restrict arg);
+template int TaskGroup::start_background<false>(
+    bthread_t* __restrict th, const bthread_attr_t* __restrict attr,
+    void* (*fn)(void*), void* __restrict arg);
 
 int TaskGroup::join(bthread_t tid, void** return_value) {
     if (__builtin_expect(!tid, 0)) {  // tid of bthread is never 0.
@@ -505,7 +498,7 @@ TaskStatistics TaskGroup::main_stat() const {
 }
 
 void TaskGroup::ending_sched(TaskGroup** pg) {
-    TaskGroup* g = *pg;
+    TaskGroup* g       = *pg;
     bthread_t next_tid = 0;
     // Find next task to run, if none, switch to idle thread of the group.
 #ifndef BTHREAD_FAIR_WSQ
@@ -522,21 +515,22 @@ void TaskGroup::ending_sched(TaskGroup** pg) {
     }
 
     TaskMeta* const cur_meta = g->_cur_meta;
-    TaskMeta* next_meta = address_meta(next_tid);
+    TaskMeta* next_meta      = address_meta(next_tid);
     if (next_meta->stack == NULL) {
         if (next_meta->stack_type() == cur_meta->stack_type()) {
             // also works with pthread_task scheduling to pthread_task, the
             // transfered stack is just _main_stack.
             next_meta->set_stack(cur_meta->release_stack());
         } else {
-            ContextualStack* stk = get_stack(next_meta->stack_type(), task_runner);
+            ContextualStack* stk =
+                get_stack(next_meta->stack_type(), task_runner);
             if (stk) {
                 next_meta->set_stack(stk);
             } else {
                 // stack_type is BTHREAD_STACKTYPE_PTHREAD or out of memory,
-                // In latter case, attr is forced to be BTHREAD_STACKTYPE_PTHREAD.
-                // This basically means that if we can't allocate stack, run
-                // the task in pthread directly.
+                // In latter case, attr is forced to be
+                // BTHREAD_STACKTYPE_PTHREAD. This basically means that if we
+                // can't allocate stack, run the task in pthread directly.
                 next_meta->attr.stack_type = BTHREAD_STACKTYPE_PTHREAD;
                 next_meta->set_stack(g->_main_stack);
             }
@@ -546,7 +540,7 @@ void TaskGroup::ending_sched(TaskGroup** pg) {
 }
 
 void TaskGroup::sched(TaskGroup** pg) {
-    TaskGroup* g = *pg;
+    TaskGroup* g       = *pg;
     bthread_t next_tid = 0;
     // Find next task to run, if none, switch to idle thread of the group.
 #ifndef BTHREAD_FAIR_WSQ
@@ -570,28 +564,29 @@ void TaskGroup::sched_to(TaskGroup** pg, TaskMeta* next_meta) {
     }
 #endif
     // Save errno so that errno is bthread-specific.
-    const int saved_errno = errno;
+    const int saved_errno       = errno;
     void* saved_unique_user_ptr = tls_unique_user_ptr;
 
     TaskMeta* const cur_meta = g->_cur_meta;
-    const int64_t now = butil::cpuwide_time_ns();
-    const int64_t elp_ns = now - g->_last_run_ns;
-    g->_last_run_ns = now;
+    const int64_t now        = butil::cpuwide_time_ns();
+    const int64_t elp_ns     = now - g->_last_run_ns;
+    g->_last_run_ns          = now;
     cur_meta->stat.cputime_ns += elp_ns;
     if (cur_meta->tid != g->main_tid()) {
         g->_cumulated_cputime_ns += elp_ns;
     }
     ++cur_meta->stat.nswitch;
-    ++ g->_nswitch;
+    ++g->_nswitch;
     // Switch to the task
     if (__builtin_expect(next_meta != cur_meta, 1)) {
         g->_cur_meta = next_meta;
         // Switch tls_bls
         cur_meta->local_storage = tls_bls;
-        tls_bls = next_meta->local_storage;
+        tls_bls                 = next_meta->local_storage;
 
-        // Logging must be done after switching the local storage, since the logging lib
-        // use bthread local storage internally, or will cause memory leak.
+        // Logging must be done after switching the local storage, since the
+        // logging lib use bthread local storage internally, or will cause
+        // memory leak.
         if ((cur_meta->attr.flags & BTHREAD_LOG_CONTEXT_SWITCH) ||
             (next_meta->attr.flags & BTHREAD_LOG_CONTEXT_SWITCH)) {
             LOG(INFO) << "Switch bthread: " << cur_meta->tid << " -> "
@@ -618,14 +613,14 @@ void TaskGroup::sched_to(TaskGroup** pg, TaskMeta* next_meta) {
     }
 
     while (g->_last_context_remained) {
-        RemainedFn fn = g->_last_context_remained;
+        RemainedFn fn             = g->_last_context_remained;
         g->_last_context_remained = NULL;
         fn(g->_last_context_remained_arg);
         g = tls_task_group;
     }
 
     // Restore errno
-    errno = saved_errno;
+    errno               = saved_errno;
     tls_unique_user_ptr = saved_unique_user_ptr;
 
 #ifndef NDEBUG
@@ -649,7 +644,7 @@ void TaskGroup::ready_to_run(bthread_t tid, bool nosignal) {
         ++_num_nosignal;
     } else {
         const int additional_signal = _num_nosignal;
-        _num_nosignal = 0;
+        _num_nosignal               = 0;
         _nsignaled += 1 + additional_signal;
         _control->signal_task(1 + additional_signal);
     }
@@ -668,8 +663,8 @@ void TaskGroup::ready_to_run_remote(bthread_t tid, bool nosignal) {
     _remote_rq._mutex.lock();
     while (!_remote_rq.push_locked(tid)) {
         flush_nosignal_tasks_remote_locked(_remote_rq._mutex);
-        LOG_EVERY_SECOND(ERROR) << "_remote_rq is full, capacity="
-                                << _remote_rq.capacity();
+        LOG_EVERY_SECOND(ERROR)
+            << "_remote_rq is full, capacity=" << _remote_rq.capacity();
         ::usleep(1000);
         _remote_rq._mutex.lock();
     }
@@ -678,7 +673,7 @@ void TaskGroup::ready_to_run_remote(bthread_t tid, bool nosignal) {
         _remote_rq._mutex.unlock();
     } else {
         const int additional_signal = _remote_num_nosignal;
-        _remote_num_nosignal = 0;
+        _remote_num_nosignal        = 0;
         _remote_nsignaled += 1 + additional_signal;
         _remote_rq._mutex.unlock();
         _control->signal_task(1 + additional_signal);
@@ -738,7 +733,7 @@ void TaskGroup::_add_sleep_event(void* void_args) {
     // Must copy SleepArgs. After calling TimerThread::schedule(), previous
     // thread may be stolen by a worker immediately and the on-stack SleepArgs
     // will be gone.
-    SleepArgs e = *static_cast<SleepArgs*>(void_args);
+    SleepArgs e  = *static_cast<SleepArgs*>(void_args);
     TaskGroup* g = e.group;
 
     TimerThread::TaskId sleep_id;
@@ -785,10 +780,10 @@ int TaskGroup::usleep(TaskGroup** pg, uint64_t timeout_us) {
     TaskGroup* g = *pg;
     // We have to schedule timer after we switched to next bthread otherwise
     // the timer may wake up(jump to) current still-running context.
-    SleepArgs e = { timeout_us, g->current_tid(), g->current_task(), g };
+    SleepArgs e = {timeout_us, g->current_tid(), g->current_task(), g};
     g->set_remained(_add_sleep_event, &e);
     sched(pg);
-    g = *pg;
+    g                     = *pg;
     e.meta->current_sleep = 0;
     if (e.meta->interrupted) {
         // Race with set and may consume multiple interruptions, which are OK.
@@ -807,8 +802,8 @@ int TaskGroup::usleep(TaskGroup** pg, uint64_t timeout_us) {
 // Defined in butex.cpp
 bool erase_from_butex_because_of_interruption(ButexWaiter* bw);
 
-static int interrupt_and_consume_waiters(
-    bthread_t tid, ButexWaiter** pw, uint64_t* sleep_id) {
+static int interrupt_and_consume_waiters(bthread_t tid, ButexWaiter** pw,
+                                         uint64_t* sleep_id) {
     TaskMeta* const m = TaskGroup::address_meta(tid);
     if (m == NULL) {
         return EINVAL;
@@ -817,9 +812,9 @@ static int interrupt_and_consume_waiters(
     BAIDU_SCOPED_LOCK(m->version_lock);
     if (given_ver == *m->version_butex) {
         *pw = m->current_waiter.exchange(NULL, butil::memory_order_acquire);
-        *sleep_id = m->current_sleep;
+        *sleep_id        = m->current_sleep;
         m->current_sleep = 0;  // only one stopper gets the sleep_id
-        m->interrupted = true;
+        m->interrupted   = true;
         return 0;
     }
     return EINVAL;
@@ -848,9 +843,9 @@ static int set_butex_waiter(bthread_t tid, ButexWaiter* w) {
 // can't be interrupted.
 int TaskGroup::interrupt(bthread_t tid, TaskControl* c) {
     // Consume current_waiter in the TaskMeta, wake it up then set it back.
-    ButexWaiter* w = NULL;
+    ButexWaiter* w    = NULL;
     uint64_t sleep_id = 0;
-    int rc = interrupt_and_consume_waiters(tid, &w, &sleep_id);
+    int rc            = interrupt_and_consume_waiters(tid, &w, &sleep_id);
     if (rc) {
         return rc;
     }
@@ -882,8 +877,8 @@ int TaskGroup::interrupt(bthread_t tid, TaskControl* c) {
 }
 
 void TaskGroup::yield(TaskGroup** pg) {
-    TaskGroup* g = *pg;
-    ReadyToRunArgs args = { g->current_tid(), false };
+    TaskGroup* g        = *pg;
+    ReadyToRunArgs args = {g->current_tid(), false};
     g->set_remained(ready_to_run_in_worker, &args);
     sched(pg);
 }
@@ -895,29 +890,29 @@ void print_task(std::ostream& os, bthread_t tid) {
         return;
     }
     const uint32_t given_ver = get_version(tid);
-    bool matched = false;
-    bool stop = false;
-    bool interrupted = false;
-    bool about_to_quit = false;
-    void* (*fn)(void*) = NULL;
-    void* arg = NULL;
-    bthread_attr_t attr = BTHREAD_ATTR_NORMAL;
-    bool has_tls = false;
+    bool matched             = false;
+    bool stop                = false;
+    bool interrupted         = false;
+    bool about_to_quit       = false;
+    void* (*fn)(void*)       = NULL;
+    void* arg                = NULL;
+    bthread_attr_t attr      = BTHREAD_ATTR_NORMAL;
+    bool has_tls             = false;
     int64_t cpuwide_start_ns = 0;
-    TaskStatistics stat = {0, 0};
+    TaskStatistics stat      = {0, 0};
     {
         BAIDU_SCOPED_LOCK(m->version_lock);
         if (given_ver == *m->version_butex) {
-            matched = true;
-            stop = m->stop;
-            interrupted = m->interrupted;
-            about_to_quit = m->about_to_quit;
-            fn = m->fn;
-            arg = m->arg;
-            attr = m->attr;
-            has_tls = m->local_storage.keytable;
+            matched          = true;
+            stop             = m->stop;
+            interrupted      = m->interrupted;
+            about_to_quit    = m->about_to_quit;
+            fn               = m->fn;
+            arg              = m->arg;
+            attr             = m->attr;
+            has_tls          = m->local_storage.keytable;
             cpuwide_start_ns = m->cpuwide_start_ns;
-            stat = m->stat;
+            stat             = m->stat;
         }
     }
     if (!matched) {
@@ -925,12 +920,9 @@ void print_task(std::ostream& os, bthread_t tid) {
     } else {
         os << "bthread=" << tid << " :\nstop=" << stop
            << "\ninterrupted=" << interrupted
-           << "\nabout_to_quit=" << about_to_quit
-           << "\nfn=" << (void*)fn
-           << "\narg=" << (void*)arg
-           << "\nattr={stack_type=" << attr.stack_type
-           << " flags=" << attr.flags
-           << " keytable_pool=" << attr.keytable_pool
+           << "\nabout_to_quit=" << about_to_quit << "\nfn=" << (void*)fn
+           << "\narg=" << (void*)arg << "\nattr={stack_type=" << attr.stack_type
+           << " flags=" << attr.flags << " keytable_pool=" << attr.keytable_pool
            << "}\nhas_tls=" << has_tls
            << "\nuptime_ns=" << butil::cpuwide_time_ns() - cpuwide_start_ns
            << "\ncputime_ns=" << stat.cputime_ns

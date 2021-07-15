@@ -17,14 +17,14 @@
 
 // Date 2014/09/22 11:57:43
 
-#ifndef  BVAR_STATUS_H
-#define  BVAR_STATUS_H
+#ifndef BVAR_STATUS_H
+#define BVAR_STATUS_H
 
-#include <string>                       // std::string
+#include <string>  // std::string
 #include "butil/atomicops.h"
-#include "butil/type_traits.h"
 #include "butil/string_printf.h"
 #include "butil/synchronization/lock.h"
+#include "butil/type_traits.h"
 #include "bvar/detail/is_atomical.h"
 #include "bvar/variable.h"
 
@@ -37,7 +37,7 @@ namespace bvar {
 //
 //   bvar::Status<int> foo_count2;
 //   foo_count2.set_value(17);
-//   
+//
 //   bvar::Status<int> foo_count3("my_value", 17);
 template <typename T, typename Enabler = void>
 class Status : public Variable {
@@ -47,8 +47,9 @@ public:
     Status(const butil::StringPiece& name, const T& value) : _value(value) {
         this->expose(name);
     }
-    Status(const butil::StringPiece& prefix,
-           const butil::StringPiece& name, const T& value) : _value(value) {
+    Status(const butil::StringPiece& prefix, const butil::StringPiece& name,
+           const T& value)
+        : _value(value) {
         this->expose_as(prefix, name);
     }
     // Calling hide() manually is a MUST required by Variable.
@@ -57,7 +58,7 @@ public:
     void describe(std::ostream& os, bool /*quote_string*/) const override {
         os << get_value();
     }
-    
+
 #ifdef BAIDU_INTERNAL
     void get_value(boost::any* value) const override {
         butil::AutoLock guard(_lock);
@@ -92,12 +93,12 @@ public:
     };
     class SeriesSampler : public detail::Sampler {
     public:
-        typedef typename butil::conditional<
-        true, detail::AddTo<T>, PlaceHolderOp>::type Op;
-        explicit SeriesSampler(Status* owner)
-            : _owner(owner), _series(Op()) {}
+        typedef typename butil::conditional<true, detail::AddTo<T>,
+                                            PlaceHolderOp>::type Op;
+        explicit SeriesSampler(Status* owner) : _owner(owner), _series(Op()) {}
         void take_sample() { _series.append(_owner->get_value()); }
         void describe(std::ostream& os) { _series.describe(os, NULL); }
+
     private:
         Status* _owner;
         detail::Series<T, Op> _series;
@@ -105,13 +106,13 @@ public:
 
 public:
     Status() : _series_sampler(NULL) {}
-    Status(const T& value) : _value(value), _series_sampler(NULL) { }
+    Status(const T& value) : _value(value), _series_sampler(NULL) {}
     Status(const butil::StringPiece& name, const T& value)
         : _value(value), _series_sampler(NULL) {
         this->expose(name);
     }
-    Status(const butil::StringPiece& prefix,
-           const butil::StringPiece& name, const T& value)
+    Status(const butil::StringPiece& prefix, const butil::StringPiece& name,
+           const T& value)
         : _value(value), _series_sampler(NULL) {
         this->expose_as(prefix, name);
     }
@@ -126,22 +127,19 @@ public:
     void describe(std::ostream& os, bool /*quote_string*/) const override {
         os << get_value();
     }
-    
+
 #ifdef BAIDU_INTERNAL
-    void get_value(boost::any* value) const override {
-        *value = get_value();
-    }
+    void get_value(boost::any* value) const override { *value = get_value(); }
 #endif
-    
-    T get_value() const {
-        return _value.load(butil::memory_order_relaxed);
-    }
-    
+
+    T get_value() const { return _value.load(butil::memory_order_relaxed); }
+
     void set_value(const T& value) {
         _value.store(value, butil::memory_order_relaxed);
     }
 
-    int describe_series(std::ostream& os, const SeriesOptions& options) const override {
+    int describe_series(std::ostream& os,
+                        const SeriesOptions& options) const override {
         if (_series_sampler == NULL) {
             return 1;
         }
@@ -156,9 +154,7 @@ protected:
                     const butil::StringPiece& name,
                     DisplayFilter display_filter) override {
         const int rc = Variable::expose_impl(prefix, name, display_filter);
-        if (rc == 0 &&
-            _series_sampler == NULL &&
-            FLAGS_save_series) {
+        if (rc == 0 && _series_sampler == NULL && FLAGS_save_series) {
             _series_sampler = new SeriesSampler(this);
             _series_sampler->schedule();
         }
@@ -184,8 +180,8 @@ public:
         }
         expose(name);
     }
-    Status(const butil::StringPiece& prefix,
-           const butil::StringPiece& name, const char* fmt, ...) {
+    Status(const butil::StringPiece& prefix, const butil::StringPiece& name,
+           const char* fmt, ...) {
         if (fmt) {
             va_list ap;
             va_start(ap, fmt);
@@ -211,11 +207,9 @@ public:
     }
 
 #ifdef BAIDU_INTERNAL
-    void get_value(boost::any* value) const override {
-        *value = get_value();
-    }
+    void get_value(boost::any* value) const override { *value = get_value(); }
 #endif
-    
+
     void set_value(const char* fmt, ...) {
         va_list ap;
         va_start(ap, fmt);
@@ -238,4 +232,4 @@ private:
 
 }  // namespace bvar
 
-#endif  //BVAR_STATUS_H
+#endif  // BVAR_STATUS_H

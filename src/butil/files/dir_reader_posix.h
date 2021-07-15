@@ -37,4 +37,4 @@ typedef DirReaderFallback DirReaderPosix;
 
 }  // namespace butil
 
-#endif // BUTIL_FILES_DIR_READER_POSIX_H_
+#endif  // BUTIL_FILES_DIR_READER_POSIX_H_

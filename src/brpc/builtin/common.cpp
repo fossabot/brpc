@@ -15,18 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <iomanip>
-#include <sys/time.h>
-#include <fcntl.h>                           // O_RDONLY
-#include <gflags/gflags.h>
-#include "butil/logging.h"
-#include "butil/fd_guard.h"                  // fd_guard
-#include "butil/file_util.h"                 // butil::FilePath
-#include "butil/third_party/murmurhash3/murmurhash3.h"
-#include "butil/process_util.h"              // ReadCommandLine
-#include "brpc/server.h"
 #include "brpc/builtin/common.h"
+#include <fcntl.h>  // O_RDONLY
+#include <gflags/gflags.h>
+#include <sys/time.h>
+#include <iomanip>
+#include "brpc/server.h"
+#include "butil/fd_guard.h"   // fd_guard
+#include "butil/file_util.h"  // butil::FilePath
+#include "butil/logging.h"
+#include "butil/process_util.h"  // ReadCommandLine
+#include "butil/third_party/murmurhash3/murmurhash3.h"
 
 namespace brpc {
 
@@ -67,13 +66,13 @@ inline bool url_wildcmp(const char* wild, const char* str) {
                 return true;
             }
             mp = wild;
-            cp = str+1;
+            cp = str + 1;
         } else if (*wild == *str || *wild == '$') {
             ++wild;
             ++str;
         } else {
             wild = mp;
-            str = cp++;
+            str  = cp++;
         }
     }
 
@@ -103,8 +102,7 @@ void PrintRealDateTime(std::ostream& os, int64_t tm) {
     os.fill(old_fill);
 }
 
-void PrintRealDateTime(std::ostream& os, int64_t tm,
-                       bool ignore_microseconds) {
+void PrintRealDateTime(std::ostream& os, int64_t tm, bool ignore_microseconds) {
     char buf[32];
     const time_t tm_s = tm / 1000000L;
     struct tm lt;
@@ -142,7 +140,7 @@ std::ostream& operator<<(std::ostream& os, const Path& link) {
     return os;
 }
 
-const butil::EndPoint *Path::LOCAL = (butil::EndPoint *)0x01;
+const butil::EndPoint* Path::LOCAL = (butil::EndPoint*)0x01;
 
 void AppendFileName(std::string* dir, const std::string& filename) {
     if (dir->empty()) {
@@ -170,10 +168,11 @@ void AppendFileName(std::string* dir, const std::string& filename) {
             dir->append(filename);
         } else {
             const bool is_abs = (dir->c_str()[0] == '/');
-            int npop = 1;
+            int npop          = 1;
             while (npop > 0) {
                 const char* p = dir->c_str() + dir->size() - 1;
-                for (; p != dir->c_str() && *p == '/'; --p);
+                for (; p != dir->c_str() && *p == '/'; --p)
+                    ;
                 if (p == dir->c_str()) {
                     dir->clear();
                     break;
@@ -194,7 +193,8 @@ void AppendFileName(std::string* dir, const std::string& filename) {
                     }
                 }
                 ssize_t new_pos = (ssize_t)slash_pos - 1;
-                for (; new_pos >= 0 && (*dir)[new_pos] == '/'; --new_pos);
+                for (; new_pos >= 0 && (*dir)[new_pos] == '/'; --new_pos)
+                    ;
                 dir->resize(new_pos + 1);
                 if (dir->empty()) {
                     break;
@@ -213,101 +213,102 @@ void AppendFileName(std::string* dir, const std::string& filename) {
                 }
             }
         }
-    } // else len == 0, nothing to do
+    }  // else len == 0, nothing to do
 }
 
 const char* gridtable_style() {
-    return
-        "<style type=\"text/css\">\n"
-        "table.gridtable {\n"
-        "  color:#333333;\n"
-        "  border-width:1px;\n"
-        "  border-color:#666666;\n"
-        "  border-collapse:collapse;\n"
-        "}\n"
-        "table.gridtable th {\n"
-        "  border-width:1px;\n"
-        "  padding:3px;\n"
-        "  border-style:solid;\n"
-        "  border-color:#666666;\n"
-        "  background-color:#eeeeee;\n"
-        "}\n"
-        "table.gridtable td {\n"
-        "  border-width:1px;\n"
-        "  padding:3px;\n"
-        "  border-style:solid;\n"
-        "  border-color:#666666;\n"
-        "  background-color:#ffffff;\n"
-        "}\n"
-        "</style>\n";
+    return "<style type=\"text/css\">\n"
+           "table.gridtable {\n"
+           "  color:#333333;\n"
+           "  border-width:1px;\n"
+           "  border-color:#666666;\n"
+           "  border-collapse:collapse;\n"
+           "}\n"
+           "table.gridtable th {\n"
+           "  border-width:1px;\n"
+           "  padding:3px;\n"
+           "  border-style:solid;\n"
+           "  border-color:#666666;\n"
+           "  background-color:#eeeeee;\n"
+           "}\n"
+           "table.gridtable td {\n"
+           "  border-width:1px;\n"
+           "  padding:3px;\n"
+           "  border-style:solid;\n"
+           "  border-color:#666666;\n"
+           "  background-color:#ffffff;\n"
+           "}\n"
+           "</style>\n";
 }
 
 const char* TabsHead() {
-    return
-        "<style type=\"text/css\">\n"
-        "ol,ul { list-style:none; }\n"
-        ".tabs-menu {\n"
-        "    position: fixed;"
-        "    top: 0px;"
-        "    left: 0px;"
-        "    height: 40px;\n"
-        "    width: 100%;\n"
-        "    clear: both;\n"
-        "    padding: 0px;\n"
-        "    margin: 0px;\n"
-        "    background-color: #606060;\n"
-        "    border:none;\n"
-        "    overflow: hidden;\n"
-        "    box-shadow: 0px 1px 2px #909090;\n"  
-        "    z-index: 5;\n"
-        "}\n"
-        ".tabs-menu li {\n"
-        "    float:left;\n"
-        "    fill:none;\n"
-        "    border:none;\n"
-        "    padding:10px 30px 10px 30px;\n"
-        "    text-align:center;\n"
-        "    cursor:pointer;\n"
-        "    color:#dddddd;\n"
-        "    font-weight: bold;\n"
-        "    font-family: \"Segoe UI\", Calibri, Arial;\n"
-        "}\n"
-        ".tabs-menu li.current {\n"
-        "    color:#FFFFFF;\n"
-        "    background-color: #303030;\n"
-        "}\n"
-        ".tabs-menu li.help {\n"
-        "    float:right;\n"
-        "}\n"
-        ".tabs-menu li:hover {\n"
-        "    background-color: #303030;\n"
-        "}\n"
-        "</style>\n"
-        "<script type=\"text/javascript\">\n"
-        "$(function() {\n"
-        "  $(\".tabs-menu li\").click(function(event) {\n"
-        "    window.location.href = $(this).attr('id');\n"
-        "  });\n"
-        "});\n"
-        "</script>\n";
+    return "<style type=\"text/css\">\n"
+           "ol,ul { list-style:none; }\n"
+           ".tabs-menu {\n"
+           "    position: fixed;"
+           "    top: 0px;"
+           "    left: 0px;"
+           "    height: 40px;\n"
+           "    width: 100%;\n"
+           "    clear: both;\n"
+           "    padding: 0px;\n"
+           "    margin: 0px;\n"
+           "    background-color: #606060;\n"
+           "    border:none;\n"
+           "    overflow: hidden;\n"
+           "    box-shadow: 0px 1px 2px #909090;\n"
+           "    z-index: 5;\n"
+           "}\n"
+           ".tabs-menu li {\n"
+           "    float:left;\n"
+           "    fill:none;\n"
+           "    border:none;\n"
+           "    padding:10px 30px 10px 30px;\n"
+           "    text-align:center;\n"
+           "    cursor:pointer;\n"
+           "    color:#dddddd;\n"
+           "    font-weight: bold;\n"
+           "    font-family: \"Segoe UI\", Calibri, Arial;\n"
+           "}\n"
+           ".tabs-menu li.current {\n"
+           "    color:#FFFFFF;\n"
+           "    background-color: #303030;\n"
+           "}\n"
+           ".tabs-menu li.help {\n"
+           "    float:right;\n"
+           "}\n"
+           ".tabs-menu li:hover {\n"
+           "    background-color: #303030;\n"
+           "}\n"
+           "</style>\n"
+           "<script type=\"text/javascript\">\n"
+           "$(function() {\n"
+           "  $(\".tabs-menu li\").click(function(event) {\n"
+           "    window.location.href = $(this).attr('id');\n"
+           "  });\n"
+           "});\n"
+           "</script>\n";
 }
 
 const char* logo() {
-    return
-        "    __\n"
-        "   / /_  _________  _____\n"
-        "  / __ \\/ ___/ __ \\/ ___/\n"
-        " / /_/ / /  / /_/ / /__\n"
-        "/_.___/_/  / .___/\\___/\n"
-        "          /_/\n";
+    return "    __\n"
+           "   / /_  _________  _____\n"
+           "  / __ \\/ ___/ __ \\/ ___/\n"
+           " / /_/ / /  / /_/ / /__\n"
+           "/_.___/_/  / .___/\\___/\n"
+           "          /_/\n";
 }
 
 const char* ProfilingType2String(ProfilingType t) {
     switch (t) {
-    case PROFILING_CPU: return "cpu";
-    case PROFILING_HEAP: return "heap";
-    case PROFILING_GROWTH: return "growth";
-    case PROFILING_CONTENTION: return "contention";
+    case PROFILING_CPU:
+        return "cpu";
+    case PROFILING_HEAP:
+        return "heap";
+    case PROFILING_GROWTH:
+        return "growth";
+    case PROFILING_CONTENTION:
+        return "contention";
     }
     return "unknown";
 }
@@ -318,7 +319,7 @@ int FileChecksum(const char* file_path, unsigned char* checksum) {
         PLOG(ERROR) << "Fail to open `" << file_path << "'";
         return -1;
     }
-    char block[16*1024];   // 16k each time
+    char block[16 * 1024];  // 16k each time
     ssize_t size = 0L;
     butil::MurmurHash3_x64_128_Context mm_ctx;
     butil::MurmurHash3_x64_128_Init(&mm_ctx, 0);
@@ -330,12 +331,13 @@ int FileChecksum(const char* file_path, unsigned char* checksum) {
 }
 
 static pthread_once_t create_program_name_once = PTHREAD_ONCE_INIT;
-static const char* s_program_name = "unknown";
+static const char* s_program_name              = "unknown";
 static char s_cmdline[256];
 static void CreateProgramName() {
-    const ssize_t nr = butil::ReadCommandLine(s_cmdline, sizeof(s_cmdline) - 1, false);
+    const ssize_t nr =
+        butil::ReadCommandLine(s_cmdline, sizeof(s_cmdline) - 1, false);
     if (nr > 0) {
-        s_cmdline[nr] = '\0';
+        s_cmdline[nr]  = '\0';
         s_program_name = s_cmdline;
     }
 }
@@ -350,12 +352,11 @@ static const char s_alphabet[] = "0123456789abcdef";
 static void ComputeProgramCHECKSUM() {
     unsigned char checksum[16];
     FileChecksum(GetProgramName(), checksum);
-    for (size_t i = 0, j = 0; i < 16; ++i, j+=2) {
-        s_program_checksum[j] = s_alphabet[checksum[i] >> 4];
-        s_program_checksum[j+1] = s_alphabet[checksum[i] & 0xF];
+    for (size_t i = 0, j = 0; i < 16; ++i, j += 2) {
+        s_program_checksum[j]     = s_alphabet[checksum[i] >> 4];
+        s_program_checksum[j + 1] = s_alphabet[checksum[i] & 0xF];
     }
     s_program_checksum[32] = '\0';
-
 }
 const char* GetProgramChecksum() {
     pthread_once(&compute_program_checksum_once, ComputeProgramCHECKSUM);
@@ -377,4 +378,4 @@ void Time2GMT(time_t t, char* buf, size_t size) {
     strftime(buf, size, "%a, %d %b %Y %H:%M:%S %Z", &tm);
 }
 
-} // namespace brpc
+}  // namespace brpc

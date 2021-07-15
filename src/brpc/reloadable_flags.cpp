@@ -15,47 +15,29 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <unistd.h>                    // write, _exit
-#include <gflags/gflags.h>
-#include "butil/macros.h"
 #include "brpc/reloadable_flags.h"
+#include <gflags/gflags.h>
+#include <unistd.h>  // write, _exit
+#include "butil/macros.h"
 
 namespace brpc {
 
-bool PassValidate(const char*, bool) {
-    return true;
-}
-bool PassValidate(const char*, int32_t) {
-    return true;
-}
-bool PassValidate(const char*, int64_t) {
-    return true;
-}
-bool PassValidate(const char*, uint64_t) {
-    return true;
-}
-bool PassValidate(const char*, double) {
-    return true;
-}
+bool PassValidate(const char*, bool) { return true; }
+bool PassValidate(const char*, int32_t) { return true; }
+bool PassValidate(const char*, int64_t) { return true; }
+bool PassValidate(const char*, uint64_t) { return true; }
+bool PassValidate(const char*, double) { return true; }
 
-bool PositiveInteger(const char*, int32_t val) {
-    return val > 0;
-}
-bool PositiveInteger(const char*, int64_t val) {
-    return val > 0;
-}
+bool PositiveInteger(const char*, int32_t val) { return val > 0; }
+bool PositiveInteger(const char*, int64_t val) { return val > 0; }
 
-bool NonNegativeInteger(const char*, int32_t val) {
-    return val >= 0;
-}
-bool NonNegativeInteger(const char*, int64_t val) {
-    return val >= 0;
-}
+bool NonNegativeInteger(const char*, int32_t val) { return val >= 0; }
+bool NonNegativeInteger(const char*, int64_t val) { return val >= 0; }
 
 template <typename T>
-static bool RegisterFlagValidatorOrDieImpl(
-    const T* flag, bool (*validate_fn)(const char*, T val)) {
+static bool RegisterFlagValidatorOrDieImpl(const T* flag,
+                                           bool (*validate_fn)(const char*,
+                                                               T val)) {
     if (GFLAGS_NS::RegisterFlagValidator(flag, validate_fn)) {
         return true;
     }
@@ -86,4 +68,4 @@ bool RegisterFlagValidatorOrDie(const double* flag,
     return RegisterFlagValidatorOrDieImpl(flag, validate_fn);
 }
 
-} // namespace brpc
+}  // namespace brpc

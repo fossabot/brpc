@@ -26,7 +26,7 @@ class fd_guard : public ScopedFD {
 public:
     operator int() const { return get(); }
 };
-}  // files
-}  // base
+}  // namespace files
+}  // namespace butil
 
 #endif  // BUTIL_FD_GUARD_H

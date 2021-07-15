@@ -15,28 +15,26 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <google/protobuf/descriptor.h>         // MethodDescriptor
-#include <google/protobuf/message.h>            // Message
+#include "brpc/policy/nshead_protocol.h"
 #include <gflags/gflags.h>
-#include "butil/time.h" 
-#include "butil/iobuf.h"                         // butil::IOBuf
-#include "brpc/log.h"
-#include "brpc/controller.h"               // Controller
-#include "brpc/socket.h"                   // Socket
-#include "brpc/server.h"                   // Server
-#include "brpc/span.h"
-#include "brpc/details/server_private_accessor.h"
+#include <google/protobuf/descriptor.h>  // MethodDescriptor
+#include <google/protobuf/message.h>     // Message
+#include "brpc/controller.h"             // Controller
 #include "brpc/details/controller_private_accessor.h"
+#include "brpc/details/server_private_accessor.h"
+#include "brpc/details/usercode_backup_pool.h"
+#include "brpc/log.h"
 #include "brpc/nshead_service.h"
 #include "brpc/policy/most_common_message.h"
-#include "brpc/policy/nshead_protocol.h"
-#include "brpc/details/usercode_backup_pool.h"
+#include "brpc/server.h"  // Server
+#include "brpc/socket.h"  // Socket
+#include "brpc/span.h"
+#include "butil/iobuf.h"  // butil::IOBuf
+#include "butil/time.h"
 
 extern "C" {
 void bthread_assign_data(void* data);
 }
-
 
 namespace brpc {
 
@@ -44,16 +42,11 @@ NsheadClosure::NsheadClosure(void* additional_space)
     : _server(NULL)
     , _received_us(0)
     , _do_respond(true)
-    , _additional_space(additional_space) {
-}
+    , _additional_space(additional_space) {}
 
-NsheadClosure::~NsheadClosure() {
-    LogErrorTextAndDelete(false)(&_controller);
-}
+NsheadClosure::~NsheadClosure() { LogErrorTextAndDelete(false)(&_controller); }
 
-void NsheadClosure::DoNotRespond() {
-    _do_respond = false;
-}
+void NsheadClosure::DoNotRespond() { _do_respond = false; }
 
 class DeleteNsheadClosure {
 public:
@@ -72,19 +65,17 @@ void NsheadClosure::Run() {
     if (span) {
         span->set_start_send_us(butil::cpuwide_time_us());
     }
-    Socket* sock = accessor.get_sending_socket();
+    Socket* sock                = accessor.get_sending_socket();
     MethodStatus* method_status = _server->options().nshead_service->_status;
-    ConcurrencyRemover concurrency_remover(method_status, &_controller, _received_us);
+    ConcurrencyRemover concurrency_remover(method_status, &_controller,
+                                           _received_us);
     if (!method_status) {
         // Judge errors belongings.
         // may not be accurate, but it does not matter too much.
         const int error_code = _controller.ErrorCode();
-        if (error_code == ENOSERVICE ||
-            error_code == ENOMETHOD ||
-            error_code == EREQUEST ||
-            error_code == ECLOSE ||
-            error_code == ELOGOFF ||
-            error_code == ELIMIT) {
+        if (error_code == ENOSERVICE || error_code == ENOMETHOD ||
+            error_code == EREQUEST || error_code == ECLOSE ||
+            error_code == ELOGOFF || error_code == ELIMIT) {
             ServerPrivateAccessor(_server).AddError();
         }
     }
@@ -99,9 +90,9 @@ void NsheadClosure::Run() {
         // Notice that the response use request.head.log_id directly rather
         // than _controller.log_id() which may be different and packed in
         // the meta or user messages.
-        _response.head = _request.head;
+        _response.head           = _request.head;
         _response.head.magic_num = NSHEAD_MAGICNUM;
-        _response.head.body_len = _response.body.length();
+        _response.head.body_len  = _response.body.length();
         if (span) {
             int response_size = sizeof(nshead_t) + _response.head.body_len;
             span->set_response_size(response_size);
@@ -115,7 +106,8 @@ void NsheadClosure::Run() {
         wopt.ignore_eovercrowded = true;
         if (sock->Write(&write_buf, &wopt) != 0) {
             const int errcode = errno;
-            PLOG_IF(WARNING, errcode != EPIPE) << "Fail to write into " << *sock;
+            PLOG_IF(WARNING, errcode != EPIPE)
+                << "Fail to write into " << *sock;
             _controller.SetFailed(errcode, "Fail to write into %s",
                                   sock->description().c_str());
             return;
@@ -137,14 +129,14 @@ void NsheadClosure::SetMethodName(const std::string& full_method_name) {
 
 namespace policy {
 
-ParseResult ParseNsheadMessage(butil::IOBuf* source,
-                               Socket*, bool /*read_eof*/, const void* /*arg*/) {
+ParseResult ParseNsheadMessage(butil::IOBuf* source, Socket*, bool /*read_eof*/,
+                               const void* /*arg*/) {
     char header_buf[sizeof(nshead_t)];
     const size_t n = source->copy_to(header_buf, sizeof(header_buf));
     if (n < offsetof(nshead_t, magic_num) + 4) {
         return MakeParseError(PARSE_ERROR_NOT_ENOUGH_DATA);
     }
-    const void* dummy = header_buf + offsetof(nshead_t, magic_num);
+    const void* dummy            = header_buf + offsetof(nshead_t, magic_num);
     const unsigned int magic_num = *(unsigned int*)dummy;
     if (magic_num != NSHEAD_MAGICNUM) {
         RPC_VLOG << "magic_num=" << magic_num
@@ -154,8 +146,8 @@ ParseResult ParseNsheadMessage(butil::IOBuf* source,
     if (n < sizeof(nshead_t)) {
         return MakeParseError(PARSE_ERROR_NOT_ENOUGH_DATA);
     }
-    const nshead_t* nshead = (const nshead_t *)header_buf;
-    uint32_t body_len = nshead->body_len;
+    const nshead_t* nshead = (const nshead_t*)header_buf;
+    uint32_t body_len      = nshead->body_len;
     if (body_len > FLAGS_max_body_size) {
         return MakeParseError(PARSE_ERROR_TOO_BIG_DATA);
     } else if (source->length() < sizeof(header_buf) + body_len) {
@@ -178,7 +170,8 @@ struct CallMethodInBackupThreadArgs {
 };
 
 static void CallMethodInBackupThread(void* void_args) {
-    CallMethodInBackupThreadArgs* args = (CallMethodInBackupThreadArgs*)void_args;
+    CallMethodInBackupThreadArgs* args =
+        (CallMethodInBackupThreadArgs*)void_args;
     args->service->ProcessNsheadRequest(*args->server, args->controller,
                                         *args->request, args->response,
                                         args->done);
@@ -192,33 +185,34 @@ static void EndRunningCallMethodInPool(NsheadService* service,
                                        NsheadMessage* response,
                                        NsheadClosure* done) {
     CallMethodInBackupThreadArgs* args = new CallMethodInBackupThreadArgs;
-    args->service = service;
-    args->server = &server;
-    args->controller = controller;
-    args->request = &request;
-    args->response = response;
-    args->done = done;
+    args->service                      = service;
+    args->server                       = &server;
+    args->controller                   = controller;
+    args->request                      = &request;
+    args->response                     = response;
+    args->done                         = done;
     return EndRunningUserCodeInPool(CallMethodInBackupThread, args);
 };
 
 void ProcessNsheadRequest(InputMessageBase* msg_base) {
-    const int64_t start_parse_us = butil::cpuwide_time_us();   
+    const int64_t start_parse_us = butil::cpuwide_time_us();
 
-    DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
+    DestroyingPtr<MostCommonMessage> msg(
+        static_cast<MostCommonMessage*>(msg_base));
     SocketUniquePtr socket_guard(msg->ReleaseSocket());
-    Socket* socket = socket_guard.get();
+    Socket* socket       = socket_guard.get();
     const Server* server = static_cast<const Server*>(msg_base->arg());
     ScopedNonServiceError non_service_error(server);
-    
+
     char buf[sizeof(nshead_t)];
-    const char *p = (const char *)msg->meta.fetch(buf, sizeof(buf));
-    const nshead_t *req_head = (const nshead_t *)p;
+    const char* p            = (const char*)msg->meta.fetch(buf, sizeof(buf));
+    const nshead_t* req_head = (const nshead_t*)p;
 
     NsheadService* service = server->options().nshead_service;
     if (service == NULL) {
-        LOG_EVERY_SECOND(WARNING) 
+        LOG_EVERY_SECOND(WARNING)
             << "Received nshead request however the server does not set"
-            " ServerOptions.nshead_service, close the connection.";
+               " ServerOptions.nshead_service, close the connection.";
         socket->SetFailed();
         return;
     }
@@ -235,21 +229,21 @@ void ProcessNsheadRequest(InputMessageBase* msg_base) {
     if (method_status) {
         CHECK(method_status->OnRequested());
     }
-    
+
     void* sub_space = NULL;
     if (service->_additional_space) {
         sub_space = (char*)space + sizeof(NsheadClosure);
     }
     NsheadClosure* nshead_done = new (space) NsheadClosure(sub_space);
-    Controller* cntl = &(nshead_done->_controller);
-    NsheadMessage* req = &(nshead_done->_request);
-    NsheadMessage* res = &(nshead_done->_response);
+    Controller* cntl           = &(nshead_done->_controller);
+    NsheadMessage* req         = &(nshead_done->_request);
+    NsheadMessage* res         = &(nshead_done->_response);
 
     req->head = *req_head;
     msg->payload.swap(req->body);
     nshead_done->_received_us = msg->received_us();
-    nshead_done->_server = server;
-    
+    nshead_done->_server      = server;
+
     ServerPrivateAccessor server_accessor(server);
     ControllerPrivateAccessor accessor(cntl);
     const bool security_mode = server->options().security_mode() &&
@@ -295,13 +289,13 @@ void ProcessNsheadRequest(InputMessageBase* msg_base) {
             break;
         }
         if (!server_accessor.AddConcurrency(cntl)) {
-            cntl->SetFailed(
-                ELIMIT, "Reached server's max_concurrency=%d",
-                server->options().max_concurrency);
+            cntl->SetFailed(ELIMIT, "Reached server's max_concurrency=%d",
+                            server->options().max_concurrency);
             break;
         }
         if (FLAGS_usercode_in_pthread && TooManyUserCode()) {
-            cntl->SetFailed(ELIMIT, "Too many user code to run when"
+            cntl->SetFailed(ELIMIT,
+                            "Too many user code to run when"
                             " -usercode_in_pthread is on");
             break;
         }
@@ -314,25 +308,27 @@ void ProcessNsheadRequest(InputMessageBase* msg_base) {
         span->AsParent();
     }
     if (!FLAGS_usercode_in_pthread) {
-        return service->ProcessNsheadRequest(*server, cntl, *req, res, nshead_done);
+        return service->ProcessNsheadRequest(*server, cntl, *req, res,
+                                             nshead_done);
     }
     if (BeginRunningUserCode()) {
         service->ProcessNsheadRequest(*server, cntl, *req, res, nshead_done);
         return EndRunningUserCodeInPlace();
     } else {
-        return EndRunningCallMethodInPool(
-            service, *server, cntl, *req, res, nshead_done);
+        return EndRunningCallMethodInPool(service, *server, cntl, *req, res,
+                                          nshead_done);
     }
 }
 
 void ProcessNsheadResponse(InputMessageBase* msg_base) {
     const int64_t start_parse_us = butil::cpuwide_time_us();
-    DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
-    
+    DestroyingPtr<MostCommonMessage> msg(
+        static_cast<MostCommonMessage*>(msg_base));
+
     // Fetch correlation id that we saved before in `PackNsheadRequest'
-    const CallId cid = { static_cast<uint64_t>(msg->socket()->correlation_id()) };
+    const CallId cid = {static_cast<uint64_t>(msg->socket()->correlation_id())};
     Controller* cntl = NULL;
-    const int rc = bthread_id_lock(cid, (void**)&cntl);
+    const int rc     = bthread_id_lock(cid, (void**)&cntl);
     if (rc != 0) {
         LOG_IF(ERROR, rc != EINVAL && rc != EPERM)
             << "Fail to lock correlation_id=" << cid << ": " << berror(rc);
@@ -349,11 +345,11 @@ void ProcessNsheadResponse(InputMessageBase* msg_base) {
     }
     // MUST be NsheadMessage (checked in SerializeNsheadRequest)
     NsheadMessage* response = (NsheadMessage*)cntl->response();
-    const int saved_error = cntl->ErrorCode();
+    const int saved_error   = cntl->ErrorCode();
     if (response != NULL) {
         msg->meta.copy_to(&response->head, sizeof(nshead_t));
         msg->payload.swap(response->body);
-    } // else just ignore the response.
+    }  // else just ignore the response.
 
     // Unlocks correlation_id inside. Revert controller's
     // error code if it version check of `cid' fails
@@ -380,27 +376,25 @@ void SerializeNsheadRequest(butil::IOBuf* request_buf, Controller* cntl,
     }
     if (cntl->response() != NULL &&
         cntl->response()->GetDescriptor() != NsheadMessage::descriptor()) {
-        return cntl->SetFailed(EINVAL, "Type of response must be NsheadMessage");
+        return cntl->SetFailed(EINVAL,
+                               "Type of response must be NsheadMessage");
     }
     const NsheadMessage* req = (const NsheadMessage*)req_base;
-    nshead_t nshead = req->head;
+    nshead_t nshead          = req->head;
     if (cntl->has_log_id()) {
         nshead.log_id = cntl->log_id();
     }
     nshead.magic_num = NSHEAD_MAGICNUM;
-    nshead.body_len = req->body.size();
+    nshead.body_len  = req->body.size();
     request_buf->append(&nshead, sizeof(nshead));
     request_buf->append(req->body);
 }
 
-void PackNsheadRequest(
-    butil::IOBuf* packet_buf,
-    SocketMessage**,
-    uint64_t correlation_id,
-    const google::protobuf::MethodDescriptor*,
-    Controller* cntl,
-    const butil::IOBuf& request,
-    const Authenticator*) {
+void PackNsheadRequest(butil::IOBuf* packet_buf, SocketMessage**,
+                       uint64_t correlation_id,
+                       const google::protobuf::MethodDescriptor*,
+                       Controller* cntl, const butil::IOBuf& request,
+                       const Authenticator*) {
     ControllerPrivateAccessor accessor(cntl);
     if (cntl->connection_type() == CONNECTION_TYPE_SINGLE) {
         return cntl->SetFailed(
@@ -421,5 +415,5 @@ void PackNsheadRequest(
     packet_buf->append(request);
 }
 
-} // namespace policy
-} // namespace brpc
+}  // namespace policy
+}  // namespace brpc

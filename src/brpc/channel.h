@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_CHANNEL_H
 #define BRPC_CHANNEL_H
 
@@ -23,18 +22,18 @@
 // on internal structures, use opaque pointers instead.
 
 #include <ostream>                          // std::ostream
-#include "bthread/errno.h"                  // Redefine errno
-#include "butil/intrusive_ptr.hpp"          // butil::intrusive_ptr
-#include "butil/ptr_container.h"
-#include "brpc/ssl_options.h"               // ChannelSSLOptions
-#include "brpc/channel_base.h"              // ChannelBase
-#include "brpc/adaptive_protocol_type.h"    // AdaptiveProtocolType
 #include "brpc/adaptive_connection_type.h"  // AdaptiveConnectionType
-#include "brpc/socket_id.h"                 // SocketId
+#include "brpc/adaptive_protocol_type.h"    // AdaptiveProtocolType
+#include "brpc/channel_base.h"              // ChannelBase
 #include "brpc/controller.h"                // brpc::Controller
 #include "brpc/details/profiler_linker.h"
-#include "brpc/retry_policy.h"
 #include "brpc/naming_service_filter.h"
+#include "brpc/retry_policy.h"
+#include "brpc/socket_id.h"         // SocketId
+#include "brpc/ssl_options.h"       // ChannelSSLOptions
+#include "bthread/errno.h"          // Redefine errno
+#include "butil/intrusive_ptr.hpp"  // butil::intrusive_ptr
+#include "butil/ptr_container.h"
 
 namespace brpc {
 
@@ -47,7 +46,7 @@ struct ChannelOptions {
     // Default: 200 (milliseconds)
     // Maximum: 0x7fffffff (roughly 30 days)
     int32_t connect_timeout_ms;
-    
+
     // Max duration of RPC over this Channel. -1 means wait indefinitely.
     // Overridable by Controller.set_timeout_ms().
     // Default: 500 (milliseconds)
@@ -69,9 +68,9 @@ struct ChannelOptions {
     // Default: 3
     // Maximum: INT_MAX
     int max_retry;
-    
-    // When the error rate of a server node is too high, isolate the node. 
-    // Note that this isolation is GLOBAL, the node will become unavailable 
+
+    // When the error rate of a server node is too high, isolate the node.
+    // Note that this isolation is GLOBAL, the node will become unavailable
     // for all channels running in this process during the isolation.
     // Default: false
     bool enable_circuit_breaker;
@@ -88,10 +87,10 @@ struct ChannelOptions {
     // Possible values: "single", "pooled", "short".
     AdaptiveConnectionType connection_type;
 
-    // Channel.Init() succeeds even if there's no server in the NamingService. 
-    // E.g. the BNS directory is empty. All RPC over the channel will fail before
-    // new nodes being added to the NamingService.
-    // Default: true (false before r32470)
+    // Channel.Init() succeeds even if there's no server in the NamingService.
+    // E.g. the BNS directory is empty. All RPC over the channel will fail
+    // before new nodes being added to the NamingService. Default: true (false
+    // before r32470)
     bool succeed_without_server;
     // Print a log when above situation happens.
     // Default: true.
@@ -145,21 +144,23 @@ private:
 //   MyService_Stub stub(&channel);
 //   stub.MyMethod(&controller, &request, &response, NULL);
 class Channel : public ChannelBase {
-friend class Controller;
-friend class SelectiveChannel;
+    friend class Controller;
+    friend class SelectiveChannel;
+
 public:
     Channel(ProfilerLinker = ProfilerLinker());
     ~Channel();
 
     // Connect this channel to a single server whose address is given by the
     // first parameter. Use default options if `options' is NULL.
-    int Init(butil::EndPoint server_addr_and_port, const ChannelOptions* options);
+    int Init(butil::EndPoint server_addr_and_port,
+             const ChannelOptions* options);
     int Init(const char* server_addr_and_port, const ChannelOptions* options);
     int Init(const char* server_addr, int port, const ChannelOptions* options);
 
     // Connect this channel to a group of servers whose addresses can be
     // accessed via `naming_service_url' according to its protocol. Use the
-    // method specified by `load_balancer_name' to distribute traffic to 
+    // method specified by `load_balancer_name' to distribute traffic to
     // servers. Use default options if `options' is NULL.
     // Supported naming service("protocol://service_name"):
     //   bns://<node-name>            # Baidu Naming Service
@@ -171,14 +172,15 @@ public:
     //   random                       # randomly choose a server
     //   la                           # locality aware
     //   c_murmurhash/c_md5           # consistent hashing with murmurhash3/md5
-    //   "" or NULL                   # treat `naming_service_url' as `server_addr_and_port'
-    //                                # Init(xxx, "", options) and Init(xxx, NULL, options)
-    //                                # are exactly same with Init(xxx, options)
-    int Init(const char* naming_service_url, 
-             const char* load_balancer_name,
+    //   "" or NULL                   # treat `naming_service_url' as
+    //   `server_addr_and_port'
+    //                                # Init(xxx, "", options) and Init(xxx,
+    //                                NULL, options) # are exactly same with
+    //                                Init(xxx, options)
+    int Init(const char* naming_service_url, const char* load_balancer_name,
              const ChannelOptions* options);
 
-    // Call `method' of the remote service with `request' as input, and 
+    // Call `method' of the remote service with `request' as input, and
     // `response' as output. `controller' contains options and extra data.
     // If `done' is not NULL, this method returns after request was sent
     // and `done->Run()' will be called when the call finishes, otherwise
@@ -202,7 +204,7 @@ protected:
 
     bool SingleServer() const { return _lb.get() == NULL; }
 
-    // Pick a server using `lb' and then send RPC. Wait for response when 
+    // Pick a server using `lb' and then send RPC. Wait for response when
     // sending synchronous RPC.
     // NOTE: DO NOT directly use `controller' after this call when
     // sending asynchronous RPC (controller->_done != NULL) since
@@ -229,11 +231,8 @@ protected:
     int _preferred_index;
 };
 
-enum ChannelOwnership {
-    OWNS_CHANNEL,
-    DOESNT_OWN_CHANNEL
-};
+enum ChannelOwnership { OWNS_CHANNEL, DOESNT_OWN_CHANNEL };
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_CHANNEL_H

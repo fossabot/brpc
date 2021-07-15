@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <stdlib.h>                                   // strtol
-#include <string>                                     // std::string
-#include <set>                                        // std::set
-#include "butil/string_splitter.h"                     // StringSplitter
-#include "brpc/log.h"
 #include "brpc/policy/list_naming_service.h"
-
+#include <stdlib.h>  // strtol
+#include <set>       // std::set
+#include <string>    // std::string
+#include "brpc/log.h"
+#include "butil/string_splitter.h"  // StringSplitter
 
 namespace brpc {
 namespace policy {
@@ -32,7 +30,7 @@ bool SplitIntoServerAndTag(const butil::StringPiece& line,
                            butil::StringPiece* server_addr,
                            butil::StringPiece* tag);
 
-int ListNamingService::GetServers(const char *service_name,
+int ListNamingService::GetServers(const char* service_name,
                                   std::vector<ServerNode>* servers) {
     servers->clear();
     // Sort/unique the inserted vector is faster, but may have a different order
@@ -52,7 +50,7 @@ int ListNamingService::GetServers(const char *service_name,
         if (!SplitIntoServerAndTag(line, &addr, &tag)) {
             continue;
         }
-        const_cast<char*>(addr.data())[addr.size()] = '\0'; // safe
+        const_cast<char*>(addr.data())[addr.size()] = '\0';  // safe
         butil::EndPoint point;
         if (str2endpoint(addr.data(), &point) != 0 &&
             hostname2endpoint(addr.data(), &point) != 0) {
@@ -84,19 +82,15 @@ int ListNamingService::RunNamingService(const char* service_name,
     return 0;
 }
 
-void ListNamingService::Describe(
-    std::ostream& os, const DescribeOptions&) const {
+void ListNamingService::Describe(std::ostream& os,
+                                 const DescribeOptions&) const {
     os << "list";
     return;
 }
 
-NamingService* ListNamingService::New() const {
-    return new ListNamingService;
-}
+NamingService* ListNamingService::New() const { return new ListNamingService; }
 
-void ListNamingService::Destroy() {
-    delete this;
-}
+void ListNamingService::Destroy() { delete this; }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc

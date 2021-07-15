@@ -15,15 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef  BRPC_JSON2PB_ZERO_COPY_STREAM_WRITER_H
-#define  BRPC_JSON2PB_ZERO_COPY_STREAM_WRITER_H
+#ifndef BRPC_JSON2PB_ZERO_COPY_STREAM_WRITER_H
+#define BRPC_JSON2PB_ZERO_COPY_STREAM_WRITER_H
 
-#include <google/protobuf/io/zero_copy_stream.h> // ZeroCopyOutputStream
+#include <google/protobuf/io/zero_copy_stream.h>  // ZeroCopyOutputStream
 #include <iostream>
 
-//class IOBufAsZeroCopyOutputStream
+// class IOBufAsZeroCopyOutputStream
 //    : public google::protobuf::io::ZeroCopyOutputStream {
-//public:
+// public:
 //    explicit IOBufAsZeroCopyOutputStream(IOBuf*);
 //
 //    // Interfaces of ZeroCopyOutputStream
@@ -31,7 +31,7 @@
 //    void BackUp(int count);
 //    google::protobuf::int64 ByteCount() const;
 //
-//private:
+// private:
 //    IOBuf* _buf;
 //    size_t _initial_length;
 //};
@@ -42,9 +42,7 @@ class ZeroCopyStreamWriter {
 public:
     typedef char Ch;
     ZeroCopyStreamWriter(google::protobuf::io::ZeroCopyOutputStream *stream)
-        : _stream(stream), _data(NULL), 
-          _cursor(NULL), _data_size(0) {
-    }
+        : _stream(stream), _data(NULL), _cursor(NULL), _data_size(0) {}
     ~ZeroCopyStreamWriter() {
         if (_stream && _data) {
             _stream->BackUp(RemainSize());
@@ -61,16 +59,16 @@ public:
     void PutN(char c, size_t n) {
         while (AcquireNextBuf() && n > 0) {
             size_t remain_size = RemainSize();
-            size_t to_write = n > remain_size ? remain_size : n;
+            size_t to_write    = n > remain_size ? remain_size : n;
             memset(_cursor, c, to_write);
             _cursor += to_write;
             n -= to_write;
         }
     }
-    void Puts(const char* str, size_t length) {
+    void Puts(const char *str, size_t length) {
         while (AcquireNextBuf() && length > 0) {
             size_t remain_size = RemainSize();
-            size_t to_write = length > remain_size ? remain_size : length;
+            size_t to_write    = length > remain_size ? remain_size : length;
             memcpy(_cursor, str, to_write);
             _cursor += to_write;
             str += to_write;
@@ -86,6 +84,7 @@ public:
     size_t Tell() { return 0; }
     char *PutBegin() { return NULL; }
     size_t PutEnd(char *) { return 0; }
+
 private:
     bool AcquireNextBuf() {
         if (__builtin_expect(!_stream, 0)) {
@@ -94,14 +93,12 @@ private:
         if (_data == NULL || _cursor == _data + _data_size) {
             if (!_stream->Next((void **)&_data, &_data_size)) {
                 return false;
-            } 
+            }
             _cursor = _data;
         }
         return true;
     }
-    size_t RemainSize() {
-        return _data_size - (_cursor - _data);
-    }
+    size_t RemainSize() { return _data_size - (_cursor - _data); }
 
     google::protobuf::io::ZeroCopyOutputStream *_stream;
     char *_data;
@@ -111,4 +108,4 @@ private:
 
 }  // namespace json2pb
 
-#endif  //BRPC_JSON2PB_ZERO_COPY_STREAM_WRITER_H
+#endif  // BRPC_JSON2PB_ZERO_COPY_STREAM_WRITER_H

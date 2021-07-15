@@ -36,7 +36,8 @@ public:
     size_t value_offset() const { return name_offset() + name_size(); }
     size_t value_size() const { return (_type & FIELD_FIXED_MASK); }
     size_t full_size() const { return value_offset() + value_size(); }
-public:// NOTE(gejun): initializer requires public members.
+
+public:             // NOTE(gejun): initializer requires public members.
     uint8_t _type;  // FieldType
     uint8_t _name_size;
 } __attribute__((__packed__));
@@ -53,6 +54,7 @@ public:
     size_t value_size() const { return _value_size; }
     void set_value_size(size_t value_size) { _value_size = value_size; }
     size_t full_size() const { return value_offset() + value_size(); }
+
 private:
     uint8_t _type;
     uint8_t _name_size;
@@ -71,6 +73,7 @@ public:
     size_t value_size() const { return _value_size; }
     void set_value_size(size_t value_size) { _value_size = value_size; }
     size_t full_size() const { return value_offset() + value_size(); }
+
 private:
     uint8_t _type;
     uint8_t _name_size;
@@ -88,39 +91,51 @@ BAIDU_CASSERT(sizeof(FieldShortHead) == 3, size_assert);
 BAIDU_CASSERT(sizeof(FieldLongHead) == 6, size_assert);
 BAIDU_CASSERT(sizeof(ItemsHead) == 4, size_assert);
 
-template<typename T> struct GetFieldType {};
+template <typename T>
+struct GetFieldType {};
 
-template<> struct GetFieldType<int8_t> {
+template <>
+struct GetFieldType<int8_t> {
     static const FieldType value = FIELD_INT8;
 };
-template<> struct GetFieldType<int16_t> {
+template <>
+struct GetFieldType<int16_t> {
     static const FieldType value = FIELD_INT16;
 };
-template<> struct GetFieldType<int32_t> {
+template <>
+struct GetFieldType<int32_t> {
     static const FieldType value = FIELD_INT32;
 };
-template<> struct GetFieldType<int64_t> {
+template <>
+struct GetFieldType<int64_t> {
     static const FieldType value = FIELD_INT64;
 };
-template<> struct GetFieldType<uint8_t> {
+template <>
+struct GetFieldType<uint8_t> {
     static const FieldType value = FIELD_UINT8;
 };
-template<> struct GetFieldType<uint16_t> {
+template <>
+struct GetFieldType<uint16_t> {
     static const FieldType value = FIELD_UINT16;
 };
-template<> struct GetFieldType<uint32_t> {
+template <>
+struct GetFieldType<uint32_t> {
     static const FieldType value = FIELD_UINT32;
 };
-template<> struct GetFieldType<uint64_t> {
+template <>
+struct GetFieldType<uint64_t> {
     static const FieldType value = FIELD_UINT64;
 };
-template<> struct GetFieldType<float> {
+template <>
+struct GetFieldType<float> {
     static const FieldType value = FIELD_FLOAT;
 };
-template<> struct GetFieldType<double> {
+template <>
+struct GetFieldType<double> {
     static const FieldType value = FIELD_DOUBLE;
 };
-template<> struct GetFieldType<bool> {
+template <>
+struct GetFieldType<bool> {
     static const FieldType value = FIELD_BOOL;
 };
 
@@ -129,7 +144,7 @@ void Serializer::GroupInfo::print(std::ostream& os) const {
     if (type == FIELD_ARRAY) {
         os << '[' << type2str(item_type) << ']';
     }
-    
+
     // os << type2str(type) << '=';
     // const uint8_t first_byte = *head_buf;
     // butil::StringPiece name;
@@ -157,25 +172,23 @@ std::ostream& operator<<(std::ostream& os, const Serializer::GroupInfo& gi) {
     gi.print(os);
     return os;
 }
-    
+
 Serializer::Serializer(OutputStream* stream)
-    : _stream(stream)
-    , _ndepth(0)
-    , _group_info_more(NULL) {
-    GroupInfo & info = _group_info_fast[0];
-    info.item_count = 0;
-    info.isomorphic = false;
-    info.item_type = 0;
-    info.type = FIELD_OBJECT;
-    info.name_size = 0;
-    info.output_offset = 0;
+    : _stream(stream), _ndepth(0), _group_info_more(NULL) {
+    GroupInfo& info         = _group_info_fast[0];
+    info.item_count         = 0;
+    info.isomorphic         = false;
+    info.item_type          = 0;
+    info.type               = FIELD_OBJECT;
+    info.name_size          = 0;
+    info.output_offset      = 0;
     info.pending_null_count = 0;
-    info.head_area = INVALID_AREA;
-    info.items_head_area = INVALID_AREA;
+    info.head_area          = INVALID_AREA;
+    info.items_head_area    = INVALID_AREA;
 }
 
 Serializer::~Serializer() {
-    if (_ndepth && good()/*error always causes opening braces*/) {
+    if (_ndepth && good() /*error always causes opening braces*/) {
         std::ostringstream oss;
         oss << "Serializer(" << this << ") has opening";
         for (; _ndepth > 0; --_ndepth) {
@@ -187,17 +200,16 @@ Serializer::~Serializer() {
     _group_info_more = NULL;
 }
 
-void add_pending_nulls(OutputStream* stream,
-                       Serializer::GroupInfo& group_info);
+void add_pending_nulls(OutputStream* stream, Serializer::GroupInfo& group_info);
 
-inline bool object_add_item(Serializer::GroupInfo & group_info,
+inline bool object_add_item(Serializer::GroupInfo& group_info,
                             const StringWrapper& name) {
     if (name.size() > 254) {
         CHECK(false) << "Too long name=`" << name << '\'';
         return false;
     }
     if (group_info.type != FIELD_OBJECT) {
-        CHECK(false) << "Cannot add `" << name << "' to " <<  group_info;
+        CHECK(false) << "Cannot add `" << name << "' to " << group_info;
         return false;
     }
     ++group_info.item_count;
@@ -205,9 +217,8 @@ inline bool object_add_item(Serializer::GroupInfo & group_info,
 }
 
 inline bool array_add_item(OutputStream* stream,
-                           Serializer::GroupInfo & group_info,
-                           FieldType item_type,
-                           uint32_t n) {
+                           Serializer::GroupInfo& group_info,
+                           FieldType item_type, uint32_t n) {
     if (group_info.pending_null_count) {
         add_pending_nulls(stream, group_info);
     }
@@ -220,7 +231,7 @@ inline bool array_add_item(OutputStream* stream,
         CHECK(false) << "Different item_type=" << type2str(item_type)
                      << " from " << group_info;
         return false;
-    }        
+    }
     if (group_info.output_offset == 0) {
         // Enable anynomous object at first level.
         group_info.item_count += n;
@@ -232,7 +243,7 @@ inline bool array_add_item(OutputStream* stream,
 }
 
 //=========================
-//adding primitive types
+// adding primitive types
 
 template <typename T>
 struct FixedHeadAndValue {
@@ -241,8 +252,8 @@ struct FixedHeadAndValue {
 } __attribute__((__packed__));
 
 template <typename T>
-inline void add_primitive(
-    OutputStream* stream, Serializer::GroupInfo & group_info, T value) {
+inline void add_primitive(OutputStream* stream,
+                          Serializer::GroupInfo& group_info, T value) {
     if (!stream->good()) {
         return;
     }
@@ -262,9 +273,8 @@ inline void add_primitive(
 
 template <typename T>
 inline void add_primitive(OutputStream* stream,
-                          Serializer::GroupInfo & group_info,
-                          const StringWrapper& name,
-                          T value) {
+                          Serializer::GroupInfo& group_info,
+                          const StringWrapper& name, T value) {
     if (name.empty()) {
         return add_primitive(stream, group_info, value);
     }
@@ -277,15 +287,15 @@ inline void add_primitive(OutputStream* stream,
     FieldFixedHead head;
     head.set_type(GetFieldType<T>::value);
     head.set_name_size(name.size() + 1);
-    void* data = stream->skip_continuous(
-        sizeof(FieldFixedHead) + name.size() + 1 + sizeof(T));
+    void* data = stream->skip_continuous(sizeof(FieldFixedHead) + name.size() +
+                                         1 + sizeof(T));
     if (data) {
         // the stream has enough continuous space, we do the copying directly.
         // Comparing to the branch below, it saves 2 memcpy and many if/else.
         *(FieldFixedHead*)data = head;
-        data = (char*)data + sizeof(FieldFixedHead);
+        data                   = (char*)data + sizeof(FieldFixedHead);
         fast_memcpy(data, name.data(), name.size() + 1);
-        data = (char*)data + name.size() + 1;
+        data      = (char*)data + name.size() + 1;
         *(T*)data = value;
     } else {
         stream->append_packed_pod(head);
@@ -296,8 +306,8 @@ inline void add_primitive(OutputStream* stream,
 
 template <typename T>
 inline void add_primitives(OutputStream* stream,
-                           Serializer::GroupInfo & group_info,
-                           const T* values, size_t n) {
+                           Serializer::GroupInfo& group_info, const T* values,
+                           size_t n) {
     if (!stream->good()) {
         return;
     }
@@ -311,7 +321,7 @@ inline void add_primitives(OutputStream* stream,
         // of head+value and write the array into stream for (much) better
         // throughput.
         static const size_t BATCH = 128;
-        size_t nwritten = 0;
+        size_t nwritten           = 0;
         while (n) {
             const size_t cur_batch = std::min(n, BATCH);
             FixedHeadAndValue<T> tmp[cur_batch];
@@ -327,82 +337,115 @@ inline void add_primitives(OutputStream* stream,
     }
 }
 
-void Serializer::add_int8(const StringWrapper& name, int8_t value)
-{ add_primitive(_stream, peek_group_info(), name, value); }
-void Serializer::add_int16(const StringWrapper& name, int16_t value)
-{ add_primitive(_stream, peek_group_info(), name, value); }
-void Serializer::add_int32(const StringWrapper& name, int32_t value)
-{ add_primitive(_stream, peek_group_info(), name, value); }
-void Serializer::add_int64(const StringWrapper& name, int64_t value)
-{ add_primitive(_stream, peek_group_info(), name, value); }
-void Serializer::add_uint8(const StringWrapper& name, uint8_t value)
-{ add_primitive(_stream, peek_group_info(), name, value); }
-void Serializer::add_uint16(const StringWrapper& name, uint16_t value)
-{ add_primitive(_stream, peek_group_info(), name, value); }
-void Serializer::add_uint32(const StringWrapper& name, uint32_t value)
-{ add_primitive(_stream, peek_group_info(), name, value); }
-void Serializer::add_uint64(const StringWrapper& name, uint64_t value)
-{ add_primitive(_stream, peek_group_info(), name, value); }
-void Serializer::add_bool(const StringWrapper& name, bool value)
-{ add_primitive(_stream, peek_group_info(), name, value); }
-void Serializer::add_float(const StringWrapper& name, float value)
-{ add_primitive(_stream, peek_group_info(), name, value); }
-void Serializer::add_double(const StringWrapper& name, double value)
-{ add_primitive(_stream, peek_group_info(), name, value); }
+void Serializer::add_int8(const StringWrapper& name, int8_t value) {
+    add_primitive(_stream, peek_group_info(), name, value);
+}
+void Serializer::add_int16(const StringWrapper& name, int16_t value) {
+    add_primitive(_stream, peek_group_info(), name, value);
+}
+void Serializer::add_int32(const StringWrapper& name, int32_t value) {
+    add_primitive(_stream, peek_group_info(), name, value);
+}
+void Serializer::add_int64(const StringWrapper& name, int64_t value) {
+    add_primitive(_stream, peek_group_info(), name, value);
+}
+void Serializer::add_uint8(const StringWrapper& name, uint8_t value) {
+    add_primitive(_stream, peek_group_info(), name, value);
+}
+void Serializer::add_uint16(const StringWrapper& name, uint16_t value) {
+    add_primitive(_stream, peek_group_info(), name, value);
+}
+void Serializer::add_uint32(const StringWrapper& name, uint32_t value) {
+    add_primitive(_stream, peek_group_info(), name, value);
+}
+void Serializer::add_uint64(const StringWrapper& name, uint64_t value) {
+    add_primitive(_stream, peek_group_info(), name, value);
+}
+void Serializer::add_bool(const StringWrapper& name, bool value) {
+    add_primitive(_stream, peek_group_info(), name, value);
+}
+void Serializer::add_float(const StringWrapper& name, float value) {
+    add_primitive(_stream, peek_group_info(), name, value);
+}
+void Serializer::add_double(const StringWrapper& name, double value) {
+    add_primitive(_stream, peek_group_info(), name, value);
+}
 
-void Serializer::add_int8(int8_t value)
-{ add_primitive(_stream, peek_group_info(), value); }
-void Serializer::add_int16(int16_t value)
-{ add_primitive(_stream, peek_group_info(), value); }
-void Serializer::add_int32(int32_t value)
-{ add_primitive(_stream, peek_group_info(), value); }
-void Serializer::add_int64(int64_t value)
-{ add_primitive(_stream, peek_group_info(), value); }
-void Serializer::add_uint8(uint8_t value)
-{ add_primitive(_stream, peek_group_info(), value); }
-void Serializer::add_uint16(uint16_t value)
-{ add_primitive(_stream, peek_group_info(), value); }
-void Serializer::add_uint32(uint32_t value)
-{ add_primitive(_stream, peek_group_info(), value); }
-void Serializer::add_uint64(uint64_t value)
-{ add_primitive(_stream, peek_group_info(), value); }
-void Serializer::add_bool(bool value)
-{ add_primitive(_stream, peek_group_info(), value); }
-void Serializer::add_float(float value)
-{ add_primitive(_stream, peek_group_info(), value); }
-void Serializer::add_double(double value)
-{ add_primitive(_stream, peek_group_info(), value); }
+void Serializer::add_int8(int8_t value) {
+    add_primitive(_stream, peek_group_info(), value);
+}
+void Serializer::add_int16(int16_t value) {
+    add_primitive(_stream, peek_group_info(), value);
+}
+void Serializer::add_int32(int32_t value) {
+    add_primitive(_stream, peek_group_info(), value);
+}
+void Serializer::add_int64(int64_t value) {
+    add_primitive(_stream, peek_group_info(), value);
+}
+void Serializer::add_uint8(uint8_t value) {
+    add_primitive(_stream, peek_group_info(), value);
+}
+void Serializer::add_uint16(uint16_t value) {
+    add_primitive(_stream, peek_group_info(), value);
+}
+void Serializer::add_uint32(uint32_t value) {
+    add_primitive(_stream, peek_group_info(), value);
+}
+void Serializer::add_uint64(uint64_t value) {
+    add_primitive(_stream, peek_group_info(), value);
+}
+void Serializer::add_bool(bool value) {
+    add_primitive(_stream, peek_group_info(), value);
+}
+void Serializer::add_float(float value) {
+    add_primitive(_stream, peek_group_info(), value);
+}
+void Serializer::add_double(double value) {
+    add_primitive(_stream, peek_group_info(), value);
+}
 
-void Serializer::add_multiple_int8(const int8_t* values, size_t count)
-{ add_primitives(_stream, peek_group_info(), values, count); }
-void Serializer::add_multiple_int16(const int16_t* values, size_t count)
-{ add_primitives(_stream, peek_group_info(), values, count); }
-void Serializer::add_multiple_int32(const int32_t* values, size_t count)
-{ add_primitives(_stream, peek_group_info(), values, count); }
-void Serializer::add_multiple_int64(const int64_t* values, size_t count)
-{ add_primitives(_stream, peek_group_info(), values, count); }
-void Serializer::add_multiple_uint8(const uint8_t* values, size_t count)
-{ add_primitives(_stream, peek_group_info(), values, count); }
-void Serializer::add_multiple_uint16(const uint16_t* values, size_t count)
-{ add_primitives(_stream, peek_group_info(), values, count); }
-void Serializer::add_multiple_uint32(const uint32_t* values, size_t count)
-{ add_primitives(_stream, peek_group_info(), values, count); }
-void Serializer::add_multiple_uint64(const uint64_t* values, size_t count)
-{ add_primitives(_stream, peek_group_info(), values, count); }
-void Serializer::add_multiple_bool(const bool* values, size_t count)
-{ add_primitives(_stream, peek_group_info(), values, count); }
-void Serializer::add_multiple_float(const float* values, size_t count)
-{ add_primitives(_stream, peek_group_info(), values, count); }
-void Serializer::add_multiple_double(const double* values, size_t count)
-{ add_primitives(_stream, peek_group_info(), values, count); }
+void Serializer::add_multiple_int8(const int8_t* values, size_t count) {
+    add_primitives(_stream, peek_group_info(), values, count);
+}
+void Serializer::add_multiple_int16(const int16_t* values, size_t count) {
+    add_primitives(_stream, peek_group_info(), values, count);
+}
+void Serializer::add_multiple_int32(const int32_t* values, size_t count) {
+    add_primitives(_stream, peek_group_info(), values, count);
+}
+void Serializer::add_multiple_int64(const int64_t* values, size_t count) {
+    add_primitives(_stream, peek_group_info(), values, count);
+}
+void Serializer::add_multiple_uint8(const uint8_t* values, size_t count) {
+    add_primitives(_stream, peek_group_info(), values, count);
+}
+void Serializer::add_multiple_uint16(const uint16_t* values, size_t count) {
+    add_primitives(_stream, peek_group_info(), values, count);
+}
+void Serializer::add_multiple_uint32(const uint32_t* values, size_t count) {
+    add_primitives(_stream, peek_group_info(), values, count);
+}
+void Serializer::add_multiple_uint64(const uint64_t* values, size_t count) {
+    add_primitives(_stream, peek_group_info(), values, count);
+}
+void Serializer::add_multiple_bool(const bool* values, size_t count) {
+    add_primitives(_stream, peek_group_info(), values, count);
+}
+void Serializer::add_multiple_float(const float* values, size_t count) {
+    add_primitives(_stream, peek_group_info(), values, count);
+}
+void Serializer::add_multiple_double(const double* values, size_t count) {
+    add_primitives(_stream, peek_group_info(), values, count);
+}
 
 // ==================
 // append string/raw
 
 inline void add_binary_internal(OutputStream* stream,
-                            Serializer::GroupInfo & group_info,
-                            const butil::StringPiece& value,
-                            FieldType type) {
+                                Serializer::GroupInfo& group_info,
+                                const butil::StringPiece& value,
+                                FieldType type) {
     if (!stream->good()) {
         return;
     }
@@ -427,10 +470,10 @@ inline void add_binary_internal(OutputStream* stream,
 }
 
 inline void add_binary_internal(OutputStream* stream,
-                             Serializer::GroupInfo & group_info,
-                             const StringWrapper& name,
-                             const butil::StringPiece& value,
-                             FieldType type) {
+                                Serializer::GroupInfo& group_info,
+                                const StringWrapper& name,
+                                const butil::StringPiece& value,
+                                FieldType type) {
     if (name.empty()) {
         return add_binary_internal(stream, group_info, value, type);
     }
@@ -439,7 +482,7 @@ inline void add_binary_internal(OutputStream* stream,
     }
     if (!object_add_item(group_info, name)) {
         return stream->set_bad();
-    }    
+    }
     if (value.size() <= 255) {
         FieldShortHead shead;
         shead.set_type(type | FIELD_SHORT_MASK);
@@ -461,27 +504,29 @@ inline void add_binary_internal(OutputStream* stream,
 
 void Serializer::add_string(const StringWrapper& name, const StringWrapper& s) {
     add_binary_internal(_stream, peek_group_info(), name,
-                     butil::StringPiece(s.data(), s.size() + 1), FIELD_STRING);
+                        butil::StringPiece(s.data(), s.size() + 1),
+                        FIELD_STRING);
 }
 void Serializer::add_string(const StringWrapper& s) {
     add_binary_internal(_stream, peek_group_info(),
-                     butil::StringPiece(s.data(), s.size() + 1), FIELD_STRING);
+                        butil::StringPiece(s.data(), s.size() + 1),
+                        FIELD_STRING);
 }
 void Serializer::add_binary(const StringWrapper& name,
-                         const std::string& data) {
+                            const std::string& data) {
     add_binary_internal(_stream, peek_group_info(), name, data, FIELD_BINARY);
 }
-void Serializer::add_binary(const StringWrapper& name,
-                         const void* data, size_t n) {
+void Serializer::add_binary(const StringWrapper& name, const void* data,
+                            size_t n) {
     add_binary_internal(_stream, peek_group_info(), name,
-                     butil::StringPiece((const char*)data, n), FIELD_BINARY);
+                        butil::StringPiece((const char*)data, n), FIELD_BINARY);
 }
 void Serializer::add_binary(const std::string& data) {
     add_binary_internal(_stream, peek_group_info(), data, FIELD_BINARY);
 }
 void Serializer::add_binary(const void* data, size_t n) {
     add_binary_internal(_stream, peek_group_info(),
-                     butil::StringPiece((const char*)data, n), FIELD_BINARY);
+                        butil::StringPiece((const char*)data, n), FIELD_BINARY);
 }
 
 // ===============
@@ -497,16 +542,17 @@ struct NullLayout {
     char zero;
 } __attribute__((__packed__));
 
-#define MCPACK_NULL_INITIALIZER {{FIELD_NULL,0},0}
-#define MCPACK_NULL_ARRAY_INITIALIZER_4                     \
-    MCPACK_NULL_INITIALIZER, MCPACK_NULL_INITIALIZER,       \
-    MCPACK_NULL_INITIALIZER, MCPACK_NULL_INITIALIZER
-#define MCPACK_NULL_ARRAY_INITIALIZER_16                                \
-    MCPACK_NULL_ARRAY_INITIALIZER_4, MCPACK_NULL_ARRAY_INITIALIZER_4,   \
-    MCPACK_NULL_ARRAY_INITIALIZER_4, MCPACK_NULL_ARRAY_INITIALIZER_4
+#define MCPACK_NULL_INITIALIZER \
+    { {FIELD_NULL, 0}, 0 }
+#define MCPACK_NULL_ARRAY_INITIALIZER_4                                        \
+    MCPACK_NULL_INITIALIZER, MCPACK_NULL_INITIALIZER, MCPACK_NULL_INITIALIZER, \
+        MCPACK_NULL_INITIALIZER
+#define MCPACK_NULL_ARRAY_INITIALIZER_16                              \
+    MCPACK_NULL_ARRAY_INITIALIZER_4, MCPACK_NULL_ARRAY_INITIALIZER_4, \
+        MCPACK_NULL_ARRAY_INITIALIZER_4, MCPACK_NULL_ARRAY_INITIALIZER_4
 #define MCPACK_NULL_ARRAY_INITIALIZER_64                                \
-    MCPACK_NULL_ARRAY_INITIALIZER_16, MCPACK_NULL_ARRAY_INITIALIZER_16,   \
-    MCPACK_NULL_ARRAY_INITIALIZER_16, MCPACK_NULL_ARRAY_INITIALIZER_16
+    MCPACK_NULL_ARRAY_INITIALIZER_16, MCPACK_NULL_ARRAY_INITIALIZER_16, \
+        MCPACK_NULL_ARRAY_INITIALIZER_16, MCPACK_NULL_ARRAY_INITIALIZER_16
 
 static NullLayout s_null_array[] = {MCPACK_NULL_ARRAY_INITIALIZER_64};
 
@@ -524,7 +570,7 @@ void add_pending_nulls(OutputStream* stream,
         CHECK(false) << "Cannot add nulls to isomorphic " << group_info;
         return stream->set_bad();
     }
-    int n = group_info.pending_null_count;
+    int n                         = group_info.pending_null_count;
     group_info.pending_null_count = 0;
     group_info.item_count += n;
     // layout of nulls = [{FIELD_NULL,0,0},{FIELD_NULL,0,0},...]
@@ -536,7 +582,7 @@ void add_pending_nulls(OutputStream* stream,
 }
 
 inline void add_null_internal(OutputStream* stream,
-                              Serializer::GroupInfo & group_info,
+                              Serializer::GroupInfo& group_info,
                               const StringWrapper& name) {
     if (name.empty()) {
         return add_null_internal(stream, group_info);
@@ -558,9 +604,7 @@ inline void add_null_internal(OutputStream* stream,
 void Serializer::add_null(const StringWrapper& name) {
     add_null_internal(_stream, peek_group_info(), name);
 }
-void Serializer::add_null() {
-    add_null_internal(_stream, peek_group_info());
-}
+void Serializer::add_null() { add_null_internal(_stream, peek_group_info()); }
 
 // ===============
 // append empty_array.
@@ -575,9 +619,8 @@ struct ObjectHead {
     ItemsHead fields_head;
 } __attribute__((__packed__));
 
-
 inline void add_empty_array_internal(OutputStream* stream,
-                                    Serializer::GroupInfo& group_info) {
+                                     Serializer::GroupInfo& group_info) {
     if (!stream->good()) {
         return;
     }
@@ -593,7 +636,7 @@ inline void add_empty_array_internal(OutputStream* stream,
 }
 
 inline void add_empty_array_internal(OutputStream* stream,
-                                     Serializer::GroupInfo & group_info,
+                                     Serializer::GroupInfo& group_info,
                                      const StringWrapper& name) {
     if (name.empty()) {
         return add_empty_array_internal(stream, group_info);
@@ -608,7 +651,7 @@ inline void add_empty_array_internal(OutputStream* stream,
     head.set_type(FIELD_ARRAY);
     head.set_name_size(name.size() + 1);
     head.set_value_size(sizeof(ItemsHead));
-    ItemsHead items_head = { 0 };
+    ItemsHead items_head = {0};
     stream->append_packed_pod(head);
     stream->append(name.data(), name.size() + 1);
     stream->append_packed_pod(items_head);
@@ -636,15 +679,15 @@ void Serializer::begin_object_internal() {
         CHECK(false) << "Fail to push object";
         return _stream->set_bad();
     }
-    info->item_count = 0;
-    info->isomorphic = false;
-    info->item_type = 0;
-    info->type = FIELD_OBJECT;
-    info->name_size = 0;
-    info->output_offset = _stream->pushed_bytes();
+    info->item_count         = 0;
+    info->isomorphic         = false;
+    info->item_type          = 0;
+    info->type               = FIELD_OBJECT;
+    info->name_size          = 0;
+    info->output_offset      = _stream->pushed_bytes();
     info->pending_null_count = 0;
-    info->head_area = _stream->reserve(sizeof(ObjectHead));
-    info->items_head_area = INVALID_AREA;
+    info->head_area          = _stream->reserve(sizeof(ObjectHead));
+    info->items_head_area    = INVALID_AREA;
 }
 
 void Serializer::begin_object_internal(const StringWrapper& name) {
@@ -662,19 +705,19 @@ void Serializer::begin_object_internal(const StringWrapper& name) {
         CHECK(false) << "Fail to push object=" << name;
         return _stream->set_bad();
     }
-    info->item_count = 0;
-    info->isomorphic = false;
-    info->item_type = 0;
-    info->type = FIELD_OBJECT;
-    info->name_size = (uint8_t)(name.size() + 1);
-    info->output_offset = _stream->pushed_bytes();
+    info->item_count         = 0;
+    info->isomorphic         = false;
+    info->item_type          = 0;
+    info->type               = FIELD_OBJECT;
+    info->name_size          = (uint8_t)(name.size() + 1);
+    info->output_offset      = _stream->pushed_bytes();
     info->pending_null_count = 0;
-    info->head_area = _stream->reserve(sizeof(FieldLongHead));
+    info->head_area          = _stream->reserve(sizeof(FieldLongHead));
     _stream->append(name.data(), name.size() + 1);
     info->items_head_area = _stream->reserve(sizeof(ItemsHead));
 }
 
-inline void pop_group_info(int & ndepth) {
+inline void pop_group_info(int& ndepth) {
     if (ndepth > 0) {
         --ndepth;
     } else {
@@ -686,17 +729,19 @@ void Serializer::end_object_internal(bool objectisoarray) {
     if (!_stream->good()) {
         return;
     }
-    GroupInfo & group_info = peek_group_info();
+    GroupInfo& group_info = peek_group_info();
     if (FIELD_OBJECT != group_info.type) {
         CHECK(false) << "end_object() is called on " << group_info;
         return _stream->set_bad();
     }
     if (group_info.name_size == 0) {
         ObjectHead objhead;
-        objhead.head.set_type(objectisoarray ? FIELD_OBJECTISOARRAY : FIELD_OBJECT);
+        objhead.head.set_type(objectisoarray ? FIELD_OBJECTISOARRAY
+                                             : FIELD_OBJECT);
         objhead.head.set_name_size(0);
-        objhead.head.set_value_size(_stream->pushed_bytes() - group_info.output_offset
-                                    - sizeof(FieldLongHead));
+        objhead.head.set_value_size(_stream->pushed_bytes() -
+                                    group_info.output_offset -
+                                    sizeof(FieldLongHead));
         objhead.fields_head.item_count = group_info.item_count;
         _stream->assign(group_info.head_area, &objhead);
         pop_group_info(_ndepth);
@@ -704,10 +749,11 @@ void Serializer::end_object_internal(bool objectisoarray) {
         FieldLongHead lhead;
         lhead.set_type(objectisoarray ? FIELD_OBJECTISOARRAY : FIELD_OBJECT);
         lhead.set_name_size(group_info.name_size);
-        lhead.set_value_size(_stream->pushed_bytes() - group_info.output_offset
-                             - group_info.name_size - sizeof(FieldLongHead));
+        lhead.set_value_size(_stream->pushed_bytes() -
+                             group_info.output_offset - group_info.name_size -
+                             sizeof(FieldLongHead));
         _stream->assign(group_info.head_area, &lhead);
-        const ItemsHead items_head = { group_info.item_count };
+        const ItemsHead items_head = {group_info.item_count};
         _stream->assign(group_info.items_head_area, &items_head);
         pop_group_info(_ndepth);
     }
@@ -725,26 +771,25 @@ void Serializer::begin_array_internal(FieldType item_type, bool compack) {
         CHECK(false) << "Fail to push array";
         return _stream->set_bad();
     }
-    info->item_count = 0;
-    info->item_type = item_type;
-    info->type = FIELD_ARRAY;
-    info->name_size = 0;
-    info->output_offset = _stream->pushed_bytes();
+    info->item_count         = 0;
+    info->item_type          = item_type;
+    info->type               = FIELD_ARRAY;
+    info->name_size          = 0;
+    info->output_offset      = _stream->pushed_bytes();
     info->pending_null_count = 0;
-    info->head_area = _stream->reserve(sizeof(FieldLongHead));
+    info->head_area          = _stream->reserve(sizeof(FieldLongHead));
     if (compack && get_primitive_type_size(item_type)) {
-        info->isomorphic = true;
+        info->isomorphic      = true;
         info->items_head_area = INVALID_AREA;
         _stream->push_back((char)item_type);
     } else {
-        info->isomorphic = false;
+        info->isomorphic      = false;
         info->items_head_area = _stream->reserve(sizeof(ItemsHead));
     }
 }
 
 void Serializer::begin_array_internal(const StringWrapper& name,
-                                      FieldType item_type,
-                                      bool compack) {
+                                      FieldType item_type, bool compack) {
     if (name.empty()) {
         return begin_array_internal(item_type, compack);
     }
@@ -759,20 +804,20 @@ void Serializer::begin_array_internal(const StringWrapper& name,
         CHECK(false) << "Fail to push array";
         return _stream->set_bad();
     }
-    info->item_count = 0;
-    info->item_type = item_type;
-    info->type = FIELD_ARRAY;
-    info->name_size = (uint8_t)(name.size() + 1);
-    info->output_offset = _stream->pushed_bytes();
+    info->item_count         = 0;
+    info->item_type          = item_type;
+    info->type               = FIELD_ARRAY;
+    info->name_size          = (uint8_t)(name.size() + 1);
+    info->output_offset      = _stream->pushed_bytes();
     info->pending_null_count = 0;
-    info->head_area = _stream->reserve(sizeof(FieldLongHead));
+    info->head_area          = _stream->reserve(sizeof(FieldLongHead));
     _stream->append(name.data(), name.size() + 1);
     if (compack && get_primitive_type_size(item_type)) {
-        info->isomorphic = true;
+        info->isomorphic      = true;
         info->items_head_area = INVALID_AREA;
         _stream->push_back((char)item_type);
     } else {
-        info->isomorphic = false;
+        info->isomorphic      = false;
         info->items_head_area = _stream->reserve(sizeof(ItemsHead));
     }
 }
@@ -781,7 +826,7 @@ void Serializer::end_array() {
     if (!_stream->good()) {
         return;
     }
-    GroupInfo & group_info = peek_group_info();
+    GroupInfo& group_info = peek_group_info();
     if (FIELD_ARRAY != group_info.type) {
         CHECK(false) << "end_array() is called on " << group_info;
         return _stream->set_bad();
@@ -803,12 +848,12 @@ void Serializer::end_array() {
         if (group_info.pending_null_count) {
             add_pending_nulls(_stream, group_info);
         }
-        const ItemsHead items_head = { group_info.item_count };
+        const ItemsHead items_head = {group_info.item_count};
         _stream->assign(group_info.items_head_area, &items_head);
     }
     lhead.set_name_size(group_info.name_size);
-    lhead.set_value_size(_stream->pushed_bytes() - group_info.output_offset
-                         - group_info.name_size - sizeof(FieldLongHead));
+    lhead.set_value_size(_stream->pushed_bytes() - group_info.output_offset -
+                         group_info.name_size - sizeof(FieldLongHead));
     _stream->assign(group_info.head_area, &lhead);
     pop_group_info(_ndepth);
 }

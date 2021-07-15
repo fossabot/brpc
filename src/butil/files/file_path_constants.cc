@@ -8,7 +8,7 @@ namespace butil {
 
 #if defined(FILE_PATH_USES_WIN_SEPARATORS)
 const FilePath::CharType FilePath::kSeparators[] = FILE_PATH_LITERAL("\\/");
-#else  // FILE_PATH_USES_WIN_SEPARATORS
+#else   // FILE_PATH_USES_WIN_SEPARATORS
 const FilePath::CharType FilePath::kSeparators[] = FILE_PATH_LITERAL("/");
 #endif  // FILE_PATH_USES_WIN_SEPARATORS
 

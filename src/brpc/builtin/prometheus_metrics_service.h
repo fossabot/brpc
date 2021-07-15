@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_PROMETHEUS_METRICS_SERVICE_H
 #define BRPC_PROMETHEUS_METRICS_SERVICE_H
 
@@ -33,6 +32,6 @@ public:
 
 int DumpPrometheusMetricsToIOBuf(butil::IOBuf* output);
 
-} // namepace brpc
+}  // namespace brpc
 
 #endif  // BRPC_PROMETHEUS_METRICS_SERVICE_H

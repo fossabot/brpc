@@ -15,19 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_HTTP_MESSAGE_H
 #define BRPC_HTTP_MESSAGE_H
 
 #include <string>                      // std::string
-#include "butil/macros.h"
-#include "butil/iobuf.h"               // butil::IOBuf
-#include "butil/scoped_lock.h"         // butil::unique_lock
-#include "butil/endpoint.h"
 #include "brpc/details/http_parser.h"  // http_parser
 #include "brpc/http_header.h"          // HttpHeader
 #include "brpc/progressive_reader.h"   // ProgressiveReader
-
+#include "butil/endpoint.h"
+#include "butil/iobuf.h"  // butil::IOBuf
+#include "butil/macros.h"
+#include "butil/scoped_lock.h"  // butil::unique_lock
 
 namespace brpc {
 
@@ -35,7 +33,7 @@ enum HttpParserStage {
     HTTP_ON_MESSAGE_BEGIN,
     HTTP_ON_URL,
     HTTP_ON_STATUS,
-    HTTP_ON_HEADER_FIELD, 
+    HTTP_ON_HEADER_FIELD,
     HTTP_ON_HEADER_VALUE,
     HTTP_ON_HEADERS_COMPLETE,
     HTTP_ON_BODY,
@@ -55,7 +53,7 @@ public:
     // Parse from array, length=0 is treated as EOF.
     // Returns bytes parsed, -1 on failure.
     ssize_t ParseFromArray(const char *data, const size_t length);
-    
+
     // Parse from butil::IOBuf.
     // Emtpy `buf' is sliently ignored, which is different from ParseFromArray.
     // Returns bytes parsed, -1 on failure.
@@ -67,34 +65,34 @@ public:
     HttpHeader &header() { return _header; }
     const HttpHeader &header() const { return _header; }
     size_t parsed_length() const { return _parsed_length; }
-    
+
     // Http parser callback functions
     static int on_message_begin(http_parser *);
     static int on_url(http_parser *, const char *, const size_t);
-    static int on_status(http_parser*, const char *, const size_t);
+    static int on_status(http_parser *, const char *, const size_t);
     static int on_header_field(http_parser *, const char *, const size_t);
     static int on_header_value(http_parser *, const char *, const size_t);
     static int on_headers_complete(http_parser *);
-    static int on_body_cb(http_parser*, const char *, const size_t);
+    static int on_body_cb(http_parser *, const char *, const size_t);
     static int on_message_complete_cb(http_parser *);
 
-    const http_parser& parser() const { return _parser; }
+    const http_parser &parser() const { return _parser; }
 
     bool read_body_progressively() const { return _read_body_progressively; }
 
     // Send new parts of the body to the reader. If the body already has some
     // data, feed them to the reader immediately.
     // Any error during the setting will destroy the reader.
-    void SetBodyReader(ProgressiveReader* r);
+    void SetBodyReader(ProgressiveReader *r);
 
 protected:
-    int OnBody(const char* data, size_t size);
+    int OnBody(const char *data, size_t size);
     int OnMessageComplete();
     size_t _parsed_length;
-    
+
 private:
     DISALLOW_COPY_AND_ASSIGN(HttpMessage);
-    int UnlockAndFlushToBodyReader(std::unique_lock<butil::Mutex>& locked);
+    int UnlockAndFlushToBodyReader(std::unique_lock<butil::Mutex> &locked);
 
     HttpParserStage _stage;
     std::string _url;
@@ -103,7 +101,7 @@ private:
     // For mutual exclusion between on_body and SetBodyReader.
     butil::Mutex _body_mutex;
     // Read body progressively
-    ProgressiveReader* _body_reader;
+    ProgressiveReader *_body_reader;
     butil::IOBuf _body;
 
     // Parser related members
@@ -113,28 +111,26 @@ private:
 
 protected:
     // Only valid when -http_verbose is on
-    butil::IOBufBuilder* _vmsgbuilder;
+    butil::IOBufBuilder *_vmsgbuilder;
     size_t _vbodylen;
 };
 
-std::ostream& operator<<(std::ostream& os, const http_parser& parser);
+std::ostream &operator<<(std::ostream &os, const http_parser &parser);
 
 // Serialize a http request.
 // header: may be modified in some cases
 // remote_side: used when "Host" is absent
 // content: could be NULL.
-void MakeRawHttpRequest(butil::IOBuf* request,
-                        HttpHeader* header,
-                        const butil::EndPoint& remote_side,
-                        const butil::IOBuf* content);
+void MakeRawHttpRequest(butil::IOBuf *request, HttpHeader *header,
+                        const butil::EndPoint &remote_side,
+                        const butil::IOBuf *content);
 
 // Serialize a http response.
 // header: may be modified in some cases
-// content: cleared after usage. could be NULL. 
-void MakeRawHttpResponse(butil::IOBuf* response,
-                         HttpHeader* header,
-                         butil::IOBuf* content);
+// content: cleared after usage. could be NULL.
+void MakeRawHttpResponse(butil::IOBuf *response, HttpHeader *header,
+                         butil::IOBuf *content);
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_HTTP_MESSAGE_H

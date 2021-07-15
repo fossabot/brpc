@@ -18,31 +18,29 @@ namespace butil {
 // above the template specialisation for this structure.
 // -----------------------------------------------------------------------------
 struct FileDescriptor {
-  FileDescriptor() : fd(-1), auto_close(false) {}
+    FileDescriptor() : fd(-1), auto_close(false) {}
 
-  FileDescriptor(int ifd, bool iauto_close) : fd(ifd), auto_close(iauto_close) {
-  }
+    FileDescriptor(int ifd, bool iauto_close)
+        : fd(ifd), auto_close(iauto_close) {}
 
-  FileDescriptor(File file) : fd(file.TakePlatformFile()), auto_close(true) {}
+    FileDescriptor(File file) : fd(file.TakePlatformFile()), auto_close(true) {}
 
-  bool operator==(const FileDescriptor& other) const {
-    return (fd == other.fd && auto_close == other.auto_close);
-  }
+    bool operator==(const FileDescriptor& other) const {
+        return (fd == other.fd && auto_close == other.auto_close);
+    }
 
-  bool operator!=(const FileDescriptor& other) const {
-    return !operator==(other);
-  }
+    bool operator!=(const FileDescriptor& other) const {
+        return !operator==(other);
+    }
 
-  // A comparison operator so that we can use these as keys in a std::map.
-  bool operator<(const FileDescriptor& other) const {
-    return other.fd < fd;
-  }
+    // A comparison operator so that we can use these as keys in a std::map.
+    bool operator<(const FileDescriptor& other) const { return other.fd < fd; }
 
-  int fd;
-  // If true, this file descriptor should be closed after it has been used. For
-  // example an IPC system might interpret this flag as indicating that the
-  // file descriptor it has been given should be closed after use.
-  bool auto_close;
+    int fd;
+    // If true, this file descriptor should be closed after it has been used.
+    // For example an IPC system might interpret this flag as indicating that
+    // the file descriptor it has been given should be closed after use.
+    bool auto_close;
 };
 
 }  // namespace butil

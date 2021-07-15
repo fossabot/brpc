@@ -20,15 +20,15 @@
 #ifndef BUTIL_DOUBLY_BUFFERED_DATA_H
 #define BUTIL_DOUBLY_BUFFERED_DATA_H
 
-#include <vector>                                       // std::vector
 #include <pthread.h>
-#include "butil/scoped_lock.h"
-#include "butil/thread_local.h"
+#include <vector>  // std::vector
+#include "butil/atomicops.h"
+#include "butil/errno.h"
 #include "butil/logging.h"
 #include "butil/macros.h"
+#include "butil/scoped_lock.h"
+#include "butil/thread_local.h"
 #include "butil/type_traits.h"
-#include "butil/errno.h"
-#include "butil/atomicops.h"
 #include "butil/unique_ptr.h"
 
 namespace butil {
@@ -49,14 +49,16 @@ namespace butil {
 // sure all existing Read() finish and later Read() see new foreground,
 // then modify background(foreground before flip) again.
 
-class Void { };
+class Void {};
 
 template <typename T, typename TLS = Void>
 class DoublyBufferedData {
     class Wrapper;
+
 public:
     class ScopedPtr {
-    friend class DoublyBufferedData;
+        friend class DoublyBufferedData;
+
     public:
         ScopedPtr() : _data(NULL), _w(NULL) {}
         ~ScopedPtr() {
@@ -68,13 +70,13 @@ public:
         const T& operator*() const { return *_data; }
         const T* operator->() const { return _data; }
         TLS& tls() { return _w->user_tls(); }
-        
+
     private:
         DISALLOW_COPY_AND_ASSIGN(ScopedPtr);
         const T* _data;
         Wrapper* _w;
     };
-    
+
     DoublyBufferedData();
     ~DoublyBufferedData();
 
@@ -89,26 +91,30 @@ public:
     // NOTE: Call same series of fn to different equivalent instances should
     // result in equivalent instances, otherwise foreground and background
     // instance will be inconsistent.
-    template <typename Fn> size_t Modify(Fn& fn);
-    template <typename Fn, typename Arg1> size_t Modify(Fn& fn, const Arg1&);
+    template <typename Fn>
+    size_t Modify(Fn& fn);
+    template <typename Fn, typename Arg1>
+    size_t Modify(Fn& fn, const Arg1&);
     template <typename Fn, typename Arg1, typename Arg2>
     size_t Modify(Fn& fn, const Arg1&, const Arg2&);
 
     // fn(T& background, const T& foreground, ...) will be called to background
     // and foreground instances respectively.
-    template <typename Fn> size_t ModifyWithForeground(Fn& fn);
+    template <typename Fn>
+    size_t ModifyWithForeground(Fn& fn);
     template <typename Fn, typename Arg1>
     size_t ModifyWithForeground(Fn& fn, const Arg1&);
     template <typename Fn, typename Arg1, typename Arg2>
     size_t ModifyWithForeground(Fn& fn, const Arg1&, const Arg2&);
-    
+
 private:
     template <typename Fn>
     struct WithFG0 {
-        WithFG0(Fn& fn, T* data) : _fn(fn), _data(data) { }
+        WithFG0(Fn& fn, T* data) : _fn(fn), _data(data) {}
         size_t operator()(T& bg) {
             return _fn(bg, (const T&)_data[&bg == _data]);
         }
+
     private:
         Fn& _fn;
         T* _data;
@@ -121,6 +127,7 @@ private:
         size_t operator()(T& bg) {
             return _fn(bg, (const T&)_data[&bg == _data], _arg1);
         }
+
     private:
         Fn& _fn;
         T* _data;
@@ -134,6 +141,7 @@ private:
         size_t operator()(T& bg) {
             return _fn(bg, (const T&)_data[&bg == _data], _arg1, _arg2);
         }
+
     private:
         Fn& _fn;
         T* _data;
@@ -145,6 +153,7 @@ private:
     struct Closure1 {
         Closure1(Fn& fn, const Arg1& arg1) : _fn(fn), _arg1(arg1) {}
         size_t operator()(T& bg) { return _fn(bg, _arg1); }
+
     private:
         Fn& _fn;
         const Arg1& _arg1;
@@ -155,14 +164,16 @@ private:
         Closure2(Fn& fn, const Arg1& arg1, const Arg2& arg2)
             : _fn(fn), _arg1(arg1), _arg2(arg2) {}
         size_t operator()(T& bg) { return _fn(bg, _arg1, _arg2); }
+
     private:
         Fn& _fn;
         const Arg1& _arg1;
         const Arg2& _arg2;
     };
 
-    const T* UnsafeRead() const
-    { return _data + _index.load(butil::memory_order_acquire); }
+    const T* UnsafeRead() const {
+        return _data + _index.load(butil::memory_order_acquire);
+    }
     Wrapper* AddWrapper();
     void RemoveWrapper(Wrapper*);
 
@@ -192,24 +203,24 @@ template <typename T, typename TLS>
 class DoublyBufferedDataWrapperBase {
 public:
     TLS& user_tls() { return _user_tls; }
+
 protected:
     TLS _user_tls;
 };
 
 template <typename T>
-class DoublyBufferedDataWrapperBase<T, Void> {
-};
-
+class DoublyBufferedDataWrapperBase<T, Void> {};
 
 template <typename T, typename TLS>
 class DoublyBufferedData<T, TLS>::Wrapper
     : public DoublyBufferedDataWrapperBase<T, TLS> {
-friend class DoublyBufferedData;
+    friend class DoublyBufferedData;
+
 public:
     explicit Wrapper(DoublyBufferedData* c) : _control(c) {
         pthread_mutex_init(&_mutex, NULL);
     }
-    
+
     ~Wrapper() {
         if (_control != NULL) {
             _control->RemoveWrapper(this);
@@ -220,18 +231,12 @@ public:
     // _mutex will be locked by the calling pthread and DoublyBufferedData.
     // Most of the time, no modifications are done, so the mutex is
     // uncontended and fast.
-    inline void BeginRead() {
-        pthread_mutex_lock(&_mutex);
-    }
+    inline void BeginRead() { pthread_mutex_lock(&_mutex); }
 
-    inline void EndRead() {
-        pthread_mutex_unlock(&_mutex);
-    }
+    inline void EndRead() { pthread_mutex_unlock(&_mutex); }
 
-    inline void WaitReadDone() {
-        BAIDU_SCOPED_LOCK(_mutex);
-    }
-    
+    inline void WaitReadDone() { BAIDU_SCOPED_LOCK(_mutex); }
+
 private:
     DoublyBufferedData* _control;
     pthread_mutex_t _mutex;
@@ -273,14 +278,12 @@ void DoublyBufferedData<T, TLS>::RemoveWrapper(
 
 template <typename T, typename TLS>
 DoublyBufferedData<T, TLS>::DoublyBufferedData()
-    : _index(0)
-    , _created_key(false)
-    , _wrapper_key(0) {
+    : _index(0), _created_key(false), _wrapper_key(0) {
     _wrappers.reserve(64);
     pthread_mutex_init(&_modify_mutex, NULL);
     pthread_mutex_init(&_wrappers_mutex, NULL);
-    const int rc = pthread_key_create(&_wrapper_key,
-                                      butil::delete_object<Wrapper>);
+    const int rc =
+        pthread_key_create(&_wrapper_key, butil::delete_object<Wrapper>);
     if (rc != 0) {
         LOG(FATAL) << "Fail to pthread_key_create: " << berror(rc);
     } else {
@@ -302,7 +305,7 @@ DoublyBufferedData<T, TLS>::~DoublyBufferedData() {
     if (_created_key) {
         pthread_key_delete(_wrapper_key);
     }
-    
+
     {
         BAIDU_SCOPED_LOCK(_wrappers_mutex);
         for (size_t i = 0; i < _wrappers.size(); ++i) {
@@ -325,7 +328,7 @@ int DoublyBufferedData<T, TLS>::Read(
     if (BAIDU_LIKELY(w != NULL)) {
         w->BeginRead();
         ptr->_data = UnsafeRead();
-        ptr->_w = w;
+        ptr->_w    = w;
         return 0;
     }
     w = AddWrapper();
@@ -334,7 +337,7 @@ int DoublyBufferedData<T, TLS>::Read(
         if (rc == 0) {
             w->BeginRead();
             ptr->_data = UnsafeRead();
-            ptr->_w = w;
+            ptr->_w    = w;
             return 0;
         }
     }
@@ -363,7 +366,7 @@ size_t DoublyBufferedData<T, TLS>::Modify(Fn& fn) {
     // all changes made in fn.
     _index.store(bg_index, butil::memory_order_release);
     bg_index = !bg_index;
-    
+
     // Wait until all threads finishes current reading. When they begin next
     // read, they should see updated _index.
     {
@@ -387,8 +390,8 @@ size_t DoublyBufferedData<T, TLS>::Modify(Fn& fn, const Arg1& arg1) {
 
 template <typename T, typename TLS>
 template <typename Fn, typename Arg1, typename Arg2>
-size_t DoublyBufferedData<T, TLS>::Modify(
-    Fn& fn, const Arg1& arg1, const Arg2& arg2) {
+size_t DoublyBufferedData<T, TLS>::Modify(Fn& fn, const Arg1& arg1,
+                                          const Arg2& arg2) {
     Closure2<Fn, Arg1, Arg2> c(fn, arg1, arg2);
     return Modify(c);
 }
@@ -402,15 +405,17 @@ size_t DoublyBufferedData<T, TLS>::ModifyWithForeground(Fn& fn) {
 
 template <typename T, typename TLS>
 template <typename Fn, typename Arg1>
-size_t DoublyBufferedData<T, TLS>::ModifyWithForeground(Fn& fn, const Arg1& arg1) {
+size_t DoublyBufferedData<T, TLS>::ModifyWithForeground(Fn& fn,
+                                                        const Arg1& arg1) {
     WithFG1<Fn, Arg1> c(fn, _data, arg1);
     return Modify(c);
 }
 
 template <typename T, typename TLS>
 template <typename Fn, typename Arg1, typename Arg2>
-size_t DoublyBufferedData<T, TLS>::ModifyWithForeground(
-    Fn& fn, const Arg1& arg1, const Arg2& arg2) {
+size_t DoublyBufferedData<T, TLS>::ModifyWithForeground(Fn& fn,
+                                                        const Arg1& arg1,
+                                                        const Arg2& arg2) {
     WithFG2<Fn, Arg1, Arg2> c(fn, _data, arg1, arg2);
     return Modify(c);
 }

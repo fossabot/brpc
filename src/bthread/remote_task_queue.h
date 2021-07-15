@@ -39,7 +39,7 @@ public:
 
     int init(size_t cap) {
         const size_t memsize = sizeof(bthread_t) * cap;
-        void* q_mem = malloc(memsize);
+        void* q_mem          = malloc(memsize);
         if (q_mem == NULL) {
             return -1;
         }
@@ -65,14 +65,12 @@ public:
         return res;
     }
 
-    bool push_locked(bthread_t task) {
-        return _tasks.push(task);
-    }
+    bool push_locked(bthread_t task) { return _tasks.push(task); }
 
     size_t capacity() const { return _tasks.capacity(); }
-    
+
 private:
-friend class TaskGroup;
+    friend class TaskGroup;
     DISALLOW_COPY_AND_ASSIGN(RemoteTaskQueue);
     butil::BoundedQueue<bthread_t> _tasks;
     butil::Mutex _mutex;

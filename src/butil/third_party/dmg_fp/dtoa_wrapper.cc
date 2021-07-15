@@ -10,10 +10,10 @@
 
 // We need two locks because they're sometimes grabbed at the same time.
 // A single lock would lead to an attempted recursive grab.
-static butil::LazyInstance<butil::Lock>::Leaky
-    dtoa_lock_0 = LAZY_INSTANCE_INITIALIZER;
-static butil::LazyInstance<butil::Lock>::Leaky
-    dtoa_lock_1 = LAZY_INSTANCE_INITIALIZER;
+static butil::LazyInstance<butil::Lock>::Leaky dtoa_lock_0 =
+    LAZY_INSTANCE_INITIALIZER;
+static butil::LazyInstance<butil::Lock>::Leaky dtoa_lock_1 =
+    LAZY_INSTANCE_INITIALIZER;
 
 /*
  * This define and the code below is to trigger thread-safe behavior
@@ -32,15 +32,15 @@ static butil::LazyInstance<butil::Lock>::Leaky
 #define MULTIPLE_THREADS
 
 inline static void ACQUIRE_DTOA_LOCK(size_t n) {
-  DCHECK(n < 2);
-  butil::Lock* lock = n == 0 ? dtoa_lock_0.Pointer() : dtoa_lock_1.Pointer();
-  lock->Acquire();
+    DCHECK(n < 2);
+    butil::Lock* lock = n == 0 ? dtoa_lock_0.Pointer() : dtoa_lock_1.Pointer();
+    lock->Acquire();
 }
 
 inline static void FREE_DTOA_LOCK(size_t n) {
-  DCHECK(n < 2);
-  butil::Lock* lock = n == 0 ? dtoa_lock_0.Pointer() : dtoa_lock_1.Pointer();
-  lock->Release();
+    DCHECK(n < 2);
+    butil::Lock* lock = n == 0 ? dtoa_lock_0.Pointer() : dtoa_lock_1.Pointer();
+    lock->Release();
 }
 
 #include "butil/third_party/dmg_fp/dtoa.cc"

@@ -17,8 +17,8 @@
 
 // Date: 2017/11/04 17:13:18
 
-#ifndef  PUBLIC_COMMON_POPEN_H
-#define  PUBLIC_COMMON_POPEN_H
+#ifndef PUBLIC_COMMON_POPEN_H
+#define PUBLIC_COMMON_POPEN_H
 
 #include <ostream>
 
@@ -29,6 +29,6 @@ namespace butil {
 // |os|. -1 otherwise and errno is set appropriately.
 int read_command_output(std::ostream& os, const char* cmd);
 
-}
+}  // namespace butil
 
-#endif  //PUBLIC_COMMON_POPEN_H
+#endif  // PUBLIC_COMMON_POPEN_H

@@ -15,23 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #include "brpc/policy/streaming_rpc_protocol.h"
 
-#include <google/protobuf/descriptor.h>         // MethodDescriptor
-#include <google/protobuf/message.h>            // Message
 #include <gflags/gflags.h>
-#include "butil/macros.h"
-#include "butil/logging.h"                       // LOG()
-#include "butil/time.h"
-#include "butil/iobuf.h"                         // butil::IOBuf
-#include "butil/raw_pack.h"                      // RawPacker RawUnpacker
+#include <google/protobuf/descriptor.h>  // MethodDescriptor
+#include <google/protobuf/message.h>     // Message
 #include "brpc/log.h"
-#include "brpc/socket.h"                        // Socket
-#include "brpc/streaming_rpc_meta.pb.h"         // StreamFrameMeta
 #include "brpc/policy/most_common_message.h"
+#include "brpc/socket.h"  // Socket
 #include "brpc/stream_impl.h"
-
+#include "brpc/streaming_rpc_meta.pb.h"  // StreamFrameMeta
+#include "butil/iobuf.h"                 // butil::IOBuf
+#include "butil/logging.h"               // LOG()
+#include "butil/macros.h"
+#include "butil/raw_pack.h"  // RawPacker RawUnpacker
+#include "butil/time.h"
 
 namespace brpc {
 namespace policy {
@@ -39,13 +37,12 @@ namespace policy {
 // Notes on Streaming RPC Protocol:
 // 1 - Header format is [STRM][body_size][meta_size], 12 bytes in total
 // 2 - body_size and meta_size are in network byte order
-void PackStreamMessage(butil::IOBuf* out,
-                       const StreamFrameMeta &fm,
-                       const butil::IOBuf *data) {
+void PackStreamMessage(butil::IOBuf* out, const StreamFrameMeta& fm,
+                       const butil::IOBuf* data) {
     const uint32_t data_length = data ? data->length() : 0;
     const uint32_t meta_length = fm.ByteSize();
     char head[12];
-    uint32_t* dummy = (uint32_t*)head;  // suppresses strict-alias warning
+    uint32_t* dummy   = (uint32_t*)head;  // suppresses strict-alias warning
     *(uint32_t*)dummy = *(const uint32_t*)"STRM";
     butil::RawPacker(head + 4)
         .pack32(data_length + meta_length)
@@ -58,8 +55,8 @@ void PackStreamMessage(butil::IOBuf* out,
     }
 }
 
-ParseResult ParseStreamingMessage(butil::IOBuf* source,
-                            Socket* socket, bool /*read_eof*/, const void* /*arg*/) {
+ParseResult ParseStreamingMessage(butil::IOBuf* source, Socket* socket,
+                                  bool /*read_eof*/, const void* /*arg*/) {
     char header_buf[12];
     const size_t n = source->copy_to(header_buf, sizeof(header_buf));
     if (n >= 4) {
@@ -84,8 +81,8 @@ ParseResult ParseStreamingMessage(butil::IOBuf* source,
         return MakeParseError(PARSE_ERROR_NOT_ENOUGH_DATA);
     }
     if (BAIDU_UNLIKELY(meta_size > body_size)) {
-        LOG(ERROR) << "meta_size=" << meta_size << " is bigger than body_size="
-                   << body_size;
+        LOG(ERROR) << "meta_size=" << meta_size
+                   << " is bigger than body_size=" << body_size;
         // Pop the message
         source->pop_front(sizeof(header_buf) + body_size);
         return MakeParseError(PARSE_ERROR_TRY_OTHERS);
@@ -104,10 +101,10 @@ ParseResult ParseStreamingMessage(butil::IOBuf* source,
         }
         SocketUniquePtr ptr;
         if (Socket::Address((SocketId)fm.stream_id(), &ptr) != 0) {
-            RPC_VLOG_IF(fm.frame_type() != FRAME_TYPE_RST 
-                            && fm.frame_type() != FRAME_TYPE_CLOSE
-                            && fm.frame_type() != FRAME_TYPE_FEEDBACK)
-                   << "Fail to find stream=" << fm.stream_id();
+            RPC_VLOG_IF(fm.frame_type() != FRAME_TYPE_RST &&
+                        fm.frame_type() != FRAME_TYPE_CLOSE &&
+                        fm.frame_type() != FRAME_TYPE_FEEDBACK)
+                << "Fail to find stream=" << fm.stream_id();
             if (fm.has_source_stream_id()) {
                 SendStreamRst(socket, fm.source_stream_id());
             }
@@ -125,7 +122,7 @@ void ProcessStreamingMessage(InputMessageBase* /*msg*/) {
     CHECK(false) << "Should never be called";
 }
 
-void SendStreamRst(Socket *sock, int64_t remote_stream_id) {
+void SendStreamRst(Socket* sock, int64_t remote_stream_id) {
     CHECK(sock != NULL);
     StreamFrameMeta fm;
     fm.set_stream_id(remote_stream_id);
@@ -135,7 +132,7 @@ void SendStreamRst(Socket *sock, int64_t remote_stream_id) {
     sock->Write(&out);
 }
 
-void SendStreamClose(Socket *sock, int64_t remote_stream_id,
+void SendStreamClose(Socket* sock, int64_t remote_stream_id,
                      int64_t source_stream_id) {
     CHECK(sock != NULL);
     StreamFrameMeta fm;
@@ -160,4 +157,4 @@ int SendStreamData(Socket* sock, const butil::IOBuf* data,
 }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc

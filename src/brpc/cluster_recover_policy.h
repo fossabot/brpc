@@ -15,15 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_CLUSTER_RECOVER_POLICY
 #define BRPC_CLUSTER_RECOVER_POLICY
 
 #include <cstdint>
 #include <memory>
-#include "butil/synchronization/lock.h"
-#include "butil/strings/string_piece.h"
 #include "butil/strings/string_number_conversions.h"
+#include "butil/strings/string_piece.h"
+#include "butil/synchronization/lock.h"
 
 namespace brpc {
 
@@ -51,22 +50,24 @@ public:
     virtual bool StopRecoverIfNecessary() = 0;
 };
 
-// The default cluster recover policy. Once no servers are available, recover is start.
-// If in recover state, the probability that a request is accepted is q/n, in
-// which q is the number of current available server, n is the number of minimum
-// working instances setting by user. If q is not changed during a given time,
-// hold_seconds, then the cluster is considered recovered and all the request
-// would be sent to the current available servers.
+// The default cluster recover policy. Once no servers are available, recover is
+// start. If in recover state, the probability that a request is accepted is
+// q/n, in which q is the number of current available server, n is the number of
+// minimum working instances setting by user. If q is not changed during a given
+// time, hold_seconds, then the cluster is considered recovered and all the
+// request would be sent to the current available servers.
 class DefaultClusterRecoverPolicy : public ClusterRecoverPolicy {
 public:
-    DefaultClusterRecoverPolicy(int64_t min_working_instances, int64_t hold_seconds);
+    DefaultClusterRecoverPolicy(int64_t min_working_instances,
+                                int64_t hold_seconds);
 
     void StartRecover() override;
     bool DoReject(const std::vector<ServerId>& server_list) override;
     bool StopRecoverIfNecessary() override;
 
 private:
-    uint64_t GetUsableServerCount(int64_t now_ms, const std::vector<ServerId>& server_list);
+    uint64_t GetUsableServerCount(int64_t now_ms,
+                                  const std::vector<ServerId>& server_list);
 
 private:
     bool _recovering;
@@ -83,7 +84,6 @@ private:
 bool GetRecoverPolicyByParams(const butil::StringPiece& params,
                               std::shared_ptr<ClusterRecoverPolicy>* ptr_out);
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif
-

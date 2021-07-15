@@ -15,16 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #include "butil/build_config.h"
 
 #if defined(OS_LINUX)
 
-#include <sys/epoll.h>                             // epoll_create
-#include <sys/types.h>                             // socketpair
-#include <sys/socket.h>                            // ^
-#include "butil/fd_guard.h"                         // fd_guard
+#include <sys/epoll.h>   // epoll_create
+#include <sys/socket.h>  // ^
+#include <sys/types.h>   // socketpair
 #include "brpc/details/has_epollrdhup.h"
+#include "butil/fd_guard.h"  // fd_guard
 
 #ifndef EPOLLRDHUP
 #define EPOLLRDHUP 0x2000
@@ -41,8 +40,8 @@ static unsigned int check_epollrdhup() {
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, (int*)fds) < 0) {
         return 0;
     }
-    epoll_event evt = { static_cast<uint32_t>(EPOLLIN | EPOLLRDHUP | EPOLLET),
-                        { NULL }};
+    epoll_event evt = {static_cast<uint32_t>(EPOLLIN | EPOLLRDHUP | EPOLLET),
+                       {NULL}};
     if (epoll_ctl(epfd, EPOLL_CTL_ADD, fds[0], &evt) < 0) {
         return 0;
     }
@@ -51,7 +50,8 @@ static unsigned int check_epollrdhup() {
     }
     epoll_event e;
     int n;
-    while ((n = epoll_wait(epfd, &e, 1, -1)) == 0);
+    while ((n = epoll_wait(epfd, &e, 1, -1)) == 0)
+        ;
     if (n < 0) {
         return 0;
     }
@@ -60,7 +60,7 @@ static unsigned int check_epollrdhup() {
 
 extern const unsigned int has_epollrdhup = check_epollrdhup();
 
-} // namespace brpc
+}  // namespace brpc
 
 #else
 
@@ -68,4 +68,4 @@ namespace brpc {
 extern const unsigned int has_epollrdhup = false;
 }
 
-#endif // defined(OS_LINUX)
+#endif  // defined(OS_LINUX)

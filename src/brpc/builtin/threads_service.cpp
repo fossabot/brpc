@@ -15,24 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "butil/time.h"
-#include "butil/logging.h"
-#include "butil/popen.h"
-#include "brpc/controller.h"           // Controller
-#include "brpc/closure_guard.h"        // ClosureGuard
 #include "brpc/builtin/threads_service.h"
 #include "brpc/builtin/common.h"
+#include "brpc/closure_guard.h"  // ClosureGuard
+#include "brpc/controller.h"     // Controller
+#include "butil/logging.h"
+#include "butil/popen.h"
 #include "butil/string_printf.h"
+#include "butil/time.h"
 
 namespace brpc {
 
-void ThreadsService::default_method(::google::protobuf::RpcController* cntl_base,
-                                    const ::brpc::ThreadsRequest*,
-                                    ::brpc::ThreadsResponse*,
-                                    ::google::protobuf::Closure* done) {
+void ThreadsService::default_method(
+    ::google::protobuf::RpcController* cntl_base, const ::brpc::ThreadsRequest*,
+    ::brpc::ThreadsResponse*, ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
+    Controller* cntl = static_cast<Controller*>(cntl_base);
     cntl->http_response().set_content_type("text/plain");
     butil::IOBuf& resp = cntl->response_attachment();
 
@@ -50,4 +48,4 @@ void ThreadsService::default_method(::google::protobuf::RpcController* cntl_base
     resp.append(butil::string_printf("\n\ntime=%" PRId64 "ms", tm.m_elapsed()));
 }
 
-} // namespace brpc
+}  // namespace brpc

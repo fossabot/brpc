@@ -15,36 +15,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <google/protobuf/descriptor.h>         // MethodDescriptor
-#include <google/protobuf/message.h>            // Message
 #include <gflags/gflags.h>
+#include <google/protobuf/descriptor.h>  // MethodDescriptor
+#include <google/protobuf/message.h>     // Message
 
-#include "butil/time.h" 
-#include "butil/iobuf.h"                         // butil::IOBuf
+#include "butil/iobuf.h"  // butil::IOBuf
+#include "butil/time.h"
 
-#include "brpc/controller.h"               // Controller
-#include "brpc/socket.h"                   // Socket
-#include "brpc/server.h"                   // Server
-#include "brpc/span.h"
-#include "brpc/details/server_private_accessor.h"
+#include "brpc/controller.h"  // Controller
 #include "brpc/details/controller_private_accessor.h"
-#include "brpc/policy/most_common_message.h"
+#include "brpc/details/server_private_accessor.h"
 #include "brpc/details/usercode_backup_pool.h"
-#include "brpc/policy/esp_protocol.h"
 #include "brpc/esp_message.h"
-
+#include "brpc/policy/esp_protocol.h"
+#include "brpc/policy/most_common_message.h"
+#include "brpc/server.h"  // Server
+#include "brpc/socket.h"  // Socket
+#include "brpc/span.h"
 
 namespace brpc {
 namespace policy {
 
-ParseResult ParseEspMessage(
-        butil::IOBuf* source,
-        Socket*, 
-        bool /*read_eof*/, 
-        const void* /*arg*/) {
-
+ParseResult ParseEspMessage(butil::IOBuf* source, Socket*, bool /*read_eof*/,
+                            const void* /*arg*/) {
     EspHead head;
-    const size_t n = source->copy_to((char *)&head, sizeof(head));
+    const size_t n = source->copy_to((char*)&head, sizeof(head));
     if (n < sizeof(head)) {
         return MakeParseError(PARSE_ERROR_NOT_ENOUGH_DATA);
     }
@@ -62,11 +57,8 @@ ParseResult ParseEspMessage(
     return MakeMessage(msg);
 }
 
-void SerializeEspRequest(
-        butil::IOBuf* request_buf, 
-        Controller* cntl,
-        const google::protobuf::Message* req_base) {
-
+void SerializeEspRequest(butil::IOBuf* request_buf, Controller* cntl,
+                         const google::protobuf::Message* req_base) {
     if (req_base == NULL) {
         return cntl->SetFailed(EREQUEST, "request is NULL");
     }
@@ -80,20 +72,16 @@ void SerializeEspRequest(
     }
     const EspMessage* req = (const EspMessage*)req_base;
 
-    EspHead head = req->head;
+    EspHead head  = req->head;
     head.body_len = req->body.size();
     request_buf->append(&head, sizeof(head));
     request_buf->append(req->body);
 }
 
-void PackEspRequest(butil::IOBuf* packet_buf,
-                    SocketMessage**,
+void PackEspRequest(butil::IOBuf* packet_buf, SocketMessage**,
                     uint64_t correlation_id,
-                    const google::protobuf::MethodDescriptor*,
-                    Controller* cntl,
-                    const butil::IOBuf& request,
-                    const Authenticator* auth) {
-
+                    const google::protobuf::MethodDescriptor*, Controller* cntl,
+                    const butil::IOBuf& request, const Authenticator* auth) {
     ControllerPrivateAccessor accessor(cntl);
     if (cntl->connection_type() == CONNECTION_TYPE_SINGLE) {
         return cntl->SetFailed(
@@ -105,11 +93,11 @@ void PackEspRequest(butil::IOBuf* packet_buf,
     if (span) {
         span->set_request_size(request.length());
     }
-    
+
     if (auth != NULL) {
         std::string auth_str;
         auth->GenerateCredential(&auth_str);
-        //means first request in this connect, need to special head
+        // means first request in this connect, need to special head
         packet_buf->append(auth_str);
     }
 
@@ -118,12 +106,13 @@ void PackEspRequest(butil::IOBuf* packet_buf,
 
 void ProcessEspResponse(InputMessageBase* msg_base) {
     const int64_t start_parse_us = butil::cpuwide_time_us();
-    DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
-    
+    DestroyingPtr<MostCommonMessage> msg(
+        static_cast<MostCommonMessage*>(msg_base));
+
     // Fetch correlation id that we saved before in `PackEspRequest'
-    const CallId cid = { static_cast<uint64_t>(msg->socket()->correlation_id()) };
+    const CallId cid = {static_cast<uint64_t>(msg->socket()->correlation_id())};
     Controller* cntl = NULL;
-    const int rc = bthread_id_lock(cid, (void**)&cntl);
+    const int rc     = bthread_id_lock(cid, (void**)&cntl);
     if (rc != 0) {
         LOG_IF(ERROR, rc != EINVAL && rc != EPERM)
             << "Fail to lock correlation_id=" << cid << ", " << berror(rc);
@@ -139,7 +128,7 @@ void ProcessEspResponse(InputMessageBase* msg_base) {
         span->set_start_parse_us(start_parse_us);
     }
     // MUST be EspMessage (checked in SerializeEspRequest)
-    EspMessage* response = (EspMessage*)cntl->response();
+    EspMessage* response  = (EspMessage*)cntl->response();
     const int saved_error = cntl->ErrorCode();
 
     if (response != NULL) {
@@ -148,9 +137,9 @@ void ProcessEspResponse(InputMessageBase* msg_base) {
         if (response->head.msg != 0) {
             cntl->SetFailed(ENOENT, "esp response head msg != 0");
             LOG(WARNING) << "Server " << msg->socket()->remote_side()
-                << " doesn't contain the right data";
+                         << " doesn't contain the right data";
         }
-    } // else just ignore the response.
+    }  // else just ignore the response.
 
     // Unlocks correlation_id inside. Revert controller's
     // error code if it version check of `cid' fails
@@ -158,5 +147,5 @@ void ProcessEspResponse(InputMessageBase* msg_base) {
     accessor.OnResponse(cid, saved_error);
 }
 
-} // namespace policy
-} // namespace brpc
+}  // namespace policy
+}  // namespace brpc

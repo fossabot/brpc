@@ -15,15 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_BUILTIN_COMMON_H
 #define BRPC_BUILTIN_COMMON_H
 
-#include <vector>                           // std::vector
 #include <gflags/gflags_declare.h>
-#include "butil/endpoint.h"
+#include <vector>  // std::vector
 #include "brpc/http_header.h"
-
+#include "butil/endpoint.h"
 
 namespace brpc {
 
@@ -31,26 +29,26 @@ class Controller;
 
 // These static strings are referenced more than once in brpc.
 // Don't turn them to std::strings whose constructing sequences are undefined.
-const char* const UNKNOWN_METHOD_STR = "unknown_method";
-const char* const TRACE_ID_STR = "trace";
-const char* const SPAN_ID_STR = "span";
-const char* const TIME_STR = "time";
-const char* const MAX_SCAN_STR = "max_scan";
-const char* const MIN_LATENCY_STR = "min_latency";
-const char* const MIN_REQUEST_SIZE_STR = "min_request_size";
+const char* const UNKNOWN_METHOD_STR    = "unknown_method";
+const char* const TRACE_ID_STR          = "trace";
+const char* const SPAN_ID_STR           = "span";
+const char* const TIME_STR              = "time";
+const char* const MAX_SCAN_STR          = "max_scan";
+const char* const MIN_LATENCY_STR       = "min_latency";
+const char* const MIN_REQUEST_SIZE_STR  = "min_request_size";
 const char* const MIN_RESPONSE_SIZE_STR = "min_response_size";
-const char* const LOG_ID_STR = "log_id";
-const char* const ERROR_CODE_STR = "error_code";
-const char* const CONSOLE_STR = "console";
-const char* const USER_AGENT_STR = "user-agent";
-const char* const SETVALUE_STR = "setvalue";
+const char* const LOG_ID_STR            = "log_id";
+const char* const ERROR_CODE_STR        = "error_code";
+const char* const CONSOLE_STR           = "console";
+const char* const USER_AGENT_STR        = "user-agent";
+const char* const SETVALUE_STR          = "setvalue";
 
 const size_t MAX_READ = 1024 * 1024;
 
 enum ProfilingType {
-    PROFILING_CPU = 0,
-    PROFILING_HEAP = 1,
-    PROFILING_GROWTH = 2,
+    PROFILING_CPU        = 0,
+    PROFILING_HEAP       = 1,
+    PROFILING_GROWTH     = 2,
     PROFILING_CONTENTION = 3,
 };
 
@@ -70,10 +68,10 @@ struct PrintedAsDateTime {
 std::ostream& operator<<(std::ostream& os, const PrintedAsDateTime&);
 
 struct Path {
-    static const butil::EndPoint *LOCAL;
+    static const butil::EndPoint* LOCAL;
     Path(const char* uri2, const butil::EndPoint* html_addr2)
         : uri(uri2), html_addr(html_addr2), text(NULL) {}
-    
+
     Path(const char* uri2, const butil::EndPoint* html_addr2, const char* text2)
         : uri(uri2), html_addr(html_addr2), text(text2) {}
 
@@ -122,7 +120,7 @@ void Time2GMT(time_t t, char* buf, size_t size);
 
 template <typename T>
 struct MinWidth {
-    MinWidth(const T& obj2, size_t nspace2) : obj(&obj2), nspace(nspace2)  {}
+    MinWidth(const T& obj2, size_t nspace2) : obj(&obj2), nspace(nspace2) {}
     const T* obj;
     size_t nspace;
 };
@@ -140,7 +138,6 @@ inline std::ostream& operator<<(std::ostream& os, const MinWidth<T>& fw) {
     return os;
 }
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_BUILTIN_COMMON_H
+#endif  // BRPC_BUILTIN_COMMON_H

@@ -17,51 +17,51 @@
 #ifndef BTHREAD_CONTEXT_H
 #define BTHREAD_CONTEXT_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stddef.h>
 
 #if defined(__GNUC__) || defined(__APPLE__)
 
-    #define BTHREAD_CONTEXT_COMPILER_gcc
+#define BTHREAD_CONTEXT_COMPILER_gcc
 
-    #if defined(__linux__)
-	#ifdef __x86_64__
-	    #define BTHREAD_CONTEXT_PLATFORM_linux_x86_64
-	    #define BTHREAD_CONTEXT_CALL_CONVENTION
+#if defined(__linux__)
+#ifdef __x86_64__
+#define BTHREAD_CONTEXT_PLATFORM_linux_x86_64
+#define BTHREAD_CONTEXT_CALL_CONVENTION
 
-	#elif __i386__
-	    #define BTHREAD_CONTEXT_PLATFORM_linux_i386
-	    #define BTHREAD_CONTEXT_CALL_CONVENTION
-	#elif __arm__
-	    #define BTHREAD_CONTEXT_PLATFORM_linux_arm32
-	    #define BTHREAD_CONTEXT_CALL_CONVENTION
-	#elif __aarch64__
-	    #define BTHREAD_CONTEXT_PLATFORM_linux_arm64
-	    #define BTHREAD_CONTEXT_CALL_CONVENTION
-	#endif
+#elif __i386__
+#define BTHREAD_CONTEXT_PLATFORM_linux_i386
+#define BTHREAD_CONTEXT_CALL_CONVENTION
+#elif __arm__
+#define BTHREAD_CONTEXT_PLATFORM_linux_arm32
+#define BTHREAD_CONTEXT_CALL_CONVENTION
+#elif __aarch64__
+#define BTHREAD_CONTEXT_PLATFORM_linux_arm64
+#define BTHREAD_CONTEXT_CALL_CONVENTION
+#endif
 
-    #elif defined(__MINGW32__) || defined (__MINGW64__)
-	#if defined(__x86_64__)
-	    #define BTHREAD_CONTEXT_COMPILER_gcc
-    	    #define BTHREAD_CONTEXT_PLATFORM_windows_x86_64
-	    #define BTHREAD_CONTEXT_CALL_CONVENTION
-	#endif
+#elif defined(__MINGW32__) || defined(__MINGW64__)
+#if defined(__x86_64__)
+#define BTHREAD_CONTEXT_COMPILER_gcc
+#define BTHREAD_CONTEXT_PLATFORM_windows_x86_64
+#define BTHREAD_CONTEXT_CALL_CONVENTION
+#endif
 
-	#if defined(__i386__)
-	    #define BTHREAD_CONTEXT_COMPILER_gcc
-	    #define BTHREAD_CONTEXT_PLATFORM_windows_i386
-	    #define BTHREAD_CONTEXT_CALL_CONVENTION __cdecl
-	#endif
-    #elif defined(__APPLE__) && defined(__MACH__)
-	#if defined (__i386__)
-	    #define BTHREAD_CONTEXT_PLATFORM_apple_i386
-	    #define BTHREAD_CONTEXT_CALL_CONVENTION
-	#elif defined (__x86_64__)
-	    #define BTHREAD_CONTEXT_PLATFORM_apple_x86_64
-	    #define BTHREAD_CONTEXT_CALL_CONVENTION
-	#endif
-    #endif
+#if defined(__i386__)
+#define BTHREAD_CONTEXT_COMPILER_gcc
+#define BTHREAD_CONTEXT_PLATFORM_windows_i386
+#define BTHREAD_CONTEXT_CALL_CONVENTION __cdecl
+#endif
+#elif defined(__APPLE__) && defined(__MACH__)
+#if defined(__i386__)
+#define BTHREAD_CONTEXT_PLATFORM_apple_i386
+#define BTHREAD_CONTEXT_CALL_CONVENTION
+#elif defined(__x86_64__)
+#define BTHREAD_CONTEXT_PLATFORM_apple_x86_64
+#define BTHREAD_CONTEXT_CALL_CONVENTION
+#endif
+#endif
 #endif
 
 #if defined(_WIN32_WCE)
@@ -71,14 +71,14 @@ typedef int intptr_t;
 typedef void* bthread_fcontext_t;
 
 #ifdef __cplusplus
-extern "C"{
+extern "C" {
 #endif
 
 intptr_t BTHREAD_CONTEXT_CALL_CONVENTION
-bthread_jump_fcontext(bthread_fcontext_t * ofc, bthread_fcontext_t nfc,
+bthread_jump_fcontext(bthread_fcontext_t* ofc, bthread_fcontext_t nfc,
                       intptr_t vp, bool preserve_fpu = false);
 bthread_fcontext_t BTHREAD_CONTEXT_CALL_CONVENTION
-bthread_make_fcontext(void* sp, size_t size, void (* fn)( intptr_t));
+bthread_make_fcontext(void* sp, size_t size, void (*fn)(intptr_t));
 
 #ifdef __cplusplus
 };

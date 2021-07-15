@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#ifndef  BRPC_POLICY_DOMAIN_NAMING_SERVICE_H
-#define  BRPC_POLICY_DOMAIN_NAMING_SERVICE_H
+#ifndef BRPC_POLICY_DOMAIN_NAMING_SERVICE_H
+#define BRPC_POLICY_DOMAIN_NAMING_SERVICE_H
 
 #include "brpc/periodic_naming_service.h"
 #include "butil/unique_ptr.h"
-
 
 namespace brpc {
 namespace policy {
@@ -32,13 +30,13 @@ public:
     DomainNamingService() : DomainNamingService(80) {}
 
 private:
-    int GetServers(const char *service_name,
+    int GetServers(const char* service_name,
                    std::vector<ServerNode>* servers) override;
 
     void Describe(std::ostream& os, const DescribeOptions&) const override;
 
     NamingService* New() const override;
-    
+
     void Destroy() override;
 
 private:
@@ -48,7 +46,6 @@ private:
 };
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif  //BRPC_POLICY_DOMAIN_NAMING_SERVICE_H
+#endif  // BRPC_POLICY_DOMAIN_NAMING_SERVICE_H

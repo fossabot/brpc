@@ -22,14 +22,14 @@
 #ifndef BUTIL_BAIDU_TIME_H
 #define BUTIL_BAIDU_TIME_H
 
-#include <time.h>                            // timespec, clock_gettime
-#include <sys/time.h>                        // timeval, gettimeofday
-#include <stdint.h>                          // int64_t, uint64_t
+#include <stdint.h>    // int64_t, uint64_t
+#include <sys/time.h>  // timeval, gettimeofday
+#include <time.h>      // timespec, clock_gettime
 
 #if defined(NO_CLOCK_GETTIME_IN_MAC)
 #include <mach/mach.h>
-# define CLOCK_REALTIME CALENDAR_CLOCK
-# define CLOCK_MONOTONIC SYSTEM_CLOCK
+#define CLOCK_REALTIME CALENDAR_CLOCK
+#define CLOCK_MONOTONIC SYSTEM_CLOCK
 
 typedef int clockid_t;
 
@@ -61,15 +61,15 @@ inline void timespec_normalize(timespec* tm) {
 }
 
 // Add timespec |span| into timespec |*tm|.
-inline void timespec_add(timespec *tm, const timespec& span) {
+inline void timespec_add(timespec* tm, const timespec& span) {
     tm->tv_sec += span.tv_sec;
     tm->tv_nsec += span.tv_nsec;
     timespec_normalize(tm);
 }
 
-// Minus timespec |span| from timespec |*tm|. 
+// Minus timespec |span| from timespec |*tm|.
 // tm->tv_nsec will be inside [0, 1,000,000,000)
-inline void timespec_minus(timespec *tm, const timespec& span) {
+inline void timespec_minus(timespec* tm, const timespec& span) {
     tm->tv_sec -= span.tv_sec;
     tm->tv_nsec -= span.tv_nsec;
     timespec_normalize(tm);
@@ -147,7 +147,7 @@ inline int64_t timespec_to_seconds(const timespec& ts) {
 
 inline timespec nanoseconds_to_timespec(int64_t ns) {
     timespec ts;
-    ts.tv_sec = ns / 1000000000L;
+    ts.tv_sec  = ns / 1000000000L;
     ts.tv_nsec = ns - ts.tv_sec * 1000000000L;
     return ts;
 }
@@ -165,7 +165,7 @@ inline timespec seconds_to_timespec(int64_t s) {
 }
 
 // ---------------------------------------------------------------------
-// Convert timeval to and from a single integer.                                             
+// Convert timeval to and from a single integer.
 // For conversions between timespec and timeval, use TIMEVAL_TO_TIMESPEC
 // and TIMESPEC_TO_TIMEVAL defined in <sys/time.h>
 // ---------------------------------------------------------------------
@@ -183,7 +183,7 @@ inline int64_t timeval_to_seconds(const timeval& tv) {
 
 inline timeval microseconds_to_timeval(int64_t us) {
     timeval tv;
-    tv.tv_sec = us / 1000000L;
+    tv.tv_sec  = us / 1000000L;
     tv.tv_usec = us - tv.tv_sec * 1000000L;
     return tv;
 }
@@ -201,27 +201,18 @@ inline timeval seconds_to_timeval(int64_t s) {
 // ---------------------------------------------------------------
 extern int64_t monotonic_time_ns();
 
-inline int64_t monotonic_time_us() { 
-    return monotonic_time_ns() / 1000L; 
-}
+inline int64_t monotonic_time_us() { return monotonic_time_ns() / 1000L; }
 
-inline int64_t monotonic_time_ms() {
-    return monotonic_time_ns() / 1000000L; 
-}
+inline int64_t monotonic_time_ms() { return monotonic_time_ns() / 1000000L; }
 
-inline int64_t monotonic_time_s() {
-    return monotonic_time_ns() / 1000000000L;
-}
+inline int64_t monotonic_time_s() { return monotonic_time_ns() / 1000000000L; }
 
 namespace detail {
 inline uint64_t clock_cycles() {
     unsigned int lo = 0;
     unsigned int hi = 0;
     // We cannot use "=A", since this would use %rax on x86_64
-    __asm__ __volatile__ (
-        "rdtsc"
-        : "=a" (lo), "=d" (hi)
-        );
+    __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
     return ((uint64_t)hi << 32) | lo;
 }
 extern int64_t read_invariant_cpu_frequency();
@@ -252,13 +243,14 @@ inline int64_t cpuwide_time_ns() {
     int64_t cpu_freq = detail::invariant_cpu_freq;
     if (cpu_freq > 0) {
         const uint64_t tsc = detail::clock_cycles();
-        //Try to avoid overflow
-        const uint64_t sec = tsc / cpu_freq;
+        // Try to avoid overflow
+        const uint64_t sec    = tsc / cpu_freq;
         const uint64_t remain = tsc % cpu_freq;
         // TODO: should be OK until CPU's frequency exceeds 16GHz.
         return remain * 1000000000L / cpu_freq + sec * 1000000000L;
     } else if (!cpu_freq) {
-        // Lack of necessary features, return system-wide monotonic time instead.
+        // Lack of necessary features, return system-wide monotonic time
+        // instead.
         return monotonic_time_ns();
     } else {
         // Use a thread-unsafe method(OK to us) to initialize the freq
@@ -266,24 +258,18 @@ inline int64_t cpuwide_time_ns() {
         detail::invariant_cpu_freq = detail::read_invariant_cpu_frequency();
         return cpuwide_time_ns();
     }
-#endif // defined(BAIDU_INTERNAL)
+#endif  // defined(BAIDU_INTERNAL)
 }
 
-inline int64_t cpuwide_time_us() {
-    return cpuwide_time_ns() / 1000L;
-}
+inline int64_t cpuwide_time_us() { return cpuwide_time_ns() / 1000L; }
 
-inline int64_t cpuwide_time_ms() { 
-    return cpuwide_time_ns() / 1000000L;
-}
+inline int64_t cpuwide_time_ms() { return cpuwide_time_ns() / 1000000L; }
 
-inline int64_t cpuwide_time_s() {
-    return cpuwide_time_ns() / 1000000000L;
-}
+inline int64_t cpuwide_time_s() { return cpuwide_time_ns() / 1000000000L; }
 
 // --------------------------------------------------------------------
-// Get elapse since the Epoch.                                          
-// No gettimeofday_ns() because resolution of timeval is microseconds.  
+// Get elapse since the Epoch.
+// No gettimeofday_ns() because resolution of timeval is microseconds.
 // Cost ~40ns on 2.6.32_1-12-0-0, Intel(R) Xeon(R) CPU E5620 @ 2.40GHz
 // --------------------------------------------------------------------
 inline int64_t gettimeofday_us() {
@@ -292,13 +278,9 @@ inline int64_t gettimeofday_us() {
     return now.tv_sec * 1000000L + now.tv_usec;
 }
 
-inline int64_t gettimeofday_ms() {
-    return gettimeofday_us() / 1000L;
-}
+inline int64_t gettimeofday_ms() { return gettimeofday_us() / 1000L; }
 
-inline int64_t gettimeofday_s() {
-    return gettimeofday_us() / 1000000L;
-}
+inline int64_t gettimeofday_s() { return gettimeofday_us() / 1000000L; }
 
 // ----------------------------------------
 // Control frequency of operations.
@@ -314,9 +296,8 @@ inline int64_t gettimeofday_s() {
 class EveryManyUS {
 public:
     explicit EveryManyUS(int64_t interval_us)
-        : _last_time_us(cpuwide_time_us())
-        , _interval_us(interval_us) {}
-    
+        : _last_time_us(cpuwide_time_us()), _interval_us(interval_us) {}
+
     operator bool() {
         const int64_t now_us = cpuwide_time_us();
         if (now_us < _last_time_us + _interval_us) {
@@ -336,26 +317,21 @@ private:
 // ---------------
 class Timer {
 public:
-
     enum TimerType {
         STARTED,
     };
 
     Timer() : _stop(0), _start(0) {}
-    explicit Timer(const TimerType) {
-        start();
-    }
+    explicit Timer(const TimerType) { start(); }
 
     // Start this timer
     void start() {
         _start = cpuwide_time_ns();
-        _stop = _start;
+        _stop  = _start;
     }
-    
+
     // Stop this timer
-    void stop() {
-        _stop = cpuwide_time_ns();
-    }
+    void stop() { _stop = cpuwide_time_ns(); }
 
     // Get the elapse from start() to stop(), in various units.
     int64_t n_elapsed() const { return _stop - _start; }
@@ -367,7 +343,7 @@ public:
     double u_elapsed(double) const { return (double)n_elapsed() / 1000.0; }
     double m_elapsed(double) const { return (double)u_elapsed() / 1000.0; }
     double s_elapsed(double) const { return (double)m_elapsed() / 1000.0; }
-    
+
 private:
     int64_t _stop;
     int64_t _start;

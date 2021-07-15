@@ -22,7 +22,7 @@
 #ifndef BUTIL_OBJECT_POOL_H
 #define BUTIL_OBJECT_POOL_H
 
-#include <cstddef>                       // size_t
+#include <cstddef>  // size_t
 
 // ObjectPool is a derivative class of ResourcePool to allocate and
 // reuse fixed-size objects without identifiers.
@@ -39,10 +39,12 @@ namespace butil {
 // Memory is allocated in blocks, memory size of a block will not exceed:
 //   min(ObjectPoolBlockMaxSize<T>::value,
 //       ObjectPoolBlockMaxItem<T>::value * sizeof(T))
-template <typename T> struct ObjectPoolBlockMaxSize {
-    static const size_t value = 64 * 1024; // bytes
+template <typename T>
+struct ObjectPoolBlockMaxSize {
+    static const size_t value = 64 * 1024;  // bytes
 };
-template <typename T> struct ObjectPoolBlockMaxItem {
+template <typename T>
+struct ObjectPoolBlockMaxItem {
     static const size_t value = 256;
 };
 
@@ -51,7 +53,8 @@ template <typename T> struct ObjectPoolBlockMaxItem {
 //   min(ObjectPoolFreeChunkMaxItem<T>::value() * sizeof(T),
 //       ObjectPoolBlockMaxSize<T>::value,
 //       ObjectPoolBlockMaxItem<T>::value * sizeof(T))
-template <typename T> struct ObjectPoolFreeChunkMaxItem {
+template <typename T>
+struct ObjectPoolFreeChunkMaxItem {
     static size_t value() { return 256; }
 };
 
@@ -59,7 +62,8 @@ template <typename T> struct ObjectPoolFreeChunkMaxItem {
 // function returns false, the object is destructed immediately and
 // get_object() shall return NULL. This is useful when the constructor
 // failed internally(namely ENOMEM).
-template <typename T> struct ObjectPoolValidator {
+template <typename T>
+struct ObjectPoolValidator {
     static bool validate(const T*) { return true; }
 };
 
@@ -71,7 +75,8 @@ namespace butil {
 
 // Get an object typed |T|. The object should be cleared before usage.
 // NOTE: T must be default-constructible.
-template <typename T> inline T* get_object() {
+template <typename T>
+inline T* get_object() {
     return ObjectPool<T>::singleton()->get_object();
 }
 
@@ -92,21 +97,24 @@ inline T* get_object(const A1& arg1, const A2& arg2) {
 // the object is not checked, user shall not return a not-yet-allocated or
 // already-returned object otherwise behavior is undefined.
 // Returns 0 when successful, -1 otherwise.
-template <typename T> inline int return_object(T* ptr) {
+template <typename T>
+inline int return_object(T* ptr) {
     return ObjectPool<T>::singleton()->return_object(ptr);
 }
 
 // Reclaim all allocated objects typed T if caller is the last thread called
 // this function, otherwise do nothing. You rarely need to call this function
 // manually because it's called automatically when each thread quits.
-template <typename T> inline void clear_objects() {
+template <typename T>
+inline void clear_objects() {
     ObjectPool<T>::singleton()->clear_objects();
 }
 
 // Get description of objects typed T.
 // This function is possibly slow because it iterates internal structures.
 // Don't use it frequently like a "getter" function.
-template <typename T> ObjectPoolInfo describe_objects() {
+template <typename T>
+ObjectPoolInfo describe_objects() {
     return ObjectPool<T>::singleton()->describe_objects();
 }
 

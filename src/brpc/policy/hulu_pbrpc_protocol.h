@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_HULU_PBRPC_PROTOCOL_H
 #define BRPC_POLICY_HULU_PBRPC_PROTOCOL_H
 
@@ -26,7 +25,8 @@ namespace brpc {
 namespace policy {
 
 // Parse binary format of hulu-pbrpc.
-ParseResult ParseHuluMessage(butil::IOBuf* source, Socket *socket, bool read_eof, const void *arg);
+ParseResult ParseHuluMessage(butil::IOBuf* source, Socket* socket,
+                             bool read_eof, const void* arg);
 
 // Actions to a (client) request in hulu-pbrpc format.
 void ProcessHuluRequest(InputMessageBase* msg);
@@ -38,16 +38,13 @@ void ProcessHuluResponse(InputMessageBase* msg);
 bool VerifyHuluRequest(const InputMessageBase* msg);
 
 // Pack `request' to `method' into `buf'.
-void PackHuluRequest(butil::IOBuf* buf,
-                     SocketMessage**,
+void PackHuluRequest(butil::IOBuf* buf, SocketMessage**,
                      uint64_t correlation_id,
                      const google::protobuf::MethodDescriptor* method,
-                     Controller* controller,
-                     const butil::IOBuf& request,
+                     Controller* controller, const butil::IOBuf& request,
                      const Authenticator* auth);
 
 }  // namespace policy
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_POLICY_HULU_PBRPC_PROTOCOL_H

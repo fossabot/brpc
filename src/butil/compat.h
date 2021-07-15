@@ -15,19 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BUTIL_COMPAT_H
 #define BUTIL_COMPAT_H
 
-#include "butil/build_config.h"
 #include <pthread.h>
+#include "butil/build_config.h"
 
 #if defined(OS_MACOSX)
 
-#include <sys/cdefs.h>
+#include <dispatch/dispatch.h>  // dispatch_semaphore
+#include <errno.h>              // EINVAL
 #include <stdint.h>
-#include <dispatch/dispatch.h>    // dispatch_semaphore
-#include <errno.h>                // EINVAL
+#include <sys/cdefs.h>
 
 __BEGIN_DECLS
 
@@ -70,7 +69,7 @@ __END_DECLS
 
 #error "The platform does not support epoll-like APIs"
 
-#endif // defined(OS_MACOSX)
+#endif  // defined(OS_MACOSX)
 
 __BEGIN_DECLS
 
@@ -88,4 +87,4 @@ inline uint64_t pthread_numeric_id() {
 
 __END_DECLS
 
-#endif // BUTIL_COMPAT_H
+#endif  // BUTIL_COMPAT_H

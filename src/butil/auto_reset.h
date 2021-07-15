@@ -7,10 +7,10 @@
 
 #include "butil/basictypes.h"
 
-// butil::AutoReset<> is useful for setting a variable to a new value only within
-// a particular scope. An butil::AutoReset<> object resets a variable to its
-// original value upon destruction, making it an alternative to writing
-// "var = false;" or "var = old_val;" at all of a block's exit points.
+// butil::AutoReset<> is useful for setting a variable to a new value only
+// within a particular scope. An butil::AutoReset<> object resets a variable to
+// its original value upon destruction, making it an alternative to writing "var
+// = false;" or "var = old_val;" at all of a block's exit points.
 //
 // This should be obvious, but note that an butil::AutoReset<> instance should
 // have a shorter lifetime than its scoped_variable, to prevent invalid memory
@@ -18,24 +18,23 @@
 
 namespace butil {
 
-template<typename T>
+template <typename T>
 class AutoReset {
- public:
-  AutoReset(T* scoped_variable, T new_value)
-      : scoped_variable_(scoped_variable),
-        original_value_(*scoped_variable) {
-    *scoped_variable_ = new_value;
-  }
+public:
+    AutoReset(T* scoped_variable, T new_value)
+        : scoped_variable_(scoped_variable), original_value_(*scoped_variable) {
+        *scoped_variable_ = new_value;
+    }
 
-  ~AutoReset() { *scoped_variable_ = original_value_; }
+    ~AutoReset() { *scoped_variable_ = original_value_; }
 
- private:
-  T* scoped_variable_;
-  T original_value_;
+private:
+    T* scoped_variable_;
+    T original_value_;
 
-  DISALLOW_COPY_AND_ASSIGN(AutoReset);
+    DISALLOW_COPY_AND_ASSIGN(AutoReset);
 };
 
-}
+}  // namespace butil
 
 #endif  // BUTIL_AUTO_RESET_H_

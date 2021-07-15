@@ -15,12 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_DETAILS_RTMP_UTILS_H
 #define BRPC_DETAILS_RTMP_UTILS_H
 
-#include <stdint.h>  // int32_t
 #include <stddef.h>  // size_t
+#include <stdint.h>  // int32_t
 
 namespace brpc {
 
@@ -30,7 +29,7 @@ public:
     BitStream(const void* data, size_t len)
         : _data(data), _data_end((const char*)data + len), _shift(7) {}
     ~BitStream() {}
-    
+
     // True if no bits any more.
     bool empty() { return _data == _data_end; }
 
@@ -38,10 +37,10 @@ public:
     // this function, otherwise the behavior is undefined.
     int8_t read_bit() {
         const int8_t* p = (const int8_t*)_data;
-        int8_t result = (*p >> _shift) & 0x1;
+        int8_t result   = (*p >> _shift) & 0x1;
         if (_shift == 0) {
             _shift = 7;
-            _data = p + 1;
+            _data  = p + 1;
         } else {
             --_shift;
         }
@@ -57,7 +56,6 @@ private:
 int avc_nalu_read_uev(BitStream* stream, int32_t* v);
 int avc_nalu_read_bit(BitStream* stream, int8_t* v);
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_DETAILS_RTMP_UTILS_H

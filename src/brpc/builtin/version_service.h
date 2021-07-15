@@ -15,13 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#ifndef  BRPC_VERSION_SERVICE_H
-#define  BRPC_VERSION_SERVICE_H
+#ifndef BRPC_VERSION_SERVICE_H
+#define BRPC_VERSION_SERVICE_H
 
 #include <ostream>
 #include "brpc/builtin_service.pb.h"
-
 
 namespace brpc {
 
@@ -30,16 +28,16 @@ class Server;
 class VersionService : public version {
 public:
     explicit VersionService(Server* server) : _server(server) {}
-    
+
     void default_method(::google::protobuf::RpcController* cntl_base,
                         const ::brpc::VersionRequest* request,
                         ::brpc::VersionResponse* response,
                         ::google::protobuf::Closure* done);
+
 private:
     Server* _server;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif  //BRPC_VERSION_SERVICE_H
+#endif  // BRPC_VERSION_SERVICE_H

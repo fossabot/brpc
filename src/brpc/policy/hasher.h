@@ -15,19 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#ifndef  BRPC_HASHER_H
-#define  BRPC_HASHER_H
+#ifndef BRPC_HASHER_H
+#define BRPC_HASHER_H
 
 #include <stddef.h>
 #include <stdint.h>
 #include "butil/strings/string_piece.h"
 
-
 namespace brpc {
 namespace policy {
 
-using HashFunc = uint32_t(*)(const void*, size_t);
+using HashFunc = uint32_t (*)(const void*, size_t);
 
 void MD5HashSignature(const void* key, size_t len, unsigned char* results);
 uint32_t MD5Hash32(const void* key, size_t len);
@@ -37,7 +35,6 @@ uint32_t MurmurHash32(const void* key, size_t len);
 uint32_t MurmurHash32V(const butil::StringPiece* keys, size_t num_keys);
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif  //BRPC_HASHER_H
+#endif  // BRPC_HASHER_H

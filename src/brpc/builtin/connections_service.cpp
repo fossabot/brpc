@@ -15,20 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <ostream>
-#include <iomanip>
-#include <netinet/tcp.h>
-#include <gflags/gflags.h>
-#include "brpc/closure_guard.h"        // ClosureGuard
-#include "brpc/controller.h"           // Controller
-#include "brpc/socket_map.h"           // SocketMapList
-#include "brpc/acceptor.h"             // Acceptor
-#include "brpc/server.h"
-#include "brpc/nshead_service.h"
-#include "brpc/builtin/common.h"
 #include "brpc/builtin/connections_service.h"
-
+#include <gflags/gflags.h>
+#include <netinet/tcp.h>
+#include <iomanip>
+#include <ostream>
+#include "brpc/acceptor.h"  // Acceptor
+#include "brpc/builtin/common.h"
+#include "brpc/closure_guard.h"  // ClosureGuard
+#include "brpc/controller.h"     // Controller
+#include "brpc/nshead_service.h"
+#include "brpc/server.h"
+#include "brpc/socket_map.h"  // SocketMapList
 
 namespace brpc {
 
@@ -73,7 +71,7 @@ std::ostream& operator<<(std::ostream& os, const NameOfPoint& nop) {
 inline bool EndsWith(const std::string& str, const char* suffix) {
     const size_t len = strlen(suffix);
     return str.size() >= len &&
-        memcmp(str.data() + str.size() - len, suffix, len) == 0;
+           memcmp(str.data() + str.size() - len, suffix, len) == 0;
 }
 
 static std::string BriefName(const std::string& cname) {
@@ -108,49 +106,50 @@ static std::string BriefName(const std::string& cname) {
     return tmp;
 }
 
-void ConnectionsService::PrintConnections(
-    std::ostream& os, const std::vector<SocketId>& conns,
-    bool use_html, const Server* server, bool is_channel_conn) const {
+void ConnectionsService::PrintConnections(std::ostream& os,
+                                          const std::vector<SocketId>& conns,
+                                          bool use_html, const Server* server,
+                                          bool is_channel_conn) const {
     if (conns.empty()) {
         return;
     }
     if (use_html) {
         os << "<table class=\"gridtable sortable\" border=\"1\"><tr>"
-            "<th>CreatedTime</th>"
-            "<th>RemoteSide</th>";
+              "<th>CreatedTime</th>"
+              "<th>RemoteSide</th>";
         if (is_channel_conn) {
             os << "<th>Local</th>"
-                "<th>RecentErr</th>"
-                "<th>nbreak</th>";
+                  "<th>RecentErr</th>"
+                  "<th>nbreak</th>";
         }
         os << "<th>SSL</th>"
-            "<th>Protocol</th>"
-            "<th>fd</th>"
-            "<th>InBytes/s</th>"
-            "<th>In/s</th>"
-            "<th>InBytes/m</th>"
-            "<th>In/m</th>"
-            "<th>OutBytes/s</th>"
-            "<th>Out/s</th>"
-            "<th>OutBytes/m</th>"
-            "<th>Out/m</th>"
-            "<th>Rtt/Var(ms)</th>"
-            "<th>SocketId</th>"
-            "</tr>\n";
+              "<th>Protocol</th>"
+              "<th>fd</th>"
+              "<th>InBytes/s</th>"
+              "<th>In/s</th>"
+              "<th>InBytes/m</th>"
+              "<th>In/m</th>"
+              "<th>OutBytes/s</th>"
+              "<th>Out/s</th>"
+              "<th>OutBytes/m</th>"
+              "<th>Out/m</th>"
+              "<th>Rtt/Var(ms)</th>"
+              "<th>SocketId</th>"
+              "</tr>\n";
     } else {
         os << "CreatedTime               |RemoteSide         |";
         if (is_channel_conn) {
             os << "Local|RecentErr|nbreak|";
         }
         os << "SSL|Protocol    |fd   |"
-            "InBytes/s|In/s  |InBytes/m |In/m    |"
-            "OutBytes/s|Out/s |OutBytes/m|Out/m   |"
-            "Rtt/Var(ms)|SocketId\n";
+              "InBytes/s|In/s  |InBytes/m |In/m    |"
+              "OutBytes/s|Out/s |OutBytes/m|Out/m   |"
+              "Rtt/Var(ms)|SocketId\n";
     }
 
     const char* const bar = (use_html ? "</td><td>" : "|");
     SocketStat stat;
-    std::string nshead_service_name; // shared in following for iterations.
+    std::string nshead_service_name;  // shared in following for iterations.
     std::vector<SocketId> first_id;
     for (size_t i = 0; i < conns.size(); ++i) {
         const SocketId socket_id = conns[i];
@@ -167,7 +166,7 @@ void ConnectionsService::PrintConnections(
                 }
                 failed = true;
             }
-        }            
+        }
 
         if (use_html) {
             os << "<tr><td>";
@@ -180,18 +179,12 @@ void ConnectionsService::PrintConnections(
                    << min_width(ptr->recent_error_count(), 10) << bar
                    << min_width(ptr->isolated_times(), 7) << bar;
             }
-            os << min_width("-", 3) << bar
-               << min_width("-", 12) << bar
-               << min_width("-", 5) << bar
-               << min_width("-", 9) << bar
-               << min_width("-", 6) << bar
-               << min_width("-", 10) << bar
-               << min_width("-", 8) << bar
-               << min_width("-", 10) << bar
-               << min_width("-", 6) << bar
-               << min_width("-", 10) << bar
-               << min_width("-", 8) << bar
-               << min_width("-", 11) << bar;
+            os << min_width("-", 3) << bar << min_width("-", 12) << bar
+               << min_width("-", 5) << bar << min_width("-", 9) << bar
+               << min_width("-", 6) << bar << min_width("-", 10) << bar
+               << min_width("-", 8) << bar << min_width("-", 10) << bar
+               << min_width("-", 6) << bar << min_width("-", 10) << bar
+               << min_width("-", 8) << bar << min_width("-", 11) << bar;
         } else {
             {
                 SocketUniquePtr agent_sock;
@@ -206,7 +199,7 @@ void ConnectionsService::PrintConnections(
             SocketUniquePtr first_sub;
             int pooled_count = -1;
             if (ptr->HasSocketPool()) {
-                int numfree = 0;
+                int numfree     = 0;
                 int numinflight = 0;
                 if (ptr->GetPooledSocketStats(&numfree, &numinflight)) {
                     pooled_count = numfree + numinflight;
@@ -226,15 +219,17 @@ void ConnectionsService::PrintConnections(
                     server->options().nshead_service != NULL) {
                     if (nshead_service_name.empty()) {
                         nshead_service_name = BriefName(butil::class_name_str(
-                                *server->options().nshead_service));
+                            *server->options().nshead_service));
                     }
                     pref_prot = nshead_service_name.c_str();
                 }
             } else if (ptr->CreatedByConnect()) {
-                pref_prot = get_client_side_messenger()->NameOfProtocol(pref_index);
+                pref_prot =
+                    get_client_side_messenger()->NameOfProtocol(pref_index);
             }
             if (strcmp(pref_prot, "unknown") == 0) {
-                // Show unknown protocol as - to be consistent with other columns.
+                // Show unknown protocol as - to be consistent with other
+                // columns.
                 pref_prot = "-";
             } else if (strcmp(pref_prot, "h2") == 0) {
                 if (!ptr->is_ssl()) {
@@ -248,8 +243,8 @@ void ConnectionsService::PrintConnections(
                 rttfd = first_sub->fd();
             }
 
-            bool got_rtt = false;
-            uint32_t srtt = 0;
+            bool got_rtt     = false;
+            uint32_t srtt    = 0;
             uint32_t rtt_var = 0;
             // get rtt
 #if defined(OS_LINUX)
@@ -257,15 +252,16 @@ void ConnectionsService::PrintConnections(
             socklen_t len = sizeof(ti);
             if (0 == getsockopt(rttfd, SOL_TCP, TCP_INFO, &ti, &len)) {
                 got_rtt = true;
-                srtt = ti.tcpi_rtt;
+                srtt    = ti.tcpi_rtt;
                 rtt_var = ti.tcpi_rttvar;
             }
 #elif defined(OS_MACOSX)
             struct tcp_connection_info ti;
             socklen_t len = sizeof(ti);
-            if (0 == getsockopt(rttfd, IPPROTO_TCP, TCP_CONNECTION_INFO, &ti, &len)) {
+            if (0 == getsockopt(rttfd, IPPROTO_TCP, TCP_CONNECTION_INFO, &ti,
+                                &len)) {
                 got_rtt = true;
-                srtt = ti.tcpi_srtt;
+                srtt    = ti.tcpi_srtt;
                 rtt_var = ti.tcpi_rttvar;
             }
 #endif
@@ -329,26 +325,24 @@ void ConnectionsService::PrintConnections(
 
 void ConnectionsService::default_method(
     ::google::protobuf::RpcController* cntl_base,
-    const ::brpc::ConnectionsRequest*,
-    ::brpc::ConnectionsResponse*,
+    const ::brpc::ConnectionsRequest*, ::brpc::ConnectionsResponse*,
     ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
-    const Server* server = cntl->server();
-    Acceptor* am = server->_am;
+    Controller* cntl      = static_cast<Controller*>(cntl_base);
+    const Server* server  = cntl->server();
+    Acceptor* am          = server->_am;
     Acceptor* internal_am = server->_internal_am;
     butil::IOBufBuilder os;
     const bool use_html = UseHTML(cntl->http_request());
-    cntl->http_response().set_content_type(
-        use_html ? "text/html" : "text/plain");
+    cntl->http_response().set_content_type(use_html ? "text/html"
+                                                    : "text/plain");
 
     if (use_html) {
         os << "<!DOCTYPE html><html><head>\n"
-           << gridtable_style()
-           << "<script src=\"/js/sorttable\"></script>\n"
-           << "<script language=\"javascript\" type=\"text/javascript\" src=\"/js/jquery_min\"></script>\n"
-           << TabsHead()
-           << "</head><body>";
+           << gridtable_style() << "<script src=\"/js/sorttable\"></script>\n"
+           << "<script language=\"javascript\" type=\"text/javascript\" "
+              "src=\"/js/jquery_min\"></script>\n"
+           << TabsHead() << "</head><body>";
         server->PrintTabsBody(os, "connections");
     }
 
@@ -379,33 +373,33 @@ void ConnectionsService::default_method(
         conns.insert(conns.end(), internal_conns.begin(), internal_conns.end());
     }
     os << "server_connection_count: " << num_conns << '\n';
-    PrintConnections(os, conns, use_html, server, false/*is_channel_conn*/);
+    PrintConnections(os, conns, use_html, server, false /*is_channel_conn*/);
     if (has_uncopied) {
         // Notice that we don't put the link of givemeall directly because
         // people seeing the link are very likely to click it which may be
         // slow and should generally be avoided.
         os << "(Stop printing more connections... check out all connections"
-            " by appending \"?givemeall\" to the url of current page)"
+              " by appending \"?givemeall\" to the url of current page)"
            << (use_html ? "<br>\n" : "\n");
     }
 
     SocketMapList(&conns);
     os << (use_html ? "<br>\n" : "\n")
        << "channel_connection_count: " << GetChannelConnectionCount() << '\n';
-    PrintConnections(os, conns, use_html, server, true/*is_channel_conn*/);
+    PrintConnections(os, conns, use_html, server, true /*is_channel_conn*/);
 
     if (use_html) {
         os << "</body></html>\n";
     }
-    
+
     os.move_to(cntl->response_attachment());
     cntl->set_response_compress_type(COMPRESS_TYPE_GZIP);
 }
 
 void ConnectionsService::GetTabInfo(TabInfoList* info_list) const {
-    TabInfo* info = info_list->add();
-    info->path = "/connections";
+    TabInfo* info  = info_list->add();
+    info->path     = "/connections";
     info->tab_name = "connections";
 }
 
-} // namespace brpc
+}  // namespace brpc

@@ -39,7 +39,7 @@ namespace internal {
 
 class WorkingMemory {
 public:
-    WorkingMemory() : large_table_(NULL) { }
+    WorkingMemory() : large_table_(NULL) {}
     ~WorkingMemory() { delete[] large_table_; }
 
     // Allocates and clears a hash table using memory in "*this",
@@ -48,7 +48,7 @@ public:
     uint16_t* GetHashTable(size_t input_size, int* table_size);
 
 private:
-    uint16_t small_table_[1<<10];    // 2KB
+    uint16_t small_table_[1 << 10];  // 2KB
     uint16_t* large_table_;          // Allocated only when needed
 
     DISALLOW_COPY_AND_ASSIGN(WorkingMemory);
@@ -65,11 +65,8 @@ private:
 //
 // Returns an "end" pointer into "op" buffer.
 // "end - op" is the compressed size of "input".
-char* CompressFragment(const char* input,
-                       size_t input_length,
-                       char* op,
-                       uint16_t* table,
-                       const int table_size);
+char* CompressFragment(const char* input, size_t input_length, char* op,
+                       uint16_t* table, const int table_size);
 
 // Return the largest n such that
 //
@@ -83,8 +80,7 @@ char* CompressFragment(const char* input,
 // Separate implementation for x86_64, for speed.  Uses the fact that
 // x86_64 is little endian.
 #if defined(ARCH_K8)
-static inline int FindMatchLength(const char* s1,
-                                  const char* s2,
+static inline int FindMatchLength(const char* s1, const char* s2,
                                   const char* s2_limit) {
     assert(s2_limit >= s2);
     int matched = 0;
@@ -119,8 +115,7 @@ static inline int FindMatchLength(const char* s1,
     return matched;
 }
 #else
-static inline int FindMatchLength(const char* s1,
-                                  const char* s2,
+static inline int FindMatchLength(const char* s1, const char* s2,
                                   const char* s2_limit) {
     // Implementation based on the x86-64 version, above.
     assert(s2_limit >= s2);

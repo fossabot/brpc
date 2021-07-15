@@ -15,9 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #include "brpc/details/load_balancer_with_naming.h"
-
 
 namespace brpc {
 
@@ -65,4 +63,4 @@ void LoadBalancerWithNaming::Describe(std::ostream& os,
     SharedLoadBalancer::Describe(os, options);
 }
 
-} // namespace brpc
+}  // namespace brpc

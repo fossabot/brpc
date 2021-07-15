@@ -15,33 +15,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <cstring>
-#include <strings.h>
-#include "butil/string_printf.h"
-#include "butil/logging.h"
-#include "butil/strings/string_number_conversions.h"
 #include "brpc/adaptive_max_concurrency.h"
+#include <strings.h>
+#include <cstring>
+#include "butil/logging.h"
+#include "butil/string_printf.h"
+#include "butil/strings/string_number_conversions.h"
 
 namespace brpc {
 
 AdaptiveMaxConcurrency::AdaptiveMaxConcurrency()
-    : _value(UNLIMITED())
-    , _max_concurrency(0) {
-}
+    : _value(UNLIMITED()), _max_concurrency(0) {}
 
 AdaptiveMaxConcurrency::AdaptiveMaxConcurrency(int max_concurrency)
     : _max_concurrency(0) {
     if (max_concurrency <= 0) {
-        _value = UNLIMITED();
+        _value           = UNLIMITED();
         _max_concurrency = 0;
     } else {
-        _value = butil::string_printf("%d", max_concurrency);
+        _value           = butil::string_printf("%d", max_concurrency);
         _max_concurrency = max_concurrency;
     }
 }
 
-inline bool CompareStringPieceWithoutCase(
-    const butil::StringPiece& s1, const char* s2) {
+inline bool CompareStringPieceWithoutCase(const butil::StringPiece& s1,
+                                          const char* s2) {
     DCHECK(s2 != NULL);
     if (std::strlen(s2) != s1.size()) {
         return false;
@@ -72,10 +70,10 @@ void AdaptiveMaxConcurrency::operator=(const butil::StringPiece& value) {
 
 void AdaptiveMaxConcurrency::operator=(int max_concurrency) {
     if (max_concurrency <= 0) {
-        _value = UNLIMITED();
+        _value           = UNLIMITED();
         _max_concurrency = 0;
     } else {
-        _value = butil::string_printf("%d", max_concurrency);
+        _value           = butil::string_printf("%d", max_concurrency);
         _max_concurrency = max_concurrency;
     }
 }
@@ -102,7 +100,7 @@ const std::string& AdaptiveMaxConcurrency::CONSTANT() {
 
 bool operator==(const AdaptiveMaxConcurrency& adaptive_concurrency,
                 const butil::StringPiece& concurrency) {
-    return CompareStringPieceWithoutCase(concurrency, 
+    return CompareStringPieceWithoutCase(concurrency,
                                          adaptive_concurrency.value().c_str());
 }
 

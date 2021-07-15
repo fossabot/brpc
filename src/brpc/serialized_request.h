@@ -15,13 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_SERIALIZED_REQUEST_H
 #define BRPC_SERIALIZED_REQUEST_H
 
 #include <google/protobuf/message.h>
-#include "butil/iobuf.h"
 #include "brpc/proto_base.pb.h"
+#include "butil/iobuf.h"
 
 namespace brpc {
 
@@ -29,20 +28,20 @@ class SerializedRequest : public ::google::protobuf::Message {
 public:
     SerializedRequest();
     virtual ~SerializedRequest();
-  
+
     SerializedRequest(const SerializedRequest& from);
-  
+
     inline SerializedRequest& operator=(const SerializedRequest& from) {
         CopyFrom(from);
         return *this;
     }
-  
+
     static const ::google::protobuf::Descriptor* descriptor();
-  
+
     void Swap(SerializedRequest* other);
-  
+
     // implements Message ----------------------------------------------
-  
+
     SerializedRequest* New() const;
     void CopyFrom(const ::google::protobuf::Message& from);
     void CopyFrom(const SerializedRequest& from);
@@ -55,7 +54,7 @@ public:
 
 protected:
     ::google::protobuf::Metadata GetMetadata() const;
-    
+
 private:
     bool MergePartialFromCodedStream(
         ::google::protobuf::io::CodedInputStream* input);
@@ -68,12 +67,11 @@ private:
     void SharedCtor();
     void SharedDtor();
     void SetCachedSize(int size) const;
-  
+
 private:
     butil::IOBuf _serialized;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_SERIALIZED_REQUEST_H

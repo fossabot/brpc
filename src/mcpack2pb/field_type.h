@@ -29,11 +29,11 @@ namespace mcpack2pb {
 
 enum FieldType {
     // NOTE: All names end with 0 and all name_size count 0.
-    
+
     // Group of fields.
     // | FieldLongHead | Name | ItemsHead | Item1 | Item2 | ...
     FIELD_OBJECT = 0x10,
-    FIELD_ARRAY = 0x20,
+    FIELD_ARRAY  = 0x20,
 
     // Isomorphic array of primitive type. Notice that the items are values
     // without any header. E.g. If type is int32_t, an items occupies 4 bytes.
@@ -57,19 +57,20 @@ enum FieldType {
 
     // Primitive types.
     // | FieldFixedHead | Name | Value |
-    FIELD_INT8 = 0x11,
-    FIELD_INT16 = 0x12,
-    FIELD_INT32 = 0x14,
-    FIELD_INT64 = 0x18,
-    FIELD_UINT8 = 0x21,
+    FIELD_INT8   = 0x11,
+    FIELD_INT16  = 0x12,
+    FIELD_INT32  = 0x14,
+    FIELD_INT64  = 0x18,
+    FIELD_UINT8  = 0x21,
     FIELD_UINT16 = 0x22,
     FIELD_UINT32 = 0x24,
     FIELD_UINT64 = 0x28,
-    FIELD_BOOL = 0x31,
-    FIELD_FLOAT = 0x44,
+    FIELD_BOOL   = 0x31,
+    FIELD_FLOAT  = 0x44,
     FIELD_DOUBLE = 0x48,
-    
-    // TODO(gejun): Don't know what this is. Seems to be timestamp, but grep nothing
+
+    // TODO(gejun): Don't know what this is. Seems to be timestamp, but grep
+    // nothing
     // from public/idlcompiler and public/mcpack
     FIELD_DATE = 0x58,
 
@@ -81,9 +82,7 @@ enum FieldType {
 // Get description of the type.
 const char* type2str(FieldType type);
 
-inline const char* type2str(uint8_t type) {
-    return type2str((FieldType)type);
-}
+inline const char* type2str(uint8_t type) { return type2str((FieldType)type); }
 
 // Masks of types.
 // String <= 254 or BinaryData <= 255 may have this bit set to save 3 bytes.
@@ -105,16 +104,16 @@ static const FieldType FIELD_UNKNOWN = (FieldType)0;
 static const int MAX_DEPTH = 128;
 
 enum PrimitiveFieldType {
-    PRIMITIVE_FIELD_INT8 = FIELD_INT8,
-    PRIMITIVE_FIELD_INT16 = FIELD_INT16,
-    PRIMITIVE_FIELD_INT32 = FIELD_INT32,
-    PRIMITIVE_FIELD_INT64 = FIELD_INT64,
-    PRIMITIVE_FIELD_UINT8 = FIELD_UINT8,
+    PRIMITIVE_FIELD_INT8   = FIELD_INT8,
+    PRIMITIVE_FIELD_INT16  = FIELD_INT16,
+    PRIMITIVE_FIELD_INT32  = FIELD_INT32,
+    PRIMITIVE_FIELD_INT64  = FIELD_INT64,
+    PRIMITIVE_FIELD_UINT8  = FIELD_UINT8,
     PRIMITIVE_FIELD_UINT16 = FIELD_UINT16,
     PRIMITIVE_FIELD_UINT32 = FIELD_UINT32,
     PRIMITIVE_FIELD_UINT64 = FIELD_UINT64,
-    PRIMITIVE_FIELD_BOOL = FIELD_BOOL,
-    PRIMITIVE_FIELD_FLOAT = FIELD_FLOAT,
+    PRIMITIVE_FIELD_BOOL   = FIELD_BOOL,
+    PRIMITIVE_FIELD_FLOAT  = FIELD_FLOAT,
     PRIMITIVE_FIELD_DOUBLE = FIELD_DOUBLE
 };
 
@@ -125,9 +124,7 @@ inline const char* type2str(PrimitiveFieldType type) {
     return type2str((FieldType)type);
 }
 
-inline bool is_primitive(FieldType type) {
-    return type & 0xF;
-}
+inline bool is_primitive(FieldType type) { return type & 0xF; }
 
 inline bool is_integral(PrimitiveFieldType type) {
     return (type & 0xF0) < 0x40;
@@ -141,10 +138,8 @@ inline size_t get_primitive_type_size(PrimitiveFieldType type) {
     return (type & 0xF);
 }
 
-inline size_t get_primitive_type_size(FieldType type) {
-    return (type & 0xF);
-}
+inline size_t get_primitive_type_size(FieldType type) { return (type & 0xF); }
 
-} // namespace mcpack2pb
+}  // namespace mcpack2pb
 
-#endif // MCPACK2PB_MCPACK_FIELD_TYPE_H
+#endif  // MCPACK2PB_MCPACK_FIELD_TYPE_H

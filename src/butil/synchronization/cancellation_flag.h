@@ -5,8 +5,8 @@
 #ifndef BUTIL_SYNCHRONIZATION_CANCELLATION_FLAG_H_
 #define BUTIL_SYNCHRONIZATION_CANCELLATION_FLAG_H_
 
-#include "butil/base_export.h"
 #include "butil/atomicops.h"
+#include "butil/base_export.h"
 #include "butil/threading/platform_thread.h"
 
 namespace butil {
@@ -17,25 +17,25 @@ namespace butil {
 //
 // This class IS NOT intended for synchronization between threads.
 class BUTIL_EXPORT CancellationFlag {
- public:
-  CancellationFlag() : flag_(false) {
+public:
+    CancellationFlag() : flag_(false) {
 #if !defined(NDEBUG)
-    set_on_ = PlatformThread::CurrentId();
+        set_on_ = PlatformThread::CurrentId();
 #endif
-  }
-  ~CancellationFlag() {}
+    }
+    ~CancellationFlag() {}
 
-  // Set the flag. May only be called on the thread which owns the object.
-  void Set();
-  bool IsSet() const;  // Returns true iff the flag was set.
+    // Set the flag. May only be called on the thread which owns the object.
+    void Set();
+    bool IsSet() const;  // Returns true iff the flag was set.
 
- private:
-  butil::subtle::Atomic32 flag_;
+private:
+    butil::subtle::Atomic32 flag_;
 #if !defined(NDEBUG)
-  PlatformThreadId set_on_;
+    PlatformThreadId set_on_;
 #endif
 
-  DISALLOW_COPY_AND_ASSIGN(CancellationFlag);
+    DISALLOW_COPY_AND_ASSIGN(CancellationFlag);
 };
 
 }  // namespace butil

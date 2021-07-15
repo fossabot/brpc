@@ -15,14 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef _HEALTH_CHECK_H
 #define _HEALTH_CHECK_H
 
-#include "brpc/socket_id.h"
 #include "brpc/periodic_task.h"
-#include "bvar/bvar.h"
 #include "brpc/socket.h"
+#include "brpc/socket_id.h"
+#include "bvar/bvar.h"
 
 namespace brpc {
 
@@ -31,6 +30,6 @@ namespace brpc {
 // immediately.
 void StartHealthCheck(SocketId id, int64_t delay_ms);
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif

@@ -17,8 +17,8 @@
 
 #ifdef BAIDU_INTERNAL
 
-#ifndef  BRPC_POLICY_BAIDU_NAMING_SERVICE_H
-#define  BRPC_POLICY_BAIDU_NAMING_SERVICE_H
+#ifndef BRPC_POLICY_BAIDU_NAMING_SERVICE_H
+#define BRPC_POLICY_BAIDU_NAMING_SERVICE_H
 
 #include "brpc/periodic_naming_service.h"
 
@@ -31,18 +31,17 @@ public:
     // You can specify port by appending port selector:
     // e.g.: bns://DPOP-inner-API-inner-API.jpaas.hosts:main
     //                                                 ^^^^^
-    int GetServers(const char *service_name,
-                   std::vector<ServerNode>* servers);
-    
+    int GetServers(const char* service_name, std::vector<ServerNode>* servers);
+
     void Describe(std::ostream& os, const DescribeOptions&) const;
-    
+
     NamingService* New() const;
-    
+
     void Destroy();
 };
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
-#endif //BRPC_POLICY_BAIDU_NAMING_SERVICE_H
-#endif // BAIDU_INTERNAL
+#endif  // BRPC_POLICY_BAIDU_NAMING_SERVICE_H
+#endif  // BAIDU_INTERNAL

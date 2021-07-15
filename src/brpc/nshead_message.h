@@ -15,14 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_NSHEAD_MESSAGE_H
 #define BRPC_NSHEAD_MESSAGE_H
 
 #include <google/protobuf/message.h>
-#include "brpc/nshead.h"                     // nshead_t
-#include "butil/iobuf.h"                     // IOBuf
+#include "brpc/nshead.h"  // nshead_t
 #include "brpc/proto_base.pb.h"
+#include "butil/iobuf.h"  // IOBuf
 
 namespace brpc {
 
@@ -31,24 +30,24 @@ class NsheadMessage : public ::google::protobuf::Message {
 public:
     nshead_t head;
     butil::IOBuf body;
-    
+
 public:
     NsheadMessage();
     virtual ~NsheadMessage();
-  
+
     NsheadMessage(const NsheadMessage& from);
-  
+
     inline NsheadMessage& operator=(const NsheadMessage& from) {
         CopyFrom(from);
         return *this;
     }
-  
+
     static const ::google::protobuf::Descriptor* descriptor();
-  
+
     void Swap(NsheadMessage* other);
-  
+
     // implements Message ----------------------------------------------
-  
+
     NsheadMessage* New() const;
     void CopyFrom(const ::google::protobuf::Message& from);
     void MergeFrom(const ::google::protobuf::Message& from);
@@ -56,13 +55,14 @@ public:
     void MergeFrom(const NsheadMessage& from);
     void Clear();
     bool IsInitialized() const;
-  
+
     int ByteSize() const;
     bool MergePartialFromCodedStream(
         ::google::protobuf::io::CodedInputStream* input);
     void SerializeWithCachedSizes(
         ::google::protobuf::io::CodedOutputStream* output) const;
-    ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+    ::google::protobuf::uint8* SerializeWithCachedSizesToArray(
+        ::google::protobuf::uint8* output) const;
     int GetCachedSize() const { return ByteSize(); }
 
 protected:
@@ -73,7 +73,6 @@ private:
     void SharedDtor();
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_NSHEAD_MESSAGE_H

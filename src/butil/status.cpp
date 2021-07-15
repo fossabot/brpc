@@ -17,16 +17,17 @@
 
 // Date: Mon Feb  9 15:04:03 CST 2015
 
-#include <stdio.h>
 #include "butil/status.h"
+#include <stdio.h>
 
 namespace butil {
 
 inline size_t status_size(size_t message_size) {
     // Add 1 because even if the sum of size is aligned with int, we need to
     // put an ending '\0'
-    return ((offsetof(Status::State, message) + message_size)
-            / sizeof(int) + 1) * sizeof(int);
+    return ((offsetof(Status::State, message) + message_size) / sizeof(int) +
+            1) *
+           sizeof(int);
 }
 
 int Status::set_errorv(int c, const char* fmt, va_list args) {
@@ -36,18 +37,18 @@ int Status::set_errorv(int c, const char* fmt, va_list args) {
         return 0;
     }
     State* new_state = NULL;
-    State* state = NULL;
+    State* state     = NULL;
     if (_state != NULL) {
         state = _state;
     } else {
         const size_t guess_size = std::max(strlen(fmt) * 2, 32UL);
-        const size_t st_size = status_size(guess_size);
-        new_state = reinterpret_cast<State*>(malloc(st_size));
+        const size_t st_size    = status_size(guess_size);
+        new_state               = reinterpret_cast<State*>(malloc(st_size));
         if (NULL == new_state) {
             return -1;
         }
         new_state->state_size = st_size;
-        state = new_state;
+        state                 = new_state;
     }
     const size_t cap = state->state_size - offsetof(State, message);
     va_list copied_args;
@@ -68,12 +69,12 @@ int Status::set_errorv(int c, const char* fmt, va_list args) {
     } else {
         free(new_state);
         const size_t st_size = status_size(bytes_used);
-        new_state = reinterpret_cast<State*>(malloc(st_size));
+        new_state            = reinterpret_cast<State*>(malloc(st_size));
         if (NULL == new_state) {
             return -1;
         }
-        new_state->code = c;
-        new_state->size = bytes_used;
+        new_state->code       = c;
+        new_state->size       = bytes_used;
         new_state->state_size = st_size;
         const int bytes_used2 =
             vsnprintf(new_state->message, bytes_used + 1, fmt, args);
@@ -112,13 +113,13 @@ int Status::set_error(int c, const butil::StringPiece& error_msg) {
 
 Status::State* Status::copy_state(const State* s) {
     const size_t n = status_size(s->size);
-    State* s2 = reinterpret_cast<State*>(malloc(n));
+    State* s2      = reinterpret_cast<State*>(malloc(n));
     if (NULL == s2) {
         // TODO: If we failed to allocate, the status will be OK.
         return NULL;
     }
-    s2->code = s->code;
-    s2->size = s->size;
+    s2->code       = s->code;
+    s2->size       = s->size;
     s2->state_size = n;
     char* msg_head = s2->message;
     memcpy(msg_head, s->message, s->size);

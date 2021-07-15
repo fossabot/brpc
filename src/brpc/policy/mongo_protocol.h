@@ -18,21 +18,20 @@
 #ifndef BRPC_POLICY_MONGO_PROTOCOL_H
 #define BRPC_POLICY_MONGO_PROTOCOL_H
 
-#include "brpc/protocol.h"
 #include "brpc/input_messenger.h"
-
+#include "brpc/protocol.h"
 
 namespace brpc {
 namespace policy {
 
 // Parse binary format of mongo
-ParseResult ParseMongoMessage(butil::IOBuf* source, Socket* socket, bool read_eof, const void *arg);
+ParseResult ParseMongoMessage(butil::IOBuf* source, Socket* socket,
+                              bool read_eof, const void* arg);
 
 // Actions to a (client) request in mongo format
 void ProcessMongoRequest(InputMessageBase* msg);
 
-} // namespace policy
-} // namespace brpc
+}  // namespace policy
+}  // namespace brpc
 
-
-#endif // BRPC_POLICY_MONGO_PROTOCOL_H
+#endif  // BRPC_POLICY_MONGO_PROTOCOL_H

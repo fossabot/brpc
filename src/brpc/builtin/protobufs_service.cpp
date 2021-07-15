@@ -15,15 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <google/protobuf/descriptor.h>     // ServiceDescriptor
-#include "brpc/controller.h"           // Controller
-#include "brpc/server.h"               // Server
-#include "brpc/closure_guard.h"        // ClosureGuard
-#include "brpc/details/method_status.h"// MethodStatus
 #include "brpc/builtin/protobufs_service.h"
+#include <google/protobuf/descriptor.h>  // ServiceDescriptor
 #include "brpc/builtin/common.h"
-
+#include "brpc/closure_guard.h"          // ClosureGuard
+#include "brpc/controller.h"             // Controller
+#include "brpc/details/method_status.h"  // MethodStatus
+#include "brpc/server.h"                 // Server
 
 namespace brpc {
 
@@ -32,17 +30,17 @@ ProtobufsService::ProtobufsService(Server* server) : _server(server) {
 }
 
 int ProtobufsService::Init() {
-    Server::ServiceMap &services = _server->_fullname_service_map;
+    Server::ServiceMap& services = _server->_fullname_service_map;
     std::vector<const google::protobuf::Descriptor*> stack;
     stack.reserve(services.size() * 3);
-    for (Server::ServiceMap::iterator 
-            iter = services.begin(); iter != services.end(); ++iter) {
+    for (Server::ServiceMap::iterator iter = services.begin();
+         iter != services.end(); ++iter) {
         if (!iter->second.is_user_service()) {
             continue;
         }
         const google::protobuf::ServiceDescriptor* d =
             iter->second.service->GetDescriptor();
-        _map[d->full_name()] = d->DebugString();
+        _map[d->full_name()]   = d->DebugString();
         const int method_count = d->method_count();
         for (int j = 0; j < method_count; ++j) {
             const google::protobuf::MethodDescriptor* md = d->method(j);
@@ -68,21 +66,20 @@ int ProtobufsService::Init() {
     return 0;
 }
 
-void ProtobufsService::default_method(::google::protobuf::RpcController* cntl_base,
-                                   const ProtobufsRequest*,
-                                   ProtobufsResponse*,
-                                   ::google::protobuf::Closure* done) {
+void ProtobufsService::default_method(
+    ::google::protobuf::RpcController* cntl_base, const ProtobufsRequest*,
+    ProtobufsResponse*, ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
+    Controller* cntl = static_cast<Controller*>(cntl_base);
     butil::IOBufBuilder os;
     const std::string& filter = cntl->http_request().unresolved_path();
     if (filter.empty()) {
         const bool use_html = UseHTML(cntl->http_request());
-        cntl->http_response().set_content_type(
-            use_html ? "text/html" : "text/plain");
+        cntl->http_response().set_content_type(use_html ? "text/html"
+                                                        : "text/plain");
         if (use_html) {
             os << "<!DOCTYPE html><html><head></head><body>\n";
-        }    
+        }
         // list all structures.
         for (Map::iterator it = _map.begin(); it != _map.end(); ++it) {
             if (use_html) {
@@ -112,4 +109,4 @@ void ProtobufsService::default_method(::google::protobuf::RpcController* cntl_ba
     os.move_to(cntl->response_attachment());
 }
 
-} // namespace brpc
+}  // namespace brpc

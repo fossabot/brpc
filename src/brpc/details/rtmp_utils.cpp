@@ -15,9 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #include "brpc/details/rtmp_utils.h"
-
 
 namespace brpc {
 
@@ -57,4 +55,4 @@ int avc_nalu_read_bit(BitStream* stream, int8_t* v) {
     return 0;
 }
 
-} // namespace brpc
+}  // namespace brpc

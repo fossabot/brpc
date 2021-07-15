@@ -22,10 +22,10 @@
 #ifndef BTHREAD_BUTEX_H
 #define BTHREAD_BUTEX_H
 
-#include <errno.h>                               // users need to check errno
-#include <time.h>                                // timespec
-#include "butil/macros.h"                         // BAIDU_CASSERT
-#include "bthread/types.h"                       // bthread_t
+#include <errno.h>          // users need to check errno
+#include <time.h>           // timespec
+#include "bthread/types.h"  // bthread_t
+#include "butil/macros.h"   // BAIDU_CASSERT
 
 namespace bthread {
 
@@ -36,7 +36,8 @@ namespace bthread {
 void* butex_create();
 
 // Check width of user type before casting.
-template <typename T> T* butex_create_checked() {
+template <typename T>
+T* butex_create_checked() {
     BAIDU_CASSERT(sizeof(T) == sizeof(int), sizeof_T_must_equal_int);
     return static_cast<T*>(butex_create());
 }

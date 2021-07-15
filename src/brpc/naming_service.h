@@ -15,19 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_NAMING_SERVICE_H
 #define BRPC_NAMING_SERVICE_H
 
-#include <vector>                                   // std::vector
-#include <string>                                   // std::string
-#include <ostream>                                  // std::ostream
-#include "butil/endpoint.h"                         // butil::EndPoint
-#include "butil/macros.h"                           // BAIDU_CONCAT
+#include <ostream>  // std::ostream
+#include <string>   // std::string
+#include <vector>   // std::vector
 #include "brpc/describable.h"
 #include "brpc/destroyable.h"
-#include "brpc/extension.h"                         // Extension<T>
-#include "brpc/server_node.h"                       // ServerNode
+#include "brpc/extension.h"    // Extension<T>
+#include "brpc/server_node.h"  // ServerNode
+#include "butil/endpoint.h"    // butil::EndPoint
+#include "butil/macros.h"      // BAIDU_CONCAT
 
 namespace brpc {
 
@@ -36,14 +35,14 @@ namespace brpc {
 class NamingServiceActions {
 public:
     virtual ~NamingServiceActions() {}
-    virtual void AddServers(const std::vector<ServerNode>& servers) = 0;
+    virtual void AddServers(const std::vector<ServerNode>& servers)    = 0;
     virtual void RemoveServers(const std::vector<ServerNode>& servers) = 0;
-    virtual void ResetServers(const std::vector<ServerNode>& servers) = 0;
+    virtual void ResetServers(const std::vector<ServerNode>& servers)  = 0;
 };
 
 // Mapping a name to ServerNodes.
 class NamingService : public Describable, public Destroyable {
-public:    
+public:
     // Implement this method to get servers associated with `service_name'
     // in periodic or event-driven manner, call methods of `actions' to
     // tell RPC system about server changes. This method will be run in
@@ -72,6 +71,6 @@ inline Extension<const NamingService>* NamingServiceExtension() {
     return Extension<const NamingService>::instance();
 }
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_NAMING_SERVICE_H

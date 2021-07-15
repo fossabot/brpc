@@ -15,22 +15,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "butil/build_config.h"                       // OS_MACOSX
-#include <netdb.h>                                    // gethostbyname_r
-#include <stdlib.h>                                   // strtol
-#include <string>                                     // std::string
-#include "bthread/bthread.h"
-#include "brpc/log.h"
 #include "brpc/policy/domain_naming_service.h"
-
+#include <netdb.h>   // gethostbyname_r
+#include <stdlib.h>  // strtol
+#include <string>    // std::string
+#include "brpc/log.h"
+#include "bthread/bthread.h"
+#include "butil/build_config.h"  // OS_MACOSX
 
 namespace brpc {
 namespace policy {
 
 DomainNamingService::DomainNamingService(int default_port)
-    : _aux_buf_len(0)
-    , _default_port(default_port) {}
+    : _aux_buf_len(0), _default_port(default_port) {}
 
 int DomainNamingService::GetServers(const char* dns_name,
                                     std::vector<ServerNode>* servers) {
@@ -43,28 +40,30 @@ int DomainNamingService::GetServers(const char* dns_name,
     // Should be enough to hold host name
     char buf[128];
     size_t i = 0;
-    for (; i < sizeof(buf) - 1 && dns_name[i] != '\0'
-             && dns_name[i] != ':' && dns_name[i] != '/'; ++i) {
+    for (; i < sizeof(buf) - 1 && dns_name[i] != '\0' && dns_name[i] != ':' &&
+           dns_name[i] != '/';
+         ++i) {
         buf[i] = dns_name[i];
     }
     if (i == sizeof(buf) - 1) {
         LOG(ERROR) << "dns_name=`" << dns_name << "' is too long";
         return -1;
     }
-    
-    buf[i] = '\0';
+
+    buf[i]   = '\0';
     int port = _default_port;
     if (dns_name[i] == ':') {
         ++i;
         char* end = NULL;
-        port = strtol(dns_name + i, &end, 10);
+        port      = strtol(dns_name + i, &end, 10);
         if (end == dns_name + i) {
             LOG(ERROR) << "No port after colon in `" << dns_name << '\'';
             return -1;
         } else if (*end != '\0') {
             if (*end != '/') {
-                LOG(ERROR) << "Invalid content=`" << end << "' after port="
-                           << port << " in `" << dns_name << '\'';
+                LOG(ERROR) << "Invalid content=`" << end
+                           << "' after port=" << port << " in `" << dns_name
+                           << '\'';
                 return -1;
             }
             // Drop path and other stuff.
@@ -79,7 +78,7 @@ int DomainNamingService::GetServers(const char* dns_name,
     }
 
 #if defined(OS_MACOSX)
-    _aux_buf_len = 0; // suppress unused warning
+    _aux_buf_len = 0;  // suppress unused warning
     // gethostbyname on MAC is thread-safe (with current usage) since the
     // returned hostent is TLS. Check following link for the ref:
     // https://lists.apple.com/archives/darwin-dev/2006/May/msg00008.html
@@ -93,16 +92,16 @@ int DomainNamingService::GetServers(const char* dns_name,
         _aux_buf_len = 1024;
         _aux_buf.reset(new char[_aux_buf_len]);
     }
-    int ret = 0;
+    int ret   = 0;
     int error = 0;
     struct hostent ent;
     struct hostent* result = NULL;
     do {
         result = NULL;
-        error = 0;
-        ret = gethostbyname_r(buf, &ent, _aux_buf.get(), _aux_buf_len,
-                              &result, &error);
-        if (ret != ERANGE) { // _aux_buf is not long enough
+        error  = 0;
+        ret = gethostbyname_r(buf, &ent, _aux_buf.get(), _aux_buf_len, &result,
+                              &error);
+        if (ret != ERANGE) {  // _aux_buf is not long enough
             break;
         }
         _aux_buf_len *= 2;
@@ -137,8 +136,8 @@ int DomainNamingService::GetServers(const char* dns_name,
     return 0;
 }
 
-void DomainNamingService::Describe(
-    std::ostream& os, const DescribeOptions&) const {
+void DomainNamingService::Describe(std::ostream& os,
+                                   const DescribeOptions&) const {
     os << "http";
     return;
 }
@@ -147,9 +146,7 @@ NamingService* DomainNamingService::New() const {
     return new DomainNamingService(_default_port);
 }
 
-void DomainNamingService::Destroy() {
-    delete this;
-}
+void DomainNamingService::Destroy() { delete this; }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc

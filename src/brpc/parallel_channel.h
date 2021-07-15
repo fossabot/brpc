@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_PARALLEL_CHANNEL_H
 #define BRPC_PARALLEL_CHANNEL_H
 
@@ -23,30 +22,27 @@
 // on internal structures, use opaque pointers instead.
 
 #include <vector>
-#include "brpc/shared_object.h"
 #include "brpc/channel.h"
-
+#include "brpc/shared_object.h"
 
 namespace brpc {
 
 // Possible values of SubCall.flag, MUST be bitwise exclusive.
-static const int DELETE_REQUEST = 1;
-static const int DELETE_RESPONSE = 2;
+static const int DELETE_REQUEST   = 1;
+static const int DELETE_RESPONSE  = 2;
 static const int SKIP_SUB_CHANNEL = 4;
 
 // Return value of CallMapper
 struct SubCall {
     SubCall(const google::protobuf::MethodDescriptor* method2,
             const google::protobuf::Message* request2,
-            google::protobuf::Message* response2,
-            int flags2)
+            google::protobuf::Message* response2, int flags2)
         : method(method2)
         , request(request2)
         , response(response2)
-        , flags(flags2)
-    { }
+        , flags(flags2) {}
 
-    SubCall() : method(NULL), request(NULL), response(NULL), flags(0) { }
+    SubCall() : method(NULL), request(NULL), response(NULL), flags(0) {}
 
     // Returning this makes the call to ParallelChannel fail immediately.
     static SubCall Bad() { return SubCall(); }
@@ -59,14 +55,12 @@ struct SubCall {
     }
 
     // True if this object is constructed by Bad().
-    bool is_bad() const {
-        return request == NULL || response == NULL;
-    }
+    bool is_bad() const { return request == NULL || response == NULL; }
 
     // True if this object is constructed by Skip().
     // true is_skip() implies true is_bad().
     bool is_skip() const { return flags & SKIP_SUB_CHANNEL; }
-            
+
     const google::protobuf::MethodDescriptor* method;
     const google::protobuf::Message* request;
     google::protobuf::Message* response;
@@ -93,18 +87,20 @@ struct SubCall {
 //                  response->add_sub_response(), 0);
 class CallMapper : public SharedObject {
 public:
-    virtual SubCall Map(int channel_index/*starting from 0*/,
+    virtual SubCall Map(int channel_index /*starting from 0*/,
                         const google::protobuf::MethodDescriptor* method,
                         const google::protobuf::Message* request,
                         google::protobuf::Message* response) = 0;
+
 protected:
     // Only callable by subclasses and butil::intrusive_ptr
     virtual ~CallMapper() {}
 };
 
 // Clone req_base typed `Req'.
-template <typename Req> Req* Clone(const google::protobuf::Message* req_base) {
-    const Req* req = dynamic_cast<const Req*>(req_base);
+template <typename Req>
+Req* Clone(const google::protobuf::Message* req_base) {
+    const Req* req  = dynamic_cast<const Req*>(req_base);
     Req* copied_req = req->New();
     copied_req->MergeFrom(*req);
     return copied_req;
@@ -116,7 +112,7 @@ public:
     enum Result {
         // the response was merged successfully
         MERGED,
-        
+
         // the sub_response was not merged and will be counted as one failure.
         // e.g. 10 sub channels & fail_limit=4, 3 failed before merging, 1
         // failed after merging, the rpc call will be treated as 4 sub
@@ -127,18 +123,19 @@ public:
         FAIL_ALL
     };
 
-    ResponseMerger() { }
+    ResponseMerger() {}
     virtual Result Merge(google::protobuf::Message* response,
                          const google::protobuf::Message* sub_response) = 0;
+
 protected:
     // Only callable by subclasses and butil::intrusive_ptr
-    virtual ~ResponseMerger() { }
+    virtual ~ResponseMerger() {}
 };
 
 struct ParallelChannelOptions {
     // [NOTE] timeout of sub channels are disabled in ParallelChannel. Control
     // deadlines of RPC by this timeout_ms or Controller.set_timeout_ms()
-    // 
+    //
     // Max duration of RPC over this Channel. -1 means wait indefinitely.
     // Overridable by Controller.set_timeout_ms().
     // Default: 500 (milliseconds)
@@ -170,9 +167,10 @@ struct ParallelChannelOptions {
 // There's no separate retrying inside ParallelChannel. To retry, enable
 // retrying of sub channels.
 class ParallelChannel : public ChannelBase {
-friend class Controller;
+    friend class Controller;
+
 public:
-    ParallelChannel() { }
+    ParallelChannel() {}
     ~ParallelChannel();
 
     // Initialize ParallelChannel with `options'.
@@ -200,12 +198,10 @@ public:
     // CAUTION:
     //   AddChannel() during CallMethod() is thread-unsafe!
     // Returns 0 on success, -1 otherwise.
-    int AddChannel(ChannelBase* sub_channel,
-                   ChannelOwnership ownership,
-                   CallMapper* call_mapper,
-                   ResponseMerger* response_merger);
+    int AddChannel(ChannelBase* sub_channel, ChannelOwnership ownership,
+                   CallMapper* call_mapper, ResponseMerger* response_merger);
 
-    // Call `method' of the remote service with `request' as input, and 
+    // Call `method' of the remote service with `request' as input, and
     // `response' as output. `controller' contains options and extra data.
     // If `done' is not NULL, this method returns after request was sent
     // and `done->Run()' will be called when the call finishes, otherwise
@@ -218,7 +214,7 @@ public:
 
     // Number of sub channels.
     size_t channel_count() const { return _chans.size(); }
-    
+
     // Reset to the state that this channel was just constructed.
     // NOTE: fail_limit is kept.
     void Reset();
@@ -249,7 +245,6 @@ protected:
     ChannelList _chans;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_PARALLEL_CHANNEL_H

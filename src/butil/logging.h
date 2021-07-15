@@ -22,40 +22,40 @@
 #ifndef BUTIL_LOGGING_H_
 #define BUTIL_LOGGING_H_
 
-#include "butil/config.h"   // BRPC_WITH_GLOG
+#include "butil/config.h"  // BRPC_WITH_GLOG
 
 #include <inttypes.h>
-#include <string>
 #include <cstring>
 #include <sstream>
-#include "butil/macros.h"    // BAIDU_CONCAT
-#include "butil/atomicops.h" // Used by LOG_EVERY_N, LOG_FIRST_N etc
-#include "butil/time.h"      // gettimeofday_us()
+#include <string>
+#include "butil/atomicops.h"  // Used by LOG_EVERY_N, LOG_FIRST_N etc
+#include "butil/macros.h"     // BAIDU_CONCAT
+#include "butil/time.h"       // gettimeofday_us()
 
 #if BRPC_WITH_GLOG
-# include <glog/logging.h>
-# include <glog/raw_logging.h>
+#include <glog/logging.h>
+#include <glog/raw_logging.h>
 // define macros that not implemented in glog
-# ifndef DCHECK_IS_ON   // glog didn't define DCHECK_IS_ON in older version
-#  if defined(NDEBUG)
-#    define DCHECK_IS_ON() 0
-#  else
-#    define DCHECK_IS_ON() 1
-#  endif  // NDEBUG
-# endif // DCHECK_IS_ON
-# if DCHECK_IS_ON() 
-#  define DPLOG(...) PLOG(__VA_ARGS__)
-#  define DPLOG_IF(...) PLOG_IF(__VA_ARGS__)
-#  define DPCHECK(...) PCHECK(__VA_ARGS__)
-#  define DVPLOG(...) VLOG(__VA_ARGS__)
-# else 
-#  define DPLOG(...) DLOG(__VA_ARGS__)
-#  define DPLOG_IF(...) DLOG_IF(__VA_ARGS__)
-#  define DPCHECK(...) DCHECK(__VA_ARGS__)
-#  define DVPLOG(...) DVLOG(__VA_ARGS__)
-# endif
+#ifndef DCHECK_IS_ON  // glog didn't define DCHECK_IS_ON in older version
+#if defined(NDEBUG)
+#define DCHECK_IS_ON() 0
+#else
+#define DCHECK_IS_ON() 1
+#endif  // NDEBUG
+#endif  // DCHECK_IS_ON
+#if DCHECK_IS_ON()
+#define DPLOG(...) PLOG(__VA_ARGS__)
+#define DPLOG_IF(...) PLOG_IF(__VA_ARGS__)
+#define DPCHECK(...) PCHECK(__VA_ARGS__)
+#define DVPLOG(...) VLOG(__VA_ARGS__)
+#else
+#define DPLOG(...) DLOG(__VA_ARGS__)
+#define DPLOG_IF(...) DLOG_IF(__VA_ARGS__)
+#define DPCHECK(...) DCHECK(__VA_ARGS__)
+#define DVPLOG(...) DVLOG(__VA_ARGS__)
+#endif
 
-#define LOG_AT(severity, file, line)                                    \
+#define LOG_AT(severity, file, line) \
     google::LogMessage(file, line, google::severity).stream()
 
 #else
@@ -71,16 +71,16 @@
 #undef Max
 #undef Min
 #undef Exchange
-#endif // BAIDU_INTERNAL
+#endif  // BAIDU_INTERNAL
 
-#include <inttypes.h>
 #include <gflags/gflags_declare.h>
+#include <inttypes.h>
 
 #include "butil/base_export.h"
 #include "butil/basictypes.h"
+#include "butil/build_config.h"
 #include "butil/debug/debugger.h"
 #include "butil/strings/string_piece.h"
-#include "butil/build_config.h"
 #include "butil/synchronization/lock.h"
 //
 // Optional message capabilities
@@ -105,7 +105,6 @@
 //
 // If DebugMessage.exe is not found, the logging code will use a normal
 // MessageBox, potentially causing the problems discussed above.
-
 
 // Instructions
 // ------------
@@ -218,9 +217,9 @@ enum LoggingDestination {
 
     LOG_TO_ALL = LOG_TO_FILE | LOG_TO_SYSTEM_DEBUG_LOG,
 
-    // On Windows, use a file next to the exe; on POSIX platforms, where
-    // it may not even be possible to locate the executable on disk, use
-    // stderr.
+// On Windows, use a file next to the exe; on POSIX platforms, where
+// it may not even be possible to locate the executable on disk, use
+// stderr.
 #if defined(OS_WIN)
     LOG_DEFAULT = LOG_TO_FILE,
 #elif defined(OS_POSIX)
@@ -259,7 +258,7 @@ struct BUTIL_EXPORT LoggingSettings {
     OldFileDeletionState delete_old;
 };
 
-// Implementation of the InitLogging() method declared below. 
+// Implementation of the InitLogging() method declared below.
 BUTIL_EXPORT bool BaseInitLoggingImpl(const LoggingSettings& settings);
 
 // Sets the log file name and other global logging state. Calling this function
@@ -308,6 +307,7 @@ public:
     // Returns true to stop further processing.
     virtual bool OnLogMessage(int severity, const char* file, int line,
                               const butil::StringPiece& log_content) = 0;
+
 private:
     DISALLOW_COPY_AND_ASSIGN(LogSink);
 };
@@ -323,7 +323,8 @@ BUTIL_EXPORT LogSink* SetLogSink(LogSink* sink);
 class StringSink : public LogSink, public std::string {
 public:
     bool OnLogMessage(int severity, const char* file, int line,
-                 const butil::StringPiece& log_content) override;
+                      const butil::StringPiece& log_content) override;
+
 private:
     butil::Lock _lock;
 };
@@ -332,12 +333,12 @@ typedef int LogSeverity;
 const LogSeverity BLOG_VERBOSE = -1;  // This is level 1 verbosity
 // Note: the log severities are used to index into the array of names,
 // see log_severity_names.
-const LogSeverity BLOG_INFO = 0;
-const LogSeverity BLOG_NOTICE = 1;
+const LogSeverity BLOG_INFO    = 0;
+const LogSeverity BLOG_NOTICE  = 1;
 const LogSeverity BLOG_WARNING = 2;
-const LogSeverity BLOG_ERROR = 3;
-const LogSeverity BLOG_FATAL = 4;
-const int LOG_NUM_SEVERITIES = 5;
+const LogSeverity BLOG_ERROR   = 3;
+const LogSeverity BLOG_FATAL   = 4;
+const int LOG_NUM_SEVERITIES   = 5;
 
 // COMBLOG_TRACE is just INFO
 const LogSeverity BLOG_TRACE = BLOG_INFO;
@@ -346,7 +347,7 @@ const LogSeverity BLOG_TRACE = BLOG_INFO;
 #ifndef NDEBUG
 const LogSeverity BLOG_DEBUG = BLOG_INFO;
 #else
-const LogSeverity BLOG_DEBUG = BLOG_VERBOSE;
+const LogSeverity BLOG_DEBUG  = BLOG_VERBOSE;
 #endif
 
 // BLOG_DFATAL is BLOG_FATAL in debug mode, ERROR in normal mode
@@ -359,12 +360,11 @@ const LogSeverity BLOG_DFATAL = BLOG_ERROR;
 // A few definitions of macros that don't generate much code. These are used
 // by LOG() and LOG_IF, etc. Since these are used all over our code, it's
 // better to have compact code for these operations.
-#define BAIDU_COMPACT_LOG_EX(severity, ClassName, ...)  \
-    ::logging::ClassName(__FILE__, __LINE__,            \
-    ::logging::BLOG_##severity, ##__VA_ARGS__)
+#define BAIDU_COMPACT_LOG_EX(severity, ClassName, ...)                   \
+    ::logging::ClassName(__FILE__, __LINE__, ::logging::BLOG_##severity, \
+                         ##__VA_ARGS__)
 
-#define BAIDU_COMPACK_LOG(severity)             \
-    BAIDU_COMPACT_LOG_EX(severity, LogMessage)
+#define BAIDU_COMPACK_LOG(severity) BAIDU_COMPACT_LOG_EX(severity, LogMessage)
 
 #if defined(OS_WIN)
 // wingdi.h defines ERROR to be 0. When we call LOG(ERROR), it gets
@@ -381,7 +381,7 @@ const LogSeverity BLOG_0 = BLOG_ERROR;
 // As special cases, we can assume that LOG_IS_ON(FATAL) always holds. Also,
 // LOG_IS_ON(DFATAL) always holds in debug mode. In particular, CHECK()s will
 // always fire if they fail.
-#define LOG_IS_ON(severity)                                     \
+#define LOG_IS_ON(severity) \
     (::logging::BLOG_##severity >= ::logging::GetMinLogLevel())
 
 #if defined(__GNUC__)
@@ -391,18 +391,20 @@ const LogSeverity BLOG_0 = BLOG_ERROR;
 // it's either FLAGS_verbose or an appropriate internal variable
 // matching the current source file that represents results of
 // parsing of --vmodule flag and/or SetVLOGLevel calls.
-# define BAIDU_VLOG_IS_ON(verbose_level, filepath)                      \
-    ({ static const int* vlocal = &::logging::VLOG_UNINITIALIZED;       \
+#define BAIDU_VLOG_IS_ON(verbose_level, filepath)                       \
+    ({                                                                  \
+        static const int* vlocal      = &::logging::VLOG_UNINITIALIZED; \
         const int saved_verbose_level = (verbose_level);                \
-        (saved_verbose_level >= 0)/*VLOG(-1) is forbidden*/ &&          \
+        (saved_verbose_level >= 0) /*VLOG(-1) is forbidden*/ &&         \
             (*vlocal >= saved_verbose_level) &&                         \
             ((vlocal != &::logging::VLOG_UNINITIALIZED) ||              \
              (::logging::add_vlog_site(&vlocal, filepath, __LINE__,     \
-                                       saved_verbose_level))); })
+                                       saved_verbose_level)));          \
+    })
 #else
 // GNU extensions not available, so we do not support --vmodule.
 // Dynamic value of FLAGS_verbose always controls the logging level.
-# define BAIDU_VLOG_IS_ON(verbose_level, filepath)      \
+#define BAIDU_VLOG_IS_ON(verbose_level, filepath) \
     (::logging::FLAGS_v >= (verbose_level))
 #endif
 
@@ -426,15 +428,15 @@ public:
     };
 
     virtual void print(const Site& site) = 0;
-    virtual ~VLogSitePrinter() = default;
+    virtual ~VLogSitePrinter()           = default;
 };
 
 void print_vlog_sites(VLogSitePrinter*);
 
 // Helper macro which avoids evaluating the arguments to a stream if
 // the condition doesn't hold.
-#define BAIDU_LAZY_STREAM(stream, condition)                            \
-    !(condition) ? (void) 0 : ::logging::LogMessageVoidify() & (stream)
+#define BAIDU_LAZY_STREAM(stream, condition) \
+    !(condition) ? (void)0 : ::logging::LogMessageVoidify() & (stream)
 
 // We use the preprocessor's merging operator, "##", so that, e.g.,
 // LOG(INFO) becomes the token BAIDU_COMPACK_LOG(INFO).  There's some funny
@@ -446,100 +448,109 @@ void print_vlog_sites(VLogSitePrinter*);
 // function of LogMessage which seems to avoid the problem.
 #define LOG_STREAM(severity) BAIDU_COMPACK_LOG(severity).stream()
 
-#define LOG(severity)                                                   \
+#define LOG(severity) \
     BAIDU_LAZY_STREAM(LOG_STREAM(severity), LOG_IS_ON(severity))
-#define LOG_IF(severity, condition)                                     \
+#define LOG_IF(severity, condition) \
     BAIDU_LAZY_STREAM(LOG_STREAM(severity), LOG_IS_ON(severity) && (condition))
 
 // FIXME(gejun): Should always crash.
-#define LOG_ASSERT(condition)                                           \
+#define LOG_ASSERT(condition) \
     LOG_IF(FATAL, !(condition)) << "Assert failed: " #condition ". "
 
 #define SYSLOG(severity) LOG(severity)
 #define SYSLOG_IF(severity, condition) LOG_IF(severity, condition)
 #define SYSLOG_EVERY_N(severity, N) LOG_EVERY_N(severity, N)
-#define SYSLOG_IF_EVERY_N(severity, condition, N) LOG_IF_EVERY_N(severity, condition, N)
+#define SYSLOG_IF_EVERY_N(severity, condition, N) \
+    LOG_IF_EVERY_N(severity, condition, N)
 #define SYSLOG_FIRST_N(severity, N) LOG_FIRST_N(severity, N)
-#define SYSLOG_IF_FIRST_N(severity, condition, N) LOG_IF_FIRST_N(severity, condition, N)
+#define SYSLOG_IF_FIRST_N(severity, condition, N) \
+    LOG_IF_FIRST_N(severity, condition, N)
 #define SYSLOG_ONCE(severity) LOG_FIRST_N(severity, 1)
-#define SYSLOG_IF_ONCE(severity, condition) LOG_IF_FIRST_N(severity, condition, 1)
+#define SYSLOG_IF_ONCE(severity, condition) \
+    LOG_IF_FIRST_N(severity, condition, 1)
 #define SYSLOG_EVERY_SECOND(severity) LOG_EVERY_SECOND(severity)
-#define SYSLOG_IF_EVERY_SECOND(severity, condition) LOG_IF_EVERY_SECOND(severity, condition)
+#define SYSLOG_IF_EVERY_SECOND(severity, condition) \
+    LOG_IF_EVERY_SECOND(severity, condition)
 
-#define SYSLOG_ASSERT(condition)                                        \
+#define SYSLOG_ASSERT(condition) \
     SYSLOG_IF(FATAL, !(condition)) << "Assert failed: " #condition ". "
 
 // file/line can be specified at running-time. This is useful for printing
 // logs with known file/line inside a LogSink or LogMessageHandler
-#define LOG_AT_STREAM(severity, file, line)                             \
+#define LOG_AT_STREAM(severity, file, line) \
     ::logging::LogMessage(file, line, ::logging::BLOG_##severity).stream()
 
-#define LOG_AT(severity, file, line)                                    \
+#define LOG_AT(severity, file, line) \
     BAIDU_LAZY_STREAM(LOG_AT_STREAM(severity, file, line), LOG_IS_ON(severity))
 
 // The VLOG macros log with negative verbosities.
-#define VLOG_STREAM(verbose_level)                                      \
+#define VLOG_STREAM(verbose_level) \
     ::logging::LogMessage(__FILE__, __LINE__, -(verbose_level)).stream()
 
-#define VLOG(verbose_level)                                             \
+#define VLOG(verbose_level) \
     BAIDU_LAZY_STREAM(VLOG_STREAM(verbose_level), VLOG_IS_ON(verbose_level))
-#define VLOG_IF(verbose_level, condition)                       \
-    BAIDU_LAZY_STREAM(VLOG_STREAM(verbose_level),               \
+#define VLOG_IF(verbose_level, condition)         \
+    BAIDU_LAZY_STREAM(VLOG_STREAM(verbose_level), \
                       VLOG_IS_ON(verbose_level) && (condition))
 
-#define VLOG_EVERY_N(verbose_level, N)                                  \
+#define VLOG_EVERY_N(verbose_level, N) \
     BAIDU_LOG_IF_EVERY_N_IMPL(VLOG_IF, verbose_level, true, N)
-#define VLOG_IF_EVERY_N(verbose_level, condition, N)                    \
+#define VLOG_IF_EVERY_N(verbose_level, condition, N) \
     BAIDU_LOG_IF_EVERY_N_IMPL(VLOG_IF, verbose_level, condition, N)
 
-#define VLOG_FIRST_N(verbose_level, N)                                  \
+#define VLOG_FIRST_N(verbose_level, N) \
     BAIDU_LOG_IF_FIRST_N_IMPL(VLOG_IF, verbose_level, true, N)
-#define VLOG_IF_FIRST_N(verbose_level, condition, N)                    \
+#define VLOG_IF_FIRST_N(verbose_level, condition, N) \
     BAIDU_LOG_IF_FIRST_N_IMPL(VLOG_IF, verbose_level, condition, N)
 
 #define VLOG_ONCE(verbose_level) VLOG_FIRST_N(verbose_level, 1)
-#define VLOG_IF_ONCE(verbose_level, condition) VLOG_IF_FIRST_N(verbose_level, condition, 1)
+#define VLOG_IF_ONCE(verbose_level, condition) \
+    VLOG_IF_FIRST_N(verbose_level, condition, 1)
 
-#define VLOG_EVERY_SECOND(verbose_level)                        \
+#define VLOG_EVERY_SECOND(verbose_level) \
     BAIDU_LOG_IF_EVERY_SECOND_IMPL(VLOG_IF, verbose_level, true)
-#define VLOG_IF_EVERY_SECOND(verbose_level, condition)                  \
+#define VLOG_IF_EVERY_SECOND(verbose_level, condition) \
     BAIDU_LOG_IF_EVERY_SECOND_IMPL(VLOG_IF, verbose_level, condition)
 
-#if defined (OS_WIN)
-#define VPLOG_STREAM(verbose_level)                                     \
-     ::logging::Win32ErrorLogMessage(__FILE__, __LINE__, -verbose_level, \
-                                     ::logging::GetLastSystemErrorCode()).stream()
+#if defined(OS_WIN)
+#define VPLOG_STREAM(verbose_level)                                      \
+    ::logging::Win32ErrorLogMessage(__FILE__, __LINE__, -verbose_level,  \
+                                    ::logging::GetLastSystemErrorCode()) \
+        .stream()
 #elif defined(OS_POSIX)
-#define VPLOG_STREAM(verbose_level)                                     \
-    ::logging::ErrnoLogMessage(__FILE__, __LINE__, -verbose_level,      \
-                               ::logging::GetLastSystemErrorCode()).stream()
+#define VPLOG_STREAM(verbose_level)                                 \
+    ::logging::ErrnoLogMessage(__FILE__, __LINE__, -verbose_level,  \
+                               ::logging::GetLastSystemErrorCode()) \
+        .stream()
 #endif
 
-#define VPLOG(verbose_level)                                            \
+#define VPLOG(verbose_level) \
     BAIDU_LAZY_STREAM(VPLOG_STREAM(verbose_level), VLOG_IS_ON(verbose_level))
 
-#define VPLOG_IF(verbose_level, condition)                      \
-    BAIDU_LAZY_STREAM(VPLOG_STREAM(verbose_level),              \
+#define VPLOG_IF(verbose_level, condition)         \
+    BAIDU_LAZY_STREAM(VPLOG_STREAM(verbose_level), \
                       VLOG_IS_ON(verbose_level) && (condition))
 
 #if defined(OS_WIN)
-#define PLOG_STREAM(severity)                                           \
-    BAIDU_COMPACT_LOG_EX(severity, Win32ErrorLogMessage,                \
-                         ::logging::GetLastSystemErrorCode()).stream()
+#define PLOG_STREAM(severity)                                 \
+    BAIDU_COMPACT_LOG_EX(severity, Win32ErrorLogMessage,      \
+                         ::logging::GetLastSystemErrorCode()) \
+        .stream()
 #elif defined(OS_POSIX)
-#define PLOG_STREAM(severity)                                           \
-    BAIDU_COMPACT_LOG_EX(severity, ErrnoLogMessage,                     \
-                         ::logging::GetLastSystemErrorCode()).stream()
+#define PLOG_STREAM(severity)                                 \
+    BAIDU_COMPACT_LOG_EX(severity, ErrnoLogMessage,           \
+                         ::logging::GetLastSystemErrorCode()) \
+        .stream()
 #endif
 
-#define PLOG(severity)                                                  \
+#define PLOG(severity) \
     BAIDU_LAZY_STREAM(PLOG_STREAM(severity), LOG_IS_ON(severity))
-#define PLOG_IF(severity, condition)                                    \
+#define PLOG_IF(severity, condition) \
     BAIDU_LAZY_STREAM(PLOG_STREAM(severity), LOG_IS_ON(severity) && (condition))
 
 // The actual stream used isn't important.
-#define BAIDU_EAT_STREAM_PARAMS                                           \
-    true ? (void) 0 : ::logging::LogMessageVoidify() & LOG_STREAM(FATAL)
+#define BAIDU_EAT_STREAM_PARAMS \
+    true ? (void)0 : ::logging::LogMessageVoidify() & LOG_STREAM(FATAL)
 
 // CHECK dies with a fatal error if condition is not true.  It is *not*
 // controlled by NDEBUG, so the check will be executed regardless of
@@ -556,33 +567,32 @@ void print_vlog_sites(VLogSitePrinter*);
 // TODO(akalin): This would be more valuable if there were some way to
 // remove BreakDebugger() from the backtrace, perhaps by turning it
 // into a macro (like __debugbreak() on Windows).
-#define CHECK(condition)                                                \
+#define CHECK(condition) \
     !(condition) ? ::butil::debug::BreakDebugger() : BAIDU_EAT_STREAM_PARAMS
 
 #define PCHECK(condition) CHECK(condition)
 
-#define BAIDU_CHECK_OP(name, op, val1, val2) CHECK((val1) op (val2))
+#define BAIDU_CHECK_OP(name, op, val1, val2) CHECK((val1)op(val2))
 
 #else
 
-#define CHECK(condition)                                        \
-    BAIDU_LAZY_STREAM(LOG_STREAM(FATAL).SetCheck(), !(condition))     \
-    << "Check failed: " #condition ". "
+#define CHECK(condition)                                          \
+    BAIDU_LAZY_STREAM(LOG_STREAM(FATAL).SetCheck(), !(condition)) \
+        << "Check failed: " #condition ". "
 
-#define PCHECK(condition)                                       \
-    BAIDU_LAZY_STREAM(PLOG_STREAM(FATAL).SetCheck(), !(condition))    \
-    << "Check failed: " #condition ". "
+#define PCHECK(condition)                                          \
+    BAIDU_LAZY_STREAM(PLOG_STREAM(FATAL).SetCheck(), !(condition)) \
+        << "Check failed: " #condition ". "
 
 // Helper macro for binary operators.
 // Don't use this macro directly in your code, use CHECK_EQ et al below.
 //
 // TODO(akalin): Rewrite this so that constructs like if (...)
 // CHECK_EQ(...) else { ... } work properly.
-#define BAIDU_CHECK_OP(name, op, val1, val2)                                  \
-    if (std::string* _result =                                          \
-        ::logging::Check##name##Impl((val1), (val2),                    \
-                                     #val1 " " #op " " #val2))          \
-        ::logging::LogMessage(__FILE__, __LINE__, _result).stream().SetCheck()
+#define BAIDU_CHECK_OP(name, op, val1, val2)                 \
+    if (std::string* _result = ::logging::Check##name##Impl( \
+            (val1), (val2), #val1 " " #op " " #val2))        \
+    ::logging::LogMessage(__FILE__, __LINE__, _result).stream().SetCheck()
 
 #endif
 
@@ -590,7 +600,7 @@ void print_vlog_sites(VLogSitePrinter*);
 // function template because it is not performance critical and so can
 // be out of line, while the "Impl" code should be inline.  Caller
 // takes ownership of the returned string.
-template<class t1, class t2>
+template <class t1, class t2>
 std::string* MakeCheckOpString(const t1& v1, const t2& v2, const char* names) {
     std::ostringstream ss;
     ss << names << " (" << v1 << " vs " << v2 << "). ";
@@ -604,49 +614,57 @@ std::string* MakeCheckOpString(const t1& v1, const t2& v2, const char* names) {
 // in logging.cc.
 extern template BUTIL_EXPORT std::string* MakeCheckOpString<int, int>(
     const int&, const int&, const char* names);
-extern template BUTIL_EXPORT
-std::string* MakeCheckOpString<unsigned long, unsigned long>(
-    const unsigned long&, const unsigned long&, const char* names);
-extern template BUTIL_EXPORT
-std::string* MakeCheckOpString<unsigned long, unsigned int>(
-    const unsigned long&, const unsigned int&, const char* names);
-extern template BUTIL_EXPORT
-std::string* MakeCheckOpString<unsigned int, unsigned long>(
-    const unsigned int&, const unsigned long&, const char* names);
-extern template BUTIL_EXPORT
-std::string* MakeCheckOpString<std::string, std::string>(
-    const std::string&, const std::string&, const char* name);
+extern template BUTIL_EXPORT std::string*
+MakeCheckOpString<unsigned long, unsigned long>(const unsigned long&,
+                                                const unsigned long&,
+                                                const char* names);
+extern template BUTIL_EXPORT std::string*
+MakeCheckOpString<unsigned long, unsigned int>(const unsigned long&,
+                                               const unsigned int&,
+                                               const char* names);
+extern template BUTIL_EXPORT std::string*
+MakeCheckOpString<unsigned int, unsigned long>(const unsigned int&,
+                                               const unsigned long&,
+                                               const char* names);
+extern template BUTIL_EXPORT std::string*
+MakeCheckOpString<std::string, std::string>(const std::string&,
+                                            const std::string&,
+                                            const char* name);
 #endif
 
 // Helper functions for BAIDU_CHECK_OP macro.
 // The (int, int) specialization works around the issue that the compiler
 // will not instantiate the template version of the function on values of
 // unnamed enum type - see comment below.
-#define BAIDU_DEFINE_CHECK_OP_IMPL(name, op)                            \
-    template <class t1, class t2>                                       \
-    inline std::string* Check##name##Impl(const t1& v1, const t2& v2,   \
-                                          const char* names) {          \
-        if (v1 op v2) return NULL;                                      \
-        else return MakeCheckOpString(v1, v2, names);                   \
-    }                                                                   \
+#define BAIDU_DEFINE_CHECK_OP_IMPL(name, op)                                   \
+    template <class t1, class t2>                                              \
+    inline std::string* Check##name##Impl(const t1& v1, const t2& v2,          \
+                                          const char* names) {                 \
+        if (v1 op v2)                                                          \
+            return NULL;                                                       \
+        else                                                                   \
+            return MakeCheckOpString(v1, v2, names);                           \
+    }                                                                          \
     inline std::string* Check##name##Impl(int v1, int v2, const char* names) { \
-        if (v1 op v2) return NULL;                                      \
-        else return MakeCheckOpString(v1, v2, names);                   \
+        if (v1 op v2)                                                          \
+            return NULL;                                                       \
+        else                                                                   \
+            return MakeCheckOpString(v1, v2, names);                           \
     }
 BAIDU_DEFINE_CHECK_OP_IMPL(EQ, ==)
 BAIDU_DEFINE_CHECK_OP_IMPL(NE, !=)
 BAIDU_DEFINE_CHECK_OP_IMPL(LE, <=)
-BAIDU_DEFINE_CHECK_OP_IMPL(LT, < )
+BAIDU_DEFINE_CHECK_OP_IMPL(LT, <)
 BAIDU_DEFINE_CHECK_OP_IMPL(GE, >=)
-BAIDU_DEFINE_CHECK_OP_IMPL(GT, > )
+BAIDU_DEFINE_CHECK_OP_IMPL(GT, >)
 #undef BAIDU_DEFINE_CHECK_OP_IMPL
 
 #define CHECK_EQ(val1, val2) BAIDU_CHECK_OP(EQ, ==, val1, val2)
 #define CHECK_NE(val1, val2) BAIDU_CHECK_OP(NE, !=, val1, val2)
 #define CHECK_LE(val1, val2) BAIDU_CHECK_OP(LE, <=, val1, val2)
-#define CHECK_LT(val1, val2) BAIDU_CHECK_OP(LT, < , val1, val2)
+#define CHECK_LT(val1, val2) BAIDU_CHECK_OP(LT, <, val1, val2)
 #define CHECK_GE(val1, val2) BAIDU_CHECK_OP(GE, >=, val1, val2)
-#define CHECK_GT(val1, val2) BAIDU_CHECK_OP(GT, > , val1, val2)
+#define CHECK_GT(val1, val2) BAIDU_CHECK_OP(GT, >, val1, val2)
 
 #if defined(NDEBUG) && !defined(DCHECK_ALWAYS_ON)
 #define DCHECK_IS_ON() 0
@@ -662,14 +680,14 @@ BAIDU_DEFINE_CHECK_OP_IMPL(GT, > )
 // defined in debug mode.
 #if ENABLE_DLOG
 #define DLOG_IS_ON(severity) LOG_IS_ON(severity)
-#define DLOG_IF(severity, condition)                    \
+#define DLOG_IF(severity, condition) \
     LOG_IF(severity, ENABLE_DLOG && (condition))
 #define DLOG_ASSERT(condition) LOG_ASSERT(!ENABLE_DLOG || condition)
-#define DPLOG_IF(severity, condition)                   \
+#define DPLOG_IF(severity, condition) \
     PLOG_IF(severity, ENABLE_DLOG && (condition))
-#define DVLOG_IF(verbose_level, condition)               \
+#define DVLOG_IF(verbose_level, condition) \
     VLOG_IF(verbose_level, ENABLE_DLOG && (condition))
-#define DVPLOG_IF(verbose_level, condition)      \
+#define DVPLOG_IF(verbose_level, condition) \
     VPLOG_IF(verbose_level, ENABLE_DLOG && (condition))
 #else  // ENABLE_DLOG
 #define DLOG_IS_ON(severity) false
@@ -680,101 +698,108 @@ BAIDU_DEFINE_CHECK_OP_IMPL(GT, > )
 #define DVPLOG_IF(verbose_level, condition) BAIDU_EAT_STREAM_PARAMS
 #endif  // ENABLE_DLOG
 
-#define DLOG(severity)                                          \
+#define DLOG(severity) \
     BAIDU_LAZY_STREAM(LOG_STREAM(severity), DLOG_IS_ON(severity))
-#define DLOG_EVERY_N(severity, N)                               \
+#define DLOG_EVERY_N(severity, N) \
     BAIDU_LOG_IF_EVERY_N_IMPL(DLOG_IF, severity, true, N)
-#define DLOG_IF_EVERY_N(severity, condition, N)                 \
+#define DLOG_IF_EVERY_N(severity, condition, N) \
     BAIDU_LOG_IF_EVERY_N_IMPL(DLOG_IF, severity, condition, N)
-#define DLOG_FIRST_N(severity, N)                               \
+#define DLOG_FIRST_N(severity, N) \
     BAIDU_LOG_IF_FIRST_N_IMPL(DLOG_IF, severity, true, N)
-#define DLOG_IF_FIRST_N(severity, condition, N)                 \
+#define DLOG_IF_FIRST_N(severity, condition, N) \
     BAIDU_LOG_IF_FIRST_N_IMPL(DLOG_IF, severity, condition, N)
 #define DLOG_ONCE(severity) DLOG_FIRST_N(severity, 1)
-#define DLOG_IF_ONCE(severity, condition) DLOG_IF_FIRST_N(severity, condition, 1)
-#define DLOG_EVERY_SECOND(severity)                             \
+#define DLOG_IF_ONCE(severity, condition) \
+    DLOG_IF_FIRST_N(severity, condition, 1)
+#define DLOG_EVERY_SECOND(severity) \
     BAIDU_LOG_IF_EVERY_SECOND_IMPL(DLOG_IF, severity, true)
-#define DLOG_IF_EVERY_SECOND(severity, condition)                       \
+#define DLOG_IF_EVERY_SECOND(severity, condition) \
     BAIDU_LOG_IF_EVERY_SECOND_IMPL(DLOG_IF, severity, condition)
 
-#define DPLOG(severity)                                         \
+#define DPLOG(severity) \
     BAIDU_LAZY_STREAM(PLOG_STREAM(severity), DLOG_IS_ON(severity))
-#define DPLOG_EVERY_N(severity, N)                               \
+#define DPLOG_EVERY_N(severity, N) \
     BAIDU_LOG_IF_EVERY_N_IMPL(DPLOG_IF, severity, true, N)
-#define DPLOG_IF_EVERY_N(severity, condition, N)                 \
+#define DPLOG_IF_EVERY_N(severity, condition, N) \
     BAIDU_LOG_IF_EVERY_N_IMPL(DPLOG_IF, severity, condition, N)
-#define DPLOG_FIRST_N(severity, N)                               \
+#define DPLOG_FIRST_N(severity, N) \
     BAIDU_LOG_IF_FIRST_N_IMPL(DPLOG_IF, severity, true, N)
-#define DPLOG_IF_FIRST_N(severity, condition, N)                 \
+#define DPLOG_IF_FIRST_N(severity, condition, N) \
     BAIDU_LOG_IF_FIRST_N_IMPL(DPLOG_IF, severity, condition, N)
 #define DPLOG_ONCE(severity) DPLOG_FIRST_N(severity, 1)
-#define DPLOG_IF_ONCE(severity, condition) DPLOG_IF_FIRST_N(severity, condition, 1)
-#define DPLOG_EVERY_SECOND(severity)                             \
+#define DPLOG_IF_ONCE(severity, condition) \
+    DPLOG_IF_FIRST_N(severity, condition, 1)
+#define DPLOG_EVERY_SECOND(severity) \
     BAIDU_LOG_IF_EVERY_SECOND_IMPL(DPLOG_IF, severity, true)
-#define DPLOG_IF_EVERY_SECOND(severity, condition)                       \
+#define DPLOG_IF_EVERY_SECOND(severity, condition) \
     BAIDU_LOG_IF_EVERY_SECOND_IMPL(DPLOG_IF, severity, condition)
 
 #define DVLOG(verbose_level) DVLOG_IF(verbose_level, VLOG_IS_ON(verbose_level))
-#define DVLOG_EVERY_N(verbose_level, N)                               \
+#define DVLOG_EVERY_N(verbose_level, N) \
     BAIDU_LOG_IF_EVERY_N_IMPL(DVLOG_IF, verbose_level, true, N)
-#define DVLOG_IF_EVERY_N(verbose_level, condition, N)                 \
+#define DVLOG_IF_EVERY_N(verbose_level, condition, N) \
     BAIDU_LOG_IF_EVERY_N_IMPL(DVLOG_IF, verbose_level, condition, N)
-#define DVLOG_FIRST_N(verbose_level, N)                               \
+#define DVLOG_FIRST_N(verbose_level, N) \
     BAIDU_LOG_IF_FIRST_N_IMPL(DVLOG_IF, verbose_level, true, N)
-#define DVLOG_IF_FIRST_N(verbose_level, condition, N)                 \
+#define DVLOG_IF_FIRST_N(verbose_level, condition, N) \
     BAIDU_LOG_IF_FIRST_N_IMPL(DVLOG_IF, verbose_level, condition, N)
 #define DVLOG_ONCE(verbose_level) DVLOG_FIRST_N(verbose_level, 1)
-#define DVLOG_IF_ONCE(verbose_level, condition) DVLOG_IF_FIRST_N(verbose_level, condition, 1)
-#define DVLOG_EVERY_SECOND(verbose_level)                             \
+#define DVLOG_IF_ONCE(verbose_level, condition) \
+    DVLOG_IF_FIRST_N(verbose_level, condition, 1)
+#define DVLOG_EVERY_SECOND(verbose_level) \
     BAIDU_LOG_IF_EVERY_SECOND_IMPL(DVLOG_IF, verbose_level, true)
-#define DVLOG_IF_EVERY_SECOND(verbose_level, condition)                       \
+#define DVLOG_IF_EVERY_SECOND(verbose_level, condition) \
     BAIDU_LOG_IF_EVERY_SECOND_IMPL(DVLOG_IF, verbose_level, condition)
 
-#define DVPLOG(verbose_level) DVPLOG_IF(verbose_level, VLOG_IS_ON(verbose_level))
-#define DVPLOG_EVERY_N(verbose_level, N)                               \
+#define DVPLOG(verbose_level) \
+    DVPLOG_IF(verbose_level, VLOG_IS_ON(verbose_level))
+#define DVPLOG_EVERY_N(verbose_level, N) \
     BAIDU_LOG_IF_EVERY_N_IMPL(DVPLOG_IF, verbose_level, true, N)
-#define DVPLOG_IF_EVERY_N(verbose_level, condition, N)                 \
+#define DVPLOG_IF_EVERY_N(verbose_level, condition, N) \
     BAIDU_LOG_IF_EVERY_N_IMPL(DVPLOG_IF, verbose_level, condition, N)
-#define DVPLOG_FIRST_N(verbose_level, N)                               \
+#define DVPLOG_FIRST_N(verbose_level, N) \
     BAIDU_LOG_IF_FIRST_N_IMPL(DVPLOG_IF, verbose_level, true, N)
-#define DVPLOG_IF_FIRST_N(verbose_level, condition, N)                 \
+#define DVPLOG_IF_FIRST_N(verbose_level, condition, N) \
     BAIDU_LOG_IF_FIRST_N_IMPL(DVPLOG_IF, verbose_level, condition, N)
 #define DVPLOG_ONCE(verbose_level) DVPLOG_FIRST_N(verbose_level, 1)
-#define DVPLOG_IF_ONCE(verbose_level, condition) DVPLOG_IF_FIRST_N(verbose_level, condition, 1)
-#define DVPLOG_EVERY_SECOND(verbose_level)                             \
+#define DVPLOG_IF_ONCE(verbose_level, condition) \
+    DVPLOG_IF_FIRST_N(verbose_level, condition, 1)
+#define DVPLOG_EVERY_SECOND(verbose_level) \
     BAIDU_LOG_IF_EVERY_SECOND_IMPL(DVPLOG_IF, verbose_level, true)
-#define DVPLOG_IF_EVERY_SECOND(verbose_level, condition)                       \
+#define DVPLOG_IF_EVERY_SECOND(verbose_level, condition) \
     BAIDU_LOG_IF_EVERY_SECOND_IMPL(DVPLOG_IF, verbose_level, condition)
 
 // You can assign virtual path to VLOG instead of physical filename.
 // [public/foo/bar.cpp]
 // VLOG2("a/b/c", 2) << "being filtered by a/b/c rather than public/foo/bar";
-#define VLOG2(virtual_path, verbose_level)                              \
-    BAIDU_LAZY_STREAM(VLOG_STREAM(verbose_level),                       \
+#define VLOG2(virtual_path, verbose_level)        \
+    BAIDU_LAZY_STREAM(VLOG_STREAM(verbose_level), \
                       BAIDU_VLOG_IS_ON(verbose_level, virtual_path))
 
-#define VLOG2_IF(virtual_path, verbose_level, condition)                \
-    BAIDU_LAZY_STREAM(VLOG_STREAM(verbose_level),                       \
-                      BAIDU_VLOG_IS_ON(verbose_level, virtual_path) && (condition))
+#define VLOG2_IF(virtual_path, verbose_level, condition) \
+    BAIDU_LAZY_STREAM(                                   \
+        VLOG_STREAM(verbose_level),                      \
+        BAIDU_VLOG_IS_ON(verbose_level, virtual_path) && (condition))
 
-#define DVLOG2(virtual_path, verbose_level)             \
+#define DVLOG2(virtual_path, verbose_level) \
     VLOG2_IF(virtual_path, verbose_level, ENABLE_DLOG)
 
-#define DVLOG2_IF(virtual_path, verbose_level, condition)               \
+#define DVLOG2_IF(virtual_path, verbose_level, condition) \
     VLOG2_IF(virtual_path, verbose_level, ENABLE_DLOG && (condition))
 
-#define VPLOG2(virtual_path, verbose_level)                             \
-    BAIDU_LAZY_STREAM(VPLOG_STREAM(verbose_level),                      \
+#define VPLOG2(virtual_path, verbose_level)        \
+    BAIDU_LAZY_STREAM(VPLOG_STREAM(verbose_level), \
                       BAIDU_VLOG_IS_ON(verbose_level, virtual_path))
 
-#define VPLOG2_IF(virtual_path, verbose_level, condition)               \
-    BAIDU_LAZY_STREAM(VPLOG_STREAM(verbose_level),                      \
-                      BAIDU_VLOG_IS_ON(verbose_level, virtual_path) && (condition))
+#define VPLOG2_IF(virtual_path, verbose_level, condition) \
+    BAIDU_LAZY_STREAM(                                    \
+        VPLOG_STREAM(verbose_level),                      \
+        BAIDU_VLOG_IS_ON(verbose_level, virtual_path) && (condition))
 
-#define DVPLOG2(virtual_path, verbose_level)                            \
+#define DVPLOG2(virtual_path, verbose_level) \
     VPLOG2_IF(virtual_path, verbose_level, ENABLE_DLOG)
 
-#define DVPLOG2_IF(virtual_path, verbose_level, condition)              \
+#define DVPLOG2_IF(virtual_path, verbose_level, condition) \
     VPLOG2_IF(virtual_path, verbose_level, ENABLE_DLOG && (condition))
 
 // Definitions for DCHECK et al.
@@ -794,24 +819,22 @@ const LogSeverity BLOG_DCHECK = BLOG_INFO;
 // variable warnings if the only use of a variable is in a DCHECK.
 // This behavior is different from DLOG_IF et al.
 
-#define DCHECK(condition)                                               \
+#define DCHECK(condition)                                                 \
     BAIDU_LAZY_STREAM(LOG_STREAM(DCHECK), DCHECK_IS_ON() && !(condition)) \
-    << "Check failed: " #condition ". "
+        << "Check failed: " #condition ". "
 
-#define DPCHECK(condition)                                              \
+#define DPCHECK(condition)                                                 \
     BAIDU_LAZY_STREAM(PLOG_STREAM(DCHECK), DCHECK_IS_ON() && !(condition)) \
-    << "Check failed: " #condition ". "
+        << "Check failed: " #condition ". "
 
 // Helper macro for binary operators.
 // Don't use this macro directly in your code, use DCHECK_EQ et al below.
-#define BAIDU_DCHECK_OP(name, op, val1, val2)                           \
-    if (DCHECK_IS_ON())                                                   \
-        if (std::string* _result =                                      \
-            ::logging::Check##name##Impl((val1), (val2),                \
-                                         #val1 " " #op " " #val2))      \
-            ::logging::LogMessage(                                      \
-                __FILE__, __LINE__, ::logging::BLOG_DCHECK,             \
-                _result).stream()
+#define BAIDU_DCHECK_OP(name, op, val1, val2)                                  \
+    if (DCHECK_IS_ON())                                                        \
+        if (std::string* _result = ::logging::Check##name##Impl(               \
+                (val1), (val2), #val1 " " #op " " #val2))                      \
+    ::logging::LogMessage(__FILE__, __LINE__, ::logging::BLOG_DCHECK, _result) \
+        .stream()
 
 // Equality/Inequality checks - compare two values, and log a
 // BLOG_DCHECK message including the two values when the result is not
@@ -835,9 +858,9 @@ const LogSeverity BLOG_DCHECK = BLOG_INFO;
 #define DCHECK_EQ(val1, val2) BAIDU_DCHECK_OP(EQ, ==, val1, val2)
 #define DCHECK_NE(val1, val2) BAIDU_DCHECK_OP(NE, !=, val1, val2)
 #define DCHECK_LE(val1, val2) BAIDU_DCHECK_OP(LE, <=, val1, val2)
-#define DCHECK_LT(val1, val2) BAIDU_DCHECK_OP(LT, < , val1, val2)
+#define DCHECK_LT(val1, val2) BAIDU_DCHECK_OP(LT, <, val1, val2)
 #define DCHECK_GE(val1, val2) BAIDU_DCHECK_OP(GE, >=, val1, val2)
-#define DCHECK_GT(val1, val2) BAIDU_DCHECK_OP(GT, > , val1, val2)
+#define DCHECK_GT(val1, val2) BAIDU_DCHECK_OP(GT, >, val1, val2)
 
 #if defined(OS_WIN)
 typedef unsigned long SystemErrorCode;
@@ -871,12 +894,16 @@ private:
 // A std::ostream to << objects.
 // Have to use private inheritance to arrange initialization order.
 class LogStream : virtual private CharArrayStreamBuf, public std::ostream {
-friend void DestroyLogStream(LogStream*);
+    friend void DestroyLogStream(LogStream*);
+
 public:
     LogStream()
-        : std::ostream(this), _file("-"), _line(0), _severity(0)
-        , _noflush(false), _is_check(false) {
-    }
+        : std::ostream(this)
+        , _file("-")
+        , _line(0)
+        , _severity(0)
+        , _noflush(false)
+        , _is_check(false) {}
 
     ~LogStream() {
         _noflush = false;
@@ -892,7 +919,8 @@ public:
         return *this;
     }
 
-    template <typename T> inline LogStream& operator<<(T const& t) {
+    template <typename T>
+    inline LogStream& operator<<(T const& t) {
         *(std::ostream*)this << t;
         return *this;
     }
@@ -913,11 +941,13 @@ public:
 
     bool empty() const { return pbase() == pptr(); }
 
-    butil::StringPiece content() const
-    { return butil::StringPiece(pbase(), pptr() - pbase()); }
+    butil::StringPiece content() const {
+        return butil::StringPiece(pbase(), pptr() - pbase());
+    }
 
-    std::string content_str() const
-    { return std::string(pbase(), pptr() - pbase()); }
+    std::string content_str() const {
+        return std::string(pbase(), pptr() - pbase());
+    }
 
     const PathChar* file() const { return _file; }
     int line() const { return _line; }
@@ -931,7 +961,7 @@ private:
     // stack-frame removal in FlushWithoutReset() is always safe.
     inline void Flush() {
         const bool res = _noflush;
-        _noflush = false;
+        _noflush       = false;
         if (!res) {
             // Save and restore thread-local error code after Flush().
             const SystemErrorCode err = GetLastSystemErrorCode();
@@ -985,7 +1015,7 @@ private:
 
 // A non-macro interface to the log facility; (useful
 // when the logging level is not a compile-time constant).
-inline void LogAtLevel(int const log_level, const butil::StringPiece &msg) {
+inline void LogAtLevel(int const log_level, const butil::StringPiece& msg) {
     LogMessage(__FILE__, __LINE__, log_level).stream() << msg;
 }
 
@@ -994,19 +1024,17 @@ inline void LogAtLevel(int const log_level, const butil::StringPiece &msg) {
 // is not used" and "statement has no effect".
 class LogMessageVoidify {
 public:
-    LogMessageVoidify() { }
+    LogMessageVoidify() {}
     // This has to be an operator with a precedence lower than << but
     // higher than ?:
-    void operator&(std::ostream&) { }
+    void operator&(std::ostream&) {}
 };
 
 #if defined(OS_WIN)
 // Appends a formatted system message of the GetLastError() type.
 class BUTIL_EXPORT Win32ErrorLogMessage {
 public:
-    Win32ErrorLogMessage(const char* file,
-                         int line,
-                         LogSeverity severity,
+    Win32ErrorLogMessage(const char* file, int line, LogSeverity severity,
                          SystemErrorCode err);
 
     // Appends the error message before destructing the encapsulated class.
@@ -1024,9 +1052,7 @@ private:
 // Appends a formatted system message of the errno type
 class BUTIL_EXPORT ErrnoLogMessage {
 public:
-    ErrnoLogMessage(const char* file,
-                    int line,
-                    LogSeverity severity,
+    ErrnoLogMessage(const char* file, int line, LogSeverity severity,
                     SystemErrorCode err);
 
     // Appends the error message before destructing the encapsulated class.
@@ -1051,13 +1077,14 @@ BUTIL_EXPORT void CloseLogFile();
 // Async signal safe logging mechanism.
 BUTIL_EXPORT void RawLog(int level, const char* message);
 
-#define RAW_LOG(level, message)                         \
+#define RAW_LOG(level, message) \
     ::logging::RawLog(::logging::BLOG_##level, message)
 
-#define RAW_CHECK(condition, message)                                   \
-    do {                                                                \
-        if (!(condition))                                               \
-            ::logging::RawLog(::logging::BLOG_FATAL, "Check failed: " #condition "\n"); \
+#define RAW_CHECK(condition, message)                            \
+    do {                                                         \
+        if (!(condition))                                        \
+            ::logging::RawLog(::logging::BLOG_FATAL,             \
+                              "Check failed: " #condition "\n"); \
     } while (0)
 
 #if defined(OS_WIN)
@@ -1073,8 +1100,8 @@ inline LogStream& noflush(LogStream& ls) {
 }  // namespace logging
 
 using ::logging::noflush;
-using ::logging::VLogSitePrinter;
 using ::logging::print_vlog_sites;
+using ::logging::VLogSitePrinter;
 
 // These functions are provided as a convenience for logging, which is where we
 // use streams (it is against Google style to use streams in other places). It
@@ -1098,7 +1125,7 @@ inline std::ostream& operator<<(std::ostream& out, const std::wstring& wstr) {
 //   4 -- [default] LOG(ERROR) at runtime
 //   5 -- LOG(ERROR) at runtime, only once per call-site
 
-#endif // BRPC_WITH_GLOG
+#endif  // BRPC_WITH_GLOG
 
 #ifndef NOTIMPLEMENTED_POLICY
 #if defined(OS_ANDROID) && defined(OFFICIAL_BUILD)
@@ -1129,112 +1156,123 @@ inline std::ostream& operator<<(std::ostream& out, const std::wstring& wstr) {
 #elif NOTIMPLEMENTED_POLICY == 4
 #define NOTIMPLEMENTED() LOG(ERROR) << NOTIMPLEMENTED_MSG
 #elif NOTIMPLEMENTED_POLICY == 5
-#define NOTIMPLEMENTED() do {                                   \
-        static bool logged_once = false;                        \
-        LOG_IF(ERROR, !logged_once) << NOTIMPLEMENTED_MSG;      \
-        logged_once = true;                                     \
-    } while(0);                                                 \
+#define NOTIMPLEMENTED()                                   \
+    do {                                                   \
+        static bool logged_once = false;                   \
+        LOG_IF(ERROR, !logged_once) << NOTIMPLEMENTED_MSG; \
+        logged_once = true;                                \
+    } while (0);                                           \
     BAIDU_EAT_STREAM_PARAMS
 #endif
 
 #if defined(NDEBUG) && defined(OS_CHROMEOS)
-#define NOTREACHED() LOG(ERROR) << "NOTREACHED() hit in "       \
-    << __FUNCTION__ << ". "
+#define NOTREACHED() \
+    LOG(ERROR) << "NOTREACHED() hit in " << __FUNCTION__ << ". "
 #else
 #define NOTREACHED() DCHECK(false)
 #endif
 
 // Helper macro included by all *_EVERY_N macros.
-#define BAIDU_LOG_IF_EVERY_N_IMPL(logifmacro, severity, condition, N)   \
-    static ::butil::subtle::Atomic32 BAIDU_CONCAT(logeveryn_, __LINE__) = -1; \
-    const static int BAIDU_CONCAT(logeveryn_sc_, __LINE__) = (N);       \
-    const int BAIDU_CONCAT(logeveryn_c_, __LINE__) =                    \
-        ::butil::subtle::NoBarrier_AtomicIncrement(&BAIDU_CONCAT(logeveryn_, __LINE__), 1); \
-    logifmacro(severity, (condition) && BAIDU_CONCAT(logeveryn_c_, __LINE__) / \
-               BAIDU_CONCAT(logeveryn_sc_, __LINE__) * BAIDU_CONCAT(logeveryn_sc_, __LINE__) \
-               == BAIDU_CONCAT(logeveryn_c_, __LINE__))
+#define BAIDU_LOG_IF_EVERY_N_IMPL(logifmacro, severity, condition, N)          \
+    static ::butil::subtle::Atomic32 BAIDU_CONCAT(logeveryn_, __LINE__) = -1;  \
+    const static int BAIDU_CONCAT(logeveryn_sc_, __LINE__)              = (N); \
+    const int BAIDU_CONCAT(logeveryn_c_, __LINE__) =                           \
+        ::butil::subtle::NoBarrier_AtomicIncrement(                            \
+            &BAIDU_CONCAT(logeveryn_, __LINE__), 1);                           \
+    logifmacro(severity,                                                       \
+               (condition) && BAIDU_CONCAT(logeveryn_c_, __LINE__) /           \
+                                      BAIDU_CONCAT(logeveryn_sc_, __LINE__) *  \
+                                      BAIDU_CONCAT(logeveryn_sc_, __LINE__) == \
+                                  BAIDU_CONCAT(logeveryn_c_, __LINE__))
 
 // Helper macro included by all *_FIRST_N macros.
-#define BAIDU_LOG_IF_FIRST_N_IMPL(logifmacro, severity, condition, N)   \
+#define BAIDU_LOG_IF_FIRST_N_IMPL(logifmacro, severity, condition, N)      \
     static ::butil::subtle::Atomic32 BAIDU_CONCAT(logfstn_, __LINE__) = 0; \
-    logifmacro(severity, (condition) && BAIDU_CONCAT(logfstn_, __LINE__) < N && \
-               ::butil::subtle::NoBarrier_AtomicIncrement(&BAIDU_CONCAT(logfstn_, __LINE__), 1) <= N)
+    logifmacro(severity, (condition) &&                                    \
+                             BAIDU_CONCAT(logfstn_, __LINE__) < N &&       \
+                             ::butil::subtle::NoBarrier_AtomicIncrement(   \
+                                 &BAIDU_CONCAT(logfstn_, __LINE__), 1) <= N)
 
 // Helper macro included by all *_EVERY_SECOND macros.
-#define BAIDU_LOG_IF_EVERY_SECOND_IMPL(logifmacro, severity, condition) \
-    static ::butil::subtle::Atomic64 BAIDU_CONCAT(logeverys_, __LINE__) = 0; \
-    const int64_t BAIDU_CONCAT(logeverys_ts_, __LINE__) = ::butil::gettimeofday_us(); \
-    const int64_t BAIDU_CONCAT(logeverys_seen_, __LINE__) = BAIDU_CONCAT(logeverys_, __LINE__); \
-    logifmacro(severity, (condition) && BAIDU_CONCAT(logeverys_ts_, __LINE__) >= \
-               (BAIDU_CONCAT(logeverys_seen_, __LINE__) + 1000000L) &&  \
-               ::butil::subtle::NoBarrier_CompareAndSwap(                \
-                   &BAIDU_CONCAT(logeverys_, __LINE__),                 \
-                   BAIDU_CONCAT(logeverys_seen_, __LINE__),             \
-                   BAIDU_CONCAT(logeverys_ts_, __LINE__))               \
-               == BAIDU_CONCAT(logeverys_seen_, __LINE__))
+#define BAIDU_LOG_IF_EVERY_SECOND_IMPL(logifmacro, severity, condition)        \
+    static ::butil::subtle::Atomic64 BAIDU_CONCAT(logeverys_, __LINE__) = 0;   \
+    const int64_t BAIDU_CONCAT(logeverys_ts_, __LINE__) =                      \
+        ::butil::gettimeofday_us();                                            \
+    const int64_t BAIDU_CONCAT(logeverys_seen_, __LINE__) =                    \
+        BAIDU_CONCAT(logeverys_, __LINE__);                                    \
+    logifmacro(severity,                                                       \
+               (condition) &&                                                  \
+                   BAIDU_CONCAT(logeverys_ts_, __LINE__) >=                    \
+                       (BAIDU_CONCAT(logeverys_seen_, __LINE__) + 1000000L) && \
+                   ::butil::subtle::NoBarrier_CompareAndSwap(                  \
+                       &BAIDU_CONCAT(logeverys_, __LINE__),                    \
+                       BAIDU_CONCAT(logeverys_seen_, __LINE__),                \
+                       BAIDU_CONCAT(logeverys_ts_, __LINE__)) ==               \
+                       BAIDU_CONCAT(logeverys_seen_, __LINE__))
 
 // ===============================================================
 
 // Print a log for at most once. (not present in glog)
 // Almost zero overhead when the log was printed.
 #ifndef LOG_ONCE
-# define LOG_ONCE(severity) LOG_FIRST_N(severity, 1)
-# define LOG_IF_ONCE(severity, condition) LOG_IF_FIRST_N(severity, condition, 1)
+#define LOG_ONCE(severity) LOG_FIRST_N(severity, 1)
+#define LOG_IF_ONCE(severity, condition) LOG_IF_FIRST_N(severity, condition, 1)
 #endif
 
 // Print a log after every N calls. First call always prints.
 // Each call to this macro has a cost of relaxed atomic increment.
 // The corresponding macro in glog is not thread-safe while this is.
 #ifndef LOG_EVERY_N
-# define LOG_EVERY_N(severity, N)                                \
-     BAIDU_LOG_IF_EVERY_N_IMPL(LOG_IF, severity, true, N)
-# define LOG_IF_EVERY_N(severity, condition, N)                  \
-     BAIDU_LOG_IF_EVERY_N_IMPL(LOG_IF, severity, condition, N)
+#define LOG_EVERY_N(severity, N) \
+    BAIDU_LOG_IF_EVERY_N_IMPL(LOG_IF, severity, true, N)
+#define LOG_IF_EVERY_N(severity, condition, N) \
+    BAIDU_LOG_IF_EVERY_N_IMPL(LOG_IF, severity, condition, N)
 #endif
 
 // Print logs for first N calls.
 // Almost zero overhead when the log was printed for N times
 // The corresponding macro in glog is not thread-safe while this is.
 #ifndef LOG_FIRST_N
-# define LOG_FIRST_N(severity, N)                                \
-     BAIDU_LOG_IF_FIRST_N_IMPL(LOG_IF, severity, true, N)
-# define LOG_IF_FIRST_N(severity, condition, N)                  \
-     BAIDU_LOG_IF_FIRST_N_IMPL(LOG_IF, severity, condition, N)
+#define LOG_FIRST_N(severity, N) \
+    BAIDU_LOG_IF_FIRST_N_IMPL(LOG_IF, severity, true, N)
+#define LOG_IF_FIRST_N(severity, condition, N) \
+    BAIDU_LOG_IF_FIRST_N_IMPL(LOG_IF, severity, condition, N)
 #endif
 
 // Print a log every second. (not present in glog). First call always prints.
 // Each call to this macro has a cost of calling gettimeofday.
 #ifndef LOG_EVERY_SECOND
-# define LOG_EVERY_SECOND(severity)                                \
-     BAIDU_LOG_IF_EVERY_SECOND_IMPL(LOG_IF, severity, true)
-# define LOG_IF_EVERY_SECOND(severity, condition)                \
-     BAIDU_LOG_IF_EVERY_SECOND_IMPL(LOG_IF, severity, condition)
+#define LOG_EVERY_SECOND(severity) \
+    BAIDU_LOG_IF_EVERY_SECOND_IMPL(LOG_IF, severity, true)
+#define LOG_IF_EVERY_SECOND(severity, condition) \
+    BAIDU_LOG_IF_EVERY_SECOND_IMPL(LOG_IF, severity, condition)
 #endif
 
 #ifndef PLOG_EVERY_N
-# define PLOG_EVERY_N(severity, N)                               \
-     BAIDU_LOG_IF_EVERY_N_IMPL(PLOG_IF, severity, true, N)
-# define PLOG_IF_EVERY_N(severity, condition, N)                 \
-     BAIDU_LOG_IF_EVERY_N_IMPL(PLOG_IF, severity, condition, N)
+#define PLOG_EVERY_N(severity, N) \
+    BAIDU_LOG_IF_EVERY_N_IMPL(PLOG_IF, severity, true, N)
+#define PLOG_IF_EVERY_N(severity, condition, N) \
+    BAIDU_LOG_IF_EVERY_N_IMPL(PLOG_IF, severity, condition, N)
 #endif
 
 #ifndef PLOG_FIRST_N
-# define PLOG_FIRST_N(severity, N)                               \
-     BAIDU_LOG_IF_FIRST_N_IMPL(PLOG_IF, severity, true, N)
-# define PLOG_IF_FIRST_N(severity, condition, N)                 \
-     BAIDU_LOG_IF_FIRST_N_IMPL(PLOG_IF, severity, condition, N)
+#define PLOG_FIRST_N(severity, N) \
+    BAIDU_LOG_IF_FIRST_N_IMPL(PLOG_IF, severity, true, N)
+#define PLOG_IF_FIRST_N(severity, condition, N) \
+    BAIDU_LOG_IF_FIRST_N_IMPL(PLOG_IF, severity, condition, N)
 #endif
 
 #ifndef PLOG_ONCE
-# define PLOG_ONCE(severity) PLOG_FIRST_N(severity, 1)
-# define PLOG_IF_ONCE(severity, condition) PLOG_IF_FIRST_N(severity, condition, 1)
+#define PLOG_ONCE(severity) PLOG_FIRST_N(severity, 1)
+#define PLOG_IF_ONCE(severity, condition) \
+    PLOG_IF_FIRST_N(severity, condition, 1)
 #endif
 
 #ifndef PLOG_EVERY_SECOND
-# define PLOG_EVERY_SECOND(severity)                             \
-     BAIDU_LOG_IF_EVERY_SECOND_IMPL(PLOG_IF, severity, true)
-# define PLOG_IF_EVERY_SECOND(severity, condition)                       \
-     BAIDU_LOG_IF_EVERY_SECOND_IMPL(PLOG_IF, severity, condition)
+#define PLOG_EVERY_SECOND(severity) \
+    BAIDU_LOG_IF_EVERY_SECOND_IMPL(PLOG_IF, severity, true)
+#define PLOG_IF_EVERY_SECOND(severity, condition) \
+    BAIDU_LOG_IF_EVERY_SECOND_IMPL(PLOG_IF, severity, condition)
 #endif
 
 // DEBUG_MODE is for uses like
@@ -1246,6 +1284,5 @@ inline std::ostream& operator<<(std::ostream& out, const std::wstring& wstr) {
 //
 // We tie its state to ENABLE_DLOG.
 enum { DEBUG_MODE = DCHECK_IS_ON() };
-
 
 #endif  // BUTIL_LOGGING_H_

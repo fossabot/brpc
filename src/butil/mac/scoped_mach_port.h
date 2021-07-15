@@ -16,27 +16,21 @@ namespace mac {
 namespace internal {
 
 struct SendRightTraits {
-  static mach_port_t InvalidValue() {
-    return MACH_PORT_NULL;
-  }
+    static mach_port_t InvalidValue() { return MACH_PORT_NULL; }
 
-  static void Free(mach_port_t port);
+    static void Free(mach_port_t port);
 };
 
 struct ReceiveRightTraits {
-  static mach_port_t InvalidValue() {
-    return MACH_PORT_NULL;
-  }
+    static mach_port_t InvalidValue() { return MACH_PORT_NULL; }
 
-  static void Free(mach_port_t port);
+    static void Free(mach_port_t port);
 };
 
 struct PortSetTraits {
-  static mach_port_t InvalidValue() {
-    return MACH_PORT_NULL;
-  }
+    static mach_port_t InvalidValue() { return MACH_PORT_NULL; }
 
-  static void Free(mach_port_t port);
+    static void Free(mach_port_t port);
 };
 
 }  // namespace internal

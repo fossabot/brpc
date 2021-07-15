@@ -20,7 +20,7 @@
 #ifndef BUTIL_FD_GUARD_H
 #define BUTIL_FD_GUARD_H
 
-#include <unistd.h>                                  // close()
+#include <unistd.h>  // close()
 
 namespace butil {
 
@@ -40,7 +40,7 @@ class fd_guard {
 public:
     fd_guard() : _fd(-1) {}
     explicit fd_guard(int fd) : _fd(fd) {}
-    
+
     ~fd_guard() {
         if (_fd >= 0) {
             ::close(_fd);
@@ -60,17 +60,17 @@ public:
     // Set internal fd to -1 and return the value before set.
     int release() {
         const int prev_fd = _fd;
-        _fd = -1;
+        _fd               = -1;
         return prev_fd;
     }
-    
+
     operator int() const { return _fd; }
-    
+
 private:
     // Copying this makes no sense.
     fd_guard(const fd_guard&);
     void operator=(const fd_guard&);
-    
+
     int _fd;
 };
 

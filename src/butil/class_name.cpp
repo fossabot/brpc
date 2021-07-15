@@ -17,9 +17,9 @@
 
 // Date: Mon. Nov 7 14:47:36 CST 2011
 
-#include <cxxabi.h>                              // __cxa_demangle
-#include <string>                                // std::string
-#include <stdlib.h>                              // free()
+#include <cxxabi.h>  // __cxa_demangle
+#include <stdlib.h>  // free()
+#include <string>    // std::string
 
 namespace butil {
 
@@ -48,7 +48,7 @@ std::string demangle(const char* name) {
     //       mangling rules.
     //   -3: One of the arguments is invalid.
     int status = 0;
-    char* buf = abi::__cxa_demangle(name, NULL, NULL, &status);
+    char* buf  = abi::__cxa_demangle(name, NULL, NULL, &status);
     if (status == 0) {
         std::string s(buf);
         free(buf);
@@ -58,4 +58,3 @@ std::string demangle(const char* name) {
 }
 
 }  // namespace butil
-

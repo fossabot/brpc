@@ -35,9 +35,9 @@ namespace butil {
 namespace snappy {
 
 void Varint::Append32(std::string* s, uint32_t value) {
-  char buf[Varint::kMax32];
-  const char* p = Varint::Encode32(buf, value);
-  s->append(buf, p - buf);
+    char buf[Varint::kMax32];
+    const char* p = Varint::Encode32(buf, value);
+    s->append(buf, p - buf);
 }
 
 }  // namespace snappy

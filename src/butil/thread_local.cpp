@@ -14,15 +14,15 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
- 
+
 // Date: Mon. Nov 7 14:47:36 CST 2011
 
-#include <errno.h>                       // errno
-#include <pthread.h>                     // pthread_key_t
+#include <errno.h>    // errno
+#include <pthread.h>  // pthread_key_t
 #include <stdio.h>
-#include <algorithm>                     // std::find
-#include <vector>                        // std::vector
-#include <stdlib.h>                      // abort, atexit
+#include <stdlib.h>   // abort, atexit
+#include <algorithm>  // std::find
+#include <vector>     // std::vector
 
 namespace butil {
 namespace detail {
@@ -31,7 +31,7 @@ class ThreadExitHelper {
 public:
     typedef void (*Fn)(void*);
     typedef std::pair<Fn, void*> Pair;
-    
+
     ~ThreadExitHelper() {
         // Call function reversely.
         while (!_fns.empty()) {
@@ -56,12 +56,13 @@ public:
     }
 
     void remove(Fn fn, void* arg) {
-        std::vector<Pair>::iterator
-            it = std::find(_fns.begin(), _fns.end(), std::make_pair(fn, arg));
+        std::vector<Pair>::iterator it =
+            std::find(_fns.begin(), _fns.end(), std::make_pair(fn, arg));
         if (it != _fns.end()) {
             std::vector<Pair>::iterator ite = it + 1;
             for (; ite != _fns.end() && ite->first == fn && ite->second == arg;
-                  ++ite) {}
+                 ++ite) {
+            }
             _fns.erase(it, ite);
         }
     }
@@ -78,8 +79,9 @@ static void delete_thread_exit_helper(void* arg) {
 }
 
 static void helper_exit_global() {
-    detail::ThreadExitHelper* h = 
-        (detail::ThreadExitHelper*)pthread_getspecific(detail::thread_atexit_key);
+    detail::ThreadExitHelper* h =
+        (detail::ThreadExitHelper*)pthread_getspecific(
+            detail::thread_atexit_key);
     if (h) {
         pthread_setspecific(detail::thread_atexit_key, NULL);
         delete h;
@@ -87,7 +89,8 @@ static void helper_exit_global() {
 }
 
 static void make_thread_atexit_key() {
-    if (pthread_key_create(&thread_atexit_key, delete_thread_exit_helper) != 0) {
+    if (pthread_key_create(&thread_atexit_key, delete_thread_exit_helper) !=
+        0) {
         fprintf(stderr, "Fail to create thread_atexit_key, abort\n");
         abort();
     }
@@ -100,7 +103,8 @@ detail::ThreadExitHelper* get_or_new_thread_exit_helper() {
     pthread_once(&detail::thread_atexit_once, detail::make_thread_atexit_key);
 
     detail::ThreadExitHelper* h =
-        (detail::ThreadExitHelper*)pthread_getspecific(detail::thread_atexit_key);
+        (detail::ThreadExitHelper*)pthread_getspecific(
+            detail::thread_atexit_key);
     if (NULL == h) {
         h = new (std::nothrow) detail::ThreadExitHelper;
         if (NULL != h) {
@@ -112,12 +116,11 @@ detail::ThreadExitHelper* get_or_new_thread_exit_helper() {
 
 detail::ThreadExitHelper* get_thread_exit_helper() {
     pthread_once(&detail::thread_atexit_once, detail::make_thread_atexit_key);
-    return (detail::ThreadExitHelper*)pthread_getspecific(detail::thread_atexit_key);
+    return (detail::ThreadExitHelper*)pthread_getspecific(
+        detail::thread_atexit_key);
 }
 
-static void call_single_arg_fn(void* fn) {
-    ((void (*)())fn)();
-}
+static void call_single_arg_fn(void* fn) { ((void (*)())fn)(); }
 
 }  // namespace detail
 

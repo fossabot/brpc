@@ -15,11 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef  BRPC_PPROF_SERVICE_H
-#define  BRPC_PPROF_SERVICE_H
+#ifndef BRPC_PPROF_SERVICE_H
+#define BRPC_PPROF_SERVICE_H
 
 #include "brpc/builtin_service.pb.h"
-
 
 namespace brpc {
 
@@ -34,7 +33,7 @@ public:
                     const ::brpc::ProfileRequest* request,
                     ::brpc::ProfileResponse* response,
                     ::google::protobuf::Closure* done);
-    
+
     void heap(::google::protobuf::RpcController* controller,
               const ::brpc::ProfileRequest* request,
               ::brpc::ProfileResponse* response,
@@ -56,7 +55,6 @@ public:
                  ::google::protobuf::Closure* done);
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif  //BRPC_PPROF_SERVICE_H
+#endif  // BRPC_PPROF_SERVICE_H

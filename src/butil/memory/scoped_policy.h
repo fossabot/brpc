@@ -10,13 +10,13 @@ namespace scoped_policy {
 
 // Defines the ownership policy for a scoped object.
 enum OwnershipPolicy {
-  // The scoped object takes ownership of an object by taking over an existing
-  // ownership claim.
-  ASSUME,
+    // The scoped object takes ownership of an object by taking over an existing
+    // ownership claim.
+    ASSUME,
 
-  // The scoped object will retain the the object and any initial ownership is
-  // not changed.
-  RETAIN
+    // The scoped object will retain the the object and any initial ownership is
+    // not changed.
+    RETAIN
 };
 
 }  // namespace scoped_policy

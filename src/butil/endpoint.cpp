@@ -17,30 +17,30 @@
 
 // Date: Mon. Nov 7 14:47:36 CST 2011
 
-#include "butil/build_config.h"                // OS_MACOSX
-#include <arpa/inet.h>                         // inet_pton, inet_ntop
-#include <netdb.h>                             // gethostbyname_r
-#include <unistd.h>                            // gethostname
-#include <errno.h>                             // errno
-#include <string.h>                            // strcpy
-#include <stdio.h>                             // snprintf
-#include <stdlib.h>                            // strtol
+#include "butil/endpoint.h"  // ip_t
+#include <arpa/inet.h>       // inet_pton, inet_ntop
+#include <errno.h>           // errno
 #include <gflags/gflags.h>
-#include "butil/fd_guard.h"                    // fd_guard
-#include "butil/endpoint.h"                    // ip_t
+#include <netdb.h>               // gethostbyname_r
+#include <stdio.h>               // snprintf
+#include <stdlib.h>              // strtol
+#include <string.h>              // strcpy
+#include <sys/socket.h>          // SO_REUSEADDR SO_REUSEPORT
+#include <unistd.h>              // gethostname
+#include "butil/build_config.h"  // OS_MACOSX
+#include "butil/fd_guard.h"      // fd_guard
 #include "butil/logging.h"
 #include "butil/memory/singleton_on_pthread_once.h"
 #include "butil/strings/string_piece.h"
-#include <sys/socket.h>                        // SO_REUSEADDR SO_REUSEPORT
 
-//supported since Linux 3.9.
+// supported since Linux 3.9.
 DEFINE_bool(reuse_port, false, "Enable SO_REUSEPORT for all listened sockets");
 
 DEFINE_bool(reuse_addr, true, "Enable SO_REUSEADDR for all listened sockets");
 
 __BEGIN_DECLS
-int BAIDU_WEAK bthread_connect(
-    int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen) {
+int BAIDU_WEAK bthread_connect(int sockfd, const struct sockaddr* serv_addr,
+                               socklen_t addrlen) {
     return connect(sockfd, serv_addr, addrlen);
 }
 __END_DECLS
@@ -50,7 +50,8 @@ namespace butil {
 int str2ip(const char* ip_str, ip_t* ip) {
     // ip_str can be NULL when called by EndPoint(0, ...)
     if (ip_str != NULL) {
-        for (; isspace(*ip_str); ++ip_str);
+        for (; isspace(*ip_str); ++ip_str)
+            ;
         int rc = inet_pton(AF_INET, ip_str, ip);
         if (rc > 0) {
             return 0;
@@ -75,10 +76,10 @@ int ip2hostname(ip_t ip, char* host, size_t host_len) {
     sockaddr_in sa;
     bzero((char*)&sa, sizeof(sa));
     sa.sin_family = AF_INET;
-    sa.sin_port = 0;    // useless since we don't need server_name
-    sa.sin_addr = ip;
-    if (getnameinfo((const sockaddr*)&sa, sizeof(sa),
-                    host, host_len, NULL, 0, NI_NAMEREQD) != 0) {
+    sa.sin_port   = 0;  // useless since we don't need server_name
+    sa.sin_addr   = ip;
+    if (getnameinfo((const sockaddr*)&sa, sizeof(sa), host, host_len, NULL, 0,
+                    NI_NAMEREQD) != 0) {
         return -1;
     }
     // remove baidu-specific domain name (that every name has)
@@ -104,7 +105,7 @@ EndPointStr endpoint2str(const EndPoint& point) {
         return endpoint2str(EndPoint(IP_NONE, 0));
     }
     char* buf = str._buf + strlen(str._buf);
-    *buf++ = ':';
+    *buf++    = ':';
     snprintf(buf, 16, "%d", point.port);
     return str;
 }
@@ -118,7 +119,8 @@ int hostname2ip(const char* hostname, ip_t* ip) {
         hostname = buf;
     } else {
         // skip heading space
-        for (; isspace(*hostname); ++hostname);
+        for (; isspace(*hostname); ++hostname)
+            ;
     }
 
 #if defined(OS_MACOSX)
@@ -134,11 +136,12 @@ int hostname2ip(const char* hostname, ip_t* ip) {
     int error = 0;
     struct hostent ent;
     struct hostent* result = NULL;
-    if (gethostbyname_r(hostname, &ent, aux_buf, sizeof(aux_buf),
-                        &result, &error) != 0 || result == NULL) {
+    if (gethostbyname_r(hostname, &ent, aux_buf, sizeof(aux_buf), &result,
+                        &error) != 0 ||
+        result == NULL) {
         return -1;
     }
-#endif // defined(OS_MACOSX)
+#endif  // defined(OS_MACOSX)
     // Only fetch the first address here
     bcopy((char*)result->h_addr, (char*)ip, result->h_length);
     return 0;
@@ -160,9 +163,7 @@ struct MyAddressInfo {
     }
 };
 
-ip_t my_ip() {
-    return get_leaky_singleton<MyAddressInfo>()->my_ip;
-}
+ip_t my_ip() { return get_leaky_singleton<MyAddressInfo>()->my_ip; }
 
 const char* my_ip_cstr() {
     return get_leaky_singleton<MyAddressInfo>()->my_ip_str.c_str();
@@ -187,12 +188,13 @@ int str2endpoint(const char* str, EndPoint* point) {
         return -1;
     }
     ++i;
-    char* end = NULL;
+    char* end   = NULL;
     point->port = strtol(str + i, &end, 10);
     if (end == str + i) {
         return -1;
     } else if (*end) {
-        for (++end; isspace(*end); ++end);
+        for (++end; isspace(*end); ++end)
+            ;
         if (*end) {
             return -1;
         }
@@ -232,12 +234,13 @@ int hostname2endpoint(const char* str, EndPoint* point) {
     if (str[i] == ':') {
         ++i;
     }
-    char* end = NULL;
+    char* end   = NULL;
     point->port = strtol(str + i, &end, 10);
     if (end == str + i) {
         return -1;
     } else if (*end) {
-        for (; isspace(*end); ++end);
+        for (; isspace(*end); ++end)
+            ;
         if (*end) {
             return -1;
         }
@@ -287,9 +290,9 @@ int tcp_connect(EndPoint point, int* self_port) {
     struct sockaddr_in serv_addr;
     bzero((char*)&serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr = point.ip;
-    serv_addr.sin_port = htons(point.port);
-    int rc = 0;
+    serv_addr.sin_addr   = point.ip;
+    serv_addr.sin_port   = htons(point.port);
+    int rc               = 0;
     if (bthread_connect != NULL) {
         rc = bthread_connect(sockfd, (struct sockaddr*)&serv_addr,
                              sizeof(serv_addr));
@@ -319,8 +322,8 @@ int tcp_listen(EndPoint point) {
     if (FLAGS_reuse_addr) {
 #if defined(SO_REUSEADDR)
         const int on = 1;
-        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
-                       &on, sizeof(on)) != 0) {
+        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) !=
+            0) {
             return -1;
         }
 #else
@@ -332,9 +335,10 @@ int tcp_listen(EndPoint point) {
     if (FLAGS_reuse_port) {
 #if defined(SO_REUSEPORT)
         const int on = 1;
-        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
-                       &on, sizeof(on)) != 0) {
-            LOG(WARNING) << "Fail to setsockopt SO_REUSEPORT of sockfd=" << sockfd;
+        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)) !=
+            0) {
+            LOG(WARNING) << "Fail to setsockopt SO_REUSEPORT of sockfd="
+                         << sockfd;
         }
 #else
         LOG(ERROR) << "Missing def of SO_REUSEPORT while -reuse_port is on";
@@ -345,8 +349,8 @@ int tcp_listen(EndPoint point) {
     struct sockaddr_in serv_addr;
     bzero((char*)&serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr = point.ip;
-    serv_addr.sin_port = htons(point.port);
+    serv_addr.sin_addr   = point.ip;
+    serv_addr.sin_port   = htons(point.port);
     if (bind(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) != 0) {
         return -1;
     }
@@ -359,10 +363,10 @@ int tcp_listen(EndPoint point) {
     return sockfd.release();
 }
 
-int get_local_side(int fd, EndPoint *out) {
+int get_local_side(int fd, EndPoint* out) {
     struct sockaddr addr;
     socklen_t socklen = sizeof(addr);
-    const int rc = getsockname(fd, &addr, &socklen);
+    const int rc      = getsockname(fd, &addr, &socklen);
     if (rc != 0) {
         return rc;
     }
@@ -372,10 +376,10 @@ int get_local_side(int fd, EndPoint *out) {
     return 0;
 }
 
-int get_remote_side(int fd, EndPoint *out) {
+int get_remote_side(int fd, EndPoint* out) {
     struct sockaddr addr;
     socklen_t socklen = sizeof(addr);
-    const int rc = getpeername(fd, &addr, &socklen);
+    const int rc      = getpeername(fd, &addr, &socklen);
     if (rc != 0) {
         return rc;
     }

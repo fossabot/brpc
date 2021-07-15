@@ -15,8 +15,7 @@ double strtod(const char* s00, char** se);
 
 // Convert double to ASCII string. For meaning of parameters
 // see dtoa.cc file.
-char* dtoa(double d, int mode, int ndigits,
-           int* decpt, int* sign, char** rve);
+char* dtoa(double d, int mode, int ndigits, int* decpt, int* sign, char** rve);
 
 // Must be used to free values returned by dtoa.
 void freedtoa(char* s);

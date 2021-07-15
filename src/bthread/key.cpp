@@ -20,11 +20,11 @@
 // Date: Sun Aug  3 12:46:15 CST 2014
 
 #include <pthread.h>
-#include "butil/macros.h"
+#include "bthread/errno.h"       // EAGAIN
+#include "bthread/task_group.h"  // TaskGroup
 #include "butil/atomicops.h"
+#include "butil/macros.h"
 #include "bvar/passive_status.h"
-#include "bthread/errno.h"                       // EAGAIN
-#include "bthread/task_group.h"                  // TaskGroup
 
 // Implement bthread_key_t related functions
 
@@ -51,7 +51,7 @@ static const uint32_t KEY_2NDLEVEL_SIZE = 32;
 static const uint32_t KEY_1STLEVEL_SIZE = 31;
 
 // Max tls in one thread, currently the value is 992 which should be enough
-// for most projects throughout baidu. 
+// for most projects throughout baidu.
 static const uint32_t KEYS_MAX = KEY_2NDLEVEL_SIZE * KEY_1STLEVEL_SIZE;
 
 // destructors/version of TLS.
@@ -64,12 +64,12 @@ static KeyInfo s_key_info[KEYS_MAX] = {};
 
 // For allocating keys.
 static pthread_mutex_t s_key_mutex = PTHREAD_MUTEX_INITIALIZER;
-static size_t nfreekey = 0;
-static size_t nkey = 0;
+static size_t nfreekey             = 0;
+static size_t nkey                 = 0;
 static uint32_t s_free_keys[KEYS_MAX];
 
 // Stats.
-static butil::static_atomic<size_t> nkeytable = BUTIL_STATIC_ATOMIC_INIT(0);
+static butil::static_atomic<size_t> nkeytable    = BUTIL_STATIC_ATOMIC_INIT(0);
 static butil::static_atomic<size_t> nsubkeytable = BUTIL_STATIC_ATOMIC_INIT(0);
 
 // The second-level array.
@@ -82,9 +82,7 @@ public:
     }
 
     // NOTE: Call clear first.
-    ~SubKeyTable() {
-        nsubkeytable.fetch_sub(1, butil::memory_order_relaxed);
-    }
+    ~SubKeyTable() { nsubkeytable.fetch_sub(1, butil::memory_order_relaxed); }
 
     void clear(uint32_t offset) {
         for (uint32_t i = 0; i < KEY_2NDLEVEL_SIZE; ++i) {
@@ -93,7 +91,7 @@ public:
                 // Set the position to NULL before calling dtor which may set
                 // the position again.
                 _data[i].ptr = NULL;
-                
+
                 KeyInfo info = bthread::s_key_info[offset + i];
                 if (info.dtor && _data[i].version == info.version) {
                     info.dtor(p, info.dtor_args);
@@ -121,7 +119,7 @@ public:
     }
     inline void set_data(uint32_t index, uint32_t version, void* data) {
         _data[index].version = version;
-        _data[index].ptr = data;
+        _data[index].ptr     = data;
     }
 
 private:
@@ -171,8 +169,8 @@ public:
         if (subidx < KEY_1STLEVEL_SIZE) {
             const SubKeyTable* sub_kt = _subs[subidx];
             if (sub_kt) {
-                return sub_kt->get_data(
-                    key.index - subidx * KEY_2NDLEVEL_SIZE, key.version);
+                return sub_kt->get_data(key.index - subidx * KEY_2NDLEVEL_SIZE,
+                                        key.version);
             }
         }
         return NULL;
@@ -200,6 +198,7 @@ public:
 
 public:
     KeyTable* next;
+
 private:
     SubKeyTable* _subs[KEY_1STLEVEL_SIZE];
 };
@@ -232,7 +231,7 @@ void return_keytable(bthread_keytable_pool_t* pool, KeyTable* kt) {
         delete kt;
         return;
     }
-    kt->next = (KeyTable*)pool->free_keytables;
+    kt->next             = (KeyTable*)pool->free_keytables;
     pool->free_keytables = kt;
 }
 
@@ -258,13 +257,13 @@ static size_t get_keytable_count(void*) {
     return nkeytable.load(butil::memory_order_relaxed);
 }
 static size_t get_keytable_memory(void*) {
-    const size_t n = nkeytable.load(butil::memory_order_relaxed);
+    const size_t n    = nkeytable.load(butil::memory_order_relaxed);
     const size_t nsub = nsubkeytable.load(butil::memory_order_relaxed);
     return n * sizeof(KeyTable) + nsub * sizeof(SubKeyTable);
 }
 
-static bvar::PassiveStatus<int> s_bthread_key_count(
-    "bthread_key_count", get_key_count, NULL);
+static bvar::PassiveStatus<int> s_bthread_key_count("bthread_key_count",
+                                                    get_key_count, NULL);
 static bvar::PassiveStatus<size_t> s_bthread_keytable_count(
     "bthread_keytable_count", get_keytable_count, NULL);
 static bvar::PassiveStatus<size_t> s_bthread_keytable_memory(
@@ -281,7 +280,7 @@ int bthread_keytable_pool_init(bthread_keytable_pool_t* pool) {
     }
     pthread_mutex_init(&pool->mutex, NULL);
     pool->free_keytables = NULL;
-    pool->destroyed = 0;
+    pool->destroyed      = 0;
     return 0;
 }
 
@@ -301,10 +300,10 @@ int bthread_keytable_pool_destroy(bthread_keytable_pool_t* pool) {
     }
     // Cheat get/setspecific and destroy the keytables.
     bthread::TaskGroup* const g = bthread::tls_task_group;
-    bthread::KeyTable* old_kt = bthread::tls_bls.keytable;
+    bthread::KeyTable* old_kt   = bthread::tls_bls.keytable;
     while (saved_free_keytables) {
-        bthread::KeyTable* kt = saved_free_keytables;
-        saved_free_keytables = kt->next;
+        bthread::KeyTable* kt     = saved_free_keytables;
+        saved_free_keytables      = kt->next;
         bthread::tls_bls.keytable = kt;
         if (g) {
             g->current_task()->local_storage.keytable = kt;
@@ -331,9 +330,10 @@ int bthread_keytable_pool_getstat(bthread_keytable_pool_t* pool,
         return EINVAL;
     }
     std::unique_lock<pthread_mutex_t> mu(pool->mutex);
-    size_t count = 0;
+    size_t count         = 0;
     bthread::KeyTable* p = (bthread::KeyTable*)pool->free_keytables;
-    for (; p; p = p->next, ++count) {}
+    for (; p; p = p->next, ++count) {
+    }
     stat->nfree = count;
     return 0;
 }
@@ -341,10 +341,8 @@ int bthread_keytable_pool_getstat(bthread_keytable_pool_t* pool,
 // TODO: this is not strict `reserve' because we only check #free.
 // Currently there's no way to track KeyTables that may be returned
 // to the pool in future.
-void bthread_keytable_pool_reserve(bthread_keytable_pool_t* pool,
-                                   size_t nfree,
-                                   bthread_key_t key,
-                                   void* ctor(const void*),
+void bthread_keytable_pool_reserve(bthread_keytable_pool_t* pool, size_t nfree,
+                                   bthread_key_t key, void* ctor(const void*),
                                    const void* ctor_args) {
     if (pool == NULL) {
         LOG(ERROR) << "Param[pool] is NULL";
@@ -371,7 +369,7 @@ void bthread_keytable_pool_reserve(bthread_keytable_pool_t* pool,
             delete kt;
             break;
         }
-        kt->next = (bthread::KeyTable*)pool->free_keytables;
+        kt->next             = (bthread::KeyTable*)pool->free_keytables;
         pool->free_keytables = kt;
         if (data == NULL) {
             break;
@@ -379,8 +377,7 @@ void bthread_keytable_pool_reserve(bthread_keytable_pool_t* pool,
     }
 }
 
-int bthread_key_create2(bthread_key_t* key,
-                        void (*dtor)(void*, const void*),
+int bthread_key_create2(bthread_key_t* key, void (*dtor)(void*, const void*),
                         const void* dtor_args) {
     uint32_t index = 0;
     {
@@ -393,10 +390,10 @@ int bthread_key_create2(bthread_key_t* key,
             return EAGAIN;  // what pthread_key_create returns in this case.
         }
     }
-    bthread::s_key_info[index].dtor = dtor;
+    bthread::s_key_info[index].dtor      = dtor;
     bthread::s_key_info[index].dtor_args = dtor_args;
-    key->index = index;
-    key->version = bthread::s_key_info[index].version;
+    key->index                           = index;
+    key->version                         = bthread::s_key_info[index].version;
     if (key->version == 0) {
         ++bthread::s_key_info[index].version;
         ++key->version;
@@ -408,7 +405,8 @@ int bthread_key_create(bthread_key_t* key, void (*dtor)(void*)) {
     if (dtor == NULL) {
         return bthread_key_create2(key, NULL, NULL);
     } else {
-        return bthread_key_create2(key, bthread::arg_as_dtor, (const void*)dtor);
+        return bthread_key_create2(key, bthread::arg_as_dtor,
+                                   (const void*)dtor);
     }
 }
 
@@ -420,11 +418,11 @@ int bthread_key_delete(bthread_key_t key) {
             if (++bthread::s_key_info[key.index].version == 0) {
                 ++bthread::s_key_info[key.index].version;
             }
-            bthread::s_key_info[key.index].dtor = NULL;
-            bthread::s_key_info[key.index].dtor_args = NULL;        
+            bthread::s_key_info[key.index].dtor       = NULL;
+            bthread::s_key_info[key.index].dtor_args  = NULL;
             bthread::s_free_keys[bthread::nfreekey++] = key.index;
             return 0;
-        } 
+        }
     }
     CHECK(false) << "bthread_key_delete is called on invalid " << key;
     return EINVAL;
@@ -442,7 +440,7 @@ int bthread_setspecific(bthread_key_t key, void* data) {
         if (NULL == kt) {
             return ENOMEM;
         }
-        bthread::tls_bls.keytable = kt;
+        bthread::tls_bls.keytable   = kt;
         bthread::TaskGroup* const g = bthread::tls_task_group;
         if (g) {
             g->current_task()->local_storage.keytable = kt;
@@ -466,19 +464,15 @@ void* bthread_getspecific(bthread_key_t key) {
         kt = bthread::borrow_keytable(task->attr.keytable_pool);
         if (kt) {
             g->current_task()->local_storage.keytable = kt;
-            bthread::tls_bls.keytable = kt;
+            bthread::tls_bls.keytable                 = kt;
             return kt->get_data(key);
         }
     }
     return NULL;
 }
 
-void bthread_assign_data(void* data) {
-    bthread::tls_bls.assigned_data = data;
-}
+void bthread_assign_data(void* data) { bthread::tls_bls.assigned_data = data; }
 
-void* bthread_get_assigned_data() {
-    return bthread::tls_bls.assigned_data;
-}
+void* bthread_get_assigned_data() { return bthread::tls_bls.assigned_data; }
 
 }  // extern "C"

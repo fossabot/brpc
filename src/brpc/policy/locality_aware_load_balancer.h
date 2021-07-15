@@ -15,19 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_LOCALITY_AWARE_LOAD_BALANCER_H
 #define BRPC_POLICY_LOCALITY_AWARE_LOAD_BALANCER_H
 
-#include <vector>                                      // std::vector
-#include <deque>                                       // std::deque
-#include <map>                                         // std::map
-#include "butil/containers/flat_map.h"                  // FlatMap
-#include "butil/containers/doubly_buffered_data.h"      // DoublyBufferedData
-#include "butil/containers/bounded_queue.h"             // BoundedQueue
-#include "brpc/load_balancer.h"
+#include <deque>   // std::deque
+#include <map>     // std::map
+#include <vector>  // std::vector
 #include "brpc/controller.h"
-
+#include "brpc/load_balancer.h"
+#include "butil/containers/bounded_queue.h"         // BoundedQueue
+#include "butil/containers/doubly_buffered_data.h"  // DoublyBufferedData
+#include "butil/containers/flat_map.h"              // FlatMap
 
 namespace brpc {
 namespace policy {
@@ -54,13 +52,14 @@ public:
 
 private:
     struct TimeInfo {
-        int64_t latency_sum;         // microseconds
+        int64_t latency_sum;  // microseconds
         int64_t end_time_us;
     };
-    
+
     class Servers;
     class Weight {
-    friend class Servers;
+        friend class Servers;
+
     public:
         static const int RECV_QUEUE_SIZE = 128;
 
@@ -78,8 +77,8 @@ private:
             bool chosen;
             int64_t weight_diff;
         };
-        AddInflightResult AddInflight(
-            const SelectIn& in, size_t index, int64_t dice);
+        AddInflightResult AddInflight(const SelectIn& in, size_t index,
+                                      int64_t dice);
         int64_t MarkFailed(size_t index, int64_t avg_weight);
 
         void Describe(std::ostream& os, int64_t now);
@@ -111,29 +110,25 @@ private:
         butil::atomic<int64_t>* left;
         Weight* weight;
     };
-    
+
     class Servers {
     public:
         std::vector<ServerInfo> weight_tree;
         butil::FlatMap<SocketId, size_t> server_map;
 
-        Servers() {
-            CHECK_EQ(0, server_map.init(1024, 70));
-        }
+        Servers() { CHECK_EQ(0, server_map.init(1024, 70)); }
 
         // Add diff to left_weight of all parent nodes of node `index'.
         // Not require position `index' to exist.
         void UpdateParentWeights(int64_t diff, size_t index) const;
     };
-    static bool Add(Servers& bg, const Servers& fg,
-                    SocketId id, LocalityAwareLoadBalancer*);
-    static bool Remove(Servers& bg, SocketId id,
-                       LocalityAwareLoadBalancer*);
+    static bool Add(Servers& bg, const Servers& fg, SocketId id,
+                    LocalityAwareLoadBalancer*);
+    static bool Remove(Servers& bg, SocketId id, LocalityAwareLoadBalancer*);
     static size_t BatchAdd(Servers& bg, const Servers& fg,
-                         const std::vector<SocketId>& servers,
-                         LocalityAwareLoadBalancer*);
-    static size_t BatchRemove(Servers& bg, 
-                              const std::vector<SocketId>& servers,
+                           const std::vector<SocketId>& servers,
+                           LocalityAwareLoadBalancer*);
+    static size_t BatchRemove(Servers& bg, const std::vector<SocketId>& servers,
                               LocalityAwareLoadBalancer*);
     static bool RemoveAll(Servers& bg, const Servers& fg);
 
@@ -162,8 +157,8 @@ inline void LocalityAwareLoadBalancer::Servers::UpdateParentWeights(
     }
 }
 
-inline int64_t LocalityAwareLoadBalancer::Weight::ResetWeight(
-    size_t index, int64_t now_us) {
+inline int64_t LocalityAwareLoadBalancer::Weight::ResetWeight(size_t index,
+                                                              int64_t now_us) {
     int64_t new_weight = _base_weight;
     if (_begin_time_count > 0) {
         const int64_t inflight_delay =
@@ -178,8 +173,8 @@ inline int64_t LocalityAwareLoadBalancer::Weight::ResetWeight(
         new_weight = FLAGS_min_weight;
     }
     const int64_t old_weight = _weight;
-    _weight = new_weight;
-    const int64_t diff = new_weight - old_weight;
+    _weight                  = new_weight;
+    const int64_t diff       = new_weight - old_weight;
     if (_old_index == index && diff != 0) {
         _old_diff_sum += diff;
     }
@@ -187,22 +182,22 @@ inline int64_t LocalityAwareLoadBalancer::Weight::ResetWeight(
 }
 
 inline LocalityAwareLoadBalancer::Weight::AddInflightResult
-LocalityAwareLoadBalancer::Weight::AddInflight(
-    const SelectIn& in, size_t index, int64_t dice) {
+LocalityAwareLoadBalancer::Weight::AddInflight(const SelectIn& in, size_t index,
+                                               int64_t dice) {
     BAIDU_SCOPED_LOCK(_mutex);
     if (Disabled()) {
-        AddInflightResult r = { false, 0 };
+        AddInflightResult r = {false, 0};
         return r;
     }
     const int64_t diff = ResetWeight(index, in.begin_time_us);
     if (_weight < dice) {
         // inflight delay makes the weight too small to choose.
-        AddInflightResult r = { false, diff };
+        AddInflightResult r = {false, diff};
         return r;
     }
     _begin_time_sum += in.begin_time_us;
     ++_begin_time_count;
-    AddInflightResult r = { true, diff };
+    AddInflightResult r = {true, diff};
     return r;
 }
 
@@ -217,7 +212,6 @@ inline int64_t LocalityAwareLoadBalancer::Weight::MarkFailed(
 }
 
 }  // namespace policy
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_POLICY_LOCALITY_AWARE_LOAD_BALANCER_H

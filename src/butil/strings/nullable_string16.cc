@@ -11,7 +11,8 @@
 namespace butil {
 
 std::ostream& operator<<(std::ostream& out, const NullableString16& value) {
-  return value.is_null() ? out << "(null)" : out << UTF16ToUTF8(value.string());
+    return value.is_null() ? out << "(null)"
+                           : out << UTF16ToUTF8(value.string());
 }
 
 }  // namespace butil

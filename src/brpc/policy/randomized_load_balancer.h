@@ -15,15 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_RANDOMIZED_LOAD_BALANCER_H
 #define BRPC_POLICY_RANDOMIZED_LOAD_BALANCER_H
 
-#include <vector>                                      // std::vector
-#include <map>                                         // std::map
-#include "butil/containers/doubly_buffered_data.h"
-#include "brpc/load_balancer.h"
+#include <map>     // std::map
+#include <vector>  // std::vector
 #include "brpc/cluster_recover_policy.h"
+#include "brpc/load_balancer.h"
+#include "butil/containers/doubly_buffered_data.h"
 
 namespace brpc {
 namespace policy {
@@ -41,7 +40,7 @@ public:
     RandomizedLoadBalancer* New(const butil::StringPiece&) const;
     void Destroy();
     void Describe(std::ostream& os, const DescribeOptions&);
-    
+
 private:
     struct Servers {
         std::vector<ServerId> server_list;
@@ -51,14 +50,14 @@ private:
     static bool Add(Servers& bg, const ServerId& id);
     static bool Remove(Servers& bg, const ServerId& id);
     static size_t BatchAdd(Servers& bg, const std::vector<ServerId>& servers);
-    static size_t BatchRemove(Servers& bg, const std::vector<ServerId>& servers);
+    static size_t BatchRemove(Servers& bg,
+                              const std::vector<ServerId>& servers);
 
     butil::DoublyBufferedData<Servers> _db_servers;
     std::shared_ptr<ClusterRecoverPolicy> _cluster_recover_policy;
 };
 
 }  // namespace policy
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_POLICY_RANDOMIZED_LOAD_BALANCER_H

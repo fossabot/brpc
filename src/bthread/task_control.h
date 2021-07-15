@@ -23,15 +23,15 @@
 #define BTHREAD_TASK_CONTROL_H
 
 #ifndef NDEBUG
-#include <iostream>                             // std::ostream
+#include <iostream>  // std::ostream
 #endif
-#include <stddef.h>                             // size_t
-#include "butil/atomicops.h"                     // butil::atomic
-#include "bvar/bvar.h"                          // bvar::PassiveStatus
-#include "bthread/task_meta.h"                  // TaskMeta
-#include "butil/resource_pool.h"                 // ResourcePool
-#include "bthread/work_stealing_queue.h"        // WorkStealingQueue
+#include <stddef.h>  // size_t
 #include "bthread/parking_lot.h"
+#include "bthread/task_meta.h"            // TaskMeta
+#include "bthread/work_stealing_queue.h"  // WorkStealingQueue
+#include "butil/atomicops.h"              // butil::atomic
+#include "butil/resource_pool.h"          // ResourcePool
+#include "bvar/bvar.h"                    // bvar::PassiveStatus
 
 namespace bthread {
 
@@ -47,7 +47,7 @@ public:
 
     // Must be called before using. `nconcurrency' is # of worker pthreads.
     int init(int nconcurrency);
-    
+
     // Create a TaskGroup in this control.
     TaskGroup* create_group();
 
@@ -59,10 +59,11 @@ public:
 
     // Stop and join worker threads in TaskControl.
     void stop_and_join();
-    
+
     // Get # of worker threads.
-    int concurrency() const 
-    { return _concurrency.load(butil::memory_order_acquire); }
+    int concurrency() const {
+        return _concurrency.load(butil::memory_order_acquire);
+    }
 
     void print_rq_sizes(std::ostream& os);
 

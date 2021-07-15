@@ -27,14 +27,12 @@ namespace butil {
 // Note: You should almost always use the NonThreadSafe class to get
 // the right version of the class for your build configuration.
 class NonThreadSafeDoNothing {
- public:
-  bool CalledOnValidThread() const {
-    return true;
-  }
+public:
+    bool CalledOnValidThread() const { return true; }
 
- protected:
-  ~NonThreadSafeDoNothing() {}
-  void DetachFromThread() {}
+protected:
+    ~NonThreadSafeDoNothing() {}
+    void DetachFromThread() {}
 };
 
 // NonThreadSafe is a helper class used to help verify that methods of a

@@ -20,86 +20,82 @@ namespace butil {
 namespace subtle {
 
 class BUTIL_EXPORT RefCountedBase {
- public:
-  bool HasOneRef() const { return ref_count_ == 1; }
+public:
+    bool HasOneRef() const { return ref_count_ == 1; }
 
- protected:
-  RefCountedBase()
-      : ref_count_(0)
-      , in_dtor_(false)
-      {
-  }
+protected:
+    RefCountedBase() : ref_count_(0), in_dtor_(false) {}
 
-  ~RefCountedBase() {
-  #ifndef NDEBUG
-    DCHECK(in_dtor_) << "RefCounted object deleted without calling Release()";
-  #endif
-  }
-
-
-  void AddRef() const {
-    // TODO(maruel): Add back once it doesn't assert 500 times/sec.
-    // Current thread books the critical section "AddRelease"
-    // without release it.
-    // DFAKE_SCOPED_LOCK_THREAD_LOCKED(add_release_);
-  #ifndef NDEBUG
-    DCHECK(!in_dtor_);
-  #endif
-    ++ref_count_;
-  }
-
-  // Returns true if the object should self-delete.
-  bool Release() const {
-    // TODO(maruel): Add back once it doesn't assert 500 times/sec.
-    // Current thread books the critical section "AddRelease"
-    // without release it.
-    // DFAKE_SCOPED_LOCK_THREAD_LOCKED(add_release_);
-  #ifndef NDEBUG
-    DCHECK(!in_dtor_);
-  #endif
-    if (--ref_count_ == 0) {
-  #ifndef NDEBUG
-      in_dtor_ = true;
-  #endif
-      return true;
-    }
-    return false;
-  }
-
- private:
-  mutable int ref_count_;
-#if defined(__clang__)
-  mutable bool ALLOW_UNUSED  in_dtor_;
-#else
-  mutable bool in_dtor_;
+    ~RefCountedBase() {
+#ifndef NDEBUG
+        DCHECK(in_dtor_)
+            << "RefCounted object deleted without calling Release()";
 #endif
-  DFAKE_MUTEX(add_release_);
+    }
 
-  DISALLOW_COPY_AND_ASSIGN(RefCountedBase);
+    void AddRef() const {
+        // TODO(maruel): Add back once it doesn't assert 500 times/sec.
+        // Current thread books the critical section "AddRelease"
+        // without release it.
+        // DFAKE_SCOPED_LOCK_THREAD_LOCKED(add_release_);
+#ifndef NDEBUG
+        DCHECK(!in_dtor_);
+#endif
+        ++ref_count_;
+    }
+
+    // Returns true if the object should self-delete.
+    bool Release() const {
+        // TODO(maruel): Add back once it doesn't assert 500 times/sec.
+        // Current thread books the critical section "AddRelease"
+        // without release it.
+        // DFAKE_SCOPED_LOCK_THREAD_LOCKED(add_release_);
+#ifndef NDEBUG
+        DCHECK(!in_dtor_);
+#endif
+        if (--ref_count_ == 0) {
+#ifndef NDEBUG
+            in_dtor_ = true;
+#endif
+            return true;
+        }
+        return false;
+    }
+
+private:
+    mutable int ref_count_;
+#if defined(__clang__)
+    mutable bool ALLOW_UNUSED in_dtor_;
+#else
+    mutable bool in_dtor_;
+#endif
+    DFAKE_MUTEX(add_release_);
+
+    DISALLOW_COPY_AND_ASSIGN(RefCountedBase);
 };
 
 class BUTIL_EXPORT RefCountedThreadSafeBase {
- public:
-  bool HasOneRef() const;
+public:
+    bool HasOneRef() const;
 
- protected:
-  RefCountedThreadSafeBase();
-  ~RefCountedThreadSafeBase();
+protected:
+    RefCountedThreadSafeBase();
+    ~RefCountedThreadSafeBase();
 
-  void AddRef() const;
+    void AddRef() const;
 
-  // Returns true if the object should self-delete.
-  bool Release() const;
+    // Returns true if the object should self-delete.
+    bool Release() const;
 
- private:
-  mutable AtomicRefCount ref_count_;
+private:
+    mutable AtomicRefCount ref_count_;
 #if defined(__clang__)
-  mutable bool ALLOW_UNUSED  in_dtor_;
+    mutable bool ALLOW_UNUSED in_dtor_;
 #else
-  mutable bool in_dtor_;
+    mutable bool in_dtor_;
 #endif
 
-  DISALLOW_COPY_AND_ASSIGN(RefCountedThreadSafeBase);
+    DISALLOW_COPY_AND_ASSIGN(RefCountedThreadSafeBase);
 };
 
 }  // namespace subtle
@@ -120,40 +116,39 @@ class BUTIL_EXPORT RefCountedThreadSafeBase {
 // the object accidently while there are references to it.
 template <class T>
 class RefCounted : public subtle::RefCountedBase {
- public:
-  RefCounted() {}
+public:
+    RefCounted() {}
 
-  void AddRef() const {
-    subtle::RefCountedBase::AddRef();
-  }
+    void AddRef() const { subtle::RefCountedBase::AddRef(); }
 
-  void Release() const {
-    if (subtle::RefCountedBase::Release()) {
-      delete static_cast<const T*>(this);
+    void Release() const {
+        if (subtle::RefCountedBase::Release()) {
+            delete static_cast<const T*>(this);
+        }
     }
-  }
 
- protected:
-  ~RefCounted() {}
+protected:
+    ~RefCounted() {}
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(RefCounted<T>);
+private:
+    DISALLOW_COPY_AND_ASSIGN(RefCounted<T>);
 };
 
 // Forward declaration.
-template <class T, typename Traits> class RefCountedThreadSafe;
+template <class T, typename Traits>
+class RefCountedThreadSafe;
 
 // Default traits for RefCountedThreadSafe<T>.  Deletes the object when its ref
 // count reaches 0.  Overload to delete it on a different thread etc.
-template<typename T>
+template <typename T>
 struct DefaultRefCountedThreadSafeTraits {
-  static void Destruct(const T* x) {
-    // Delete through RefCountedThreadSafe to make child classes only need to be
-    // friend with RefCountedThreadSafe instead of this struct, which is an
-    // implementation detail.
-    RefCountedThreadSafe<T,
-                         DefaultRefCountedThreadSafeTraits>::DeleteInternal(x);
-  }
+    static void Destruct(const T* x) {
+        // Delete through RefCountedThreadSafe to make child classes only need
+        // to be friend with RefCountedThreadSafe instead of this struct, which
+        // is an implementation detail.
+        RefCountedThreadSafe<
+            T, DefaultRefCountedThreadSafeTraits>::DeleteInternal(x);
+    }
 };
 
 //
@@ -170,45 +165,43 @@ struct DefaultRefCountedThreadSafeTraits {
 //     ~MyFoo();
 template <class T, typename Traits = DefaultRefCountedThreadSafeTraits<T> >
 class RefCountedThreadSafe : public subtle::RefCountedThreadSafeBase {
- public:
-  RefCountedThreadSafe() {}
+public:
+    RefCountedThreadSafe() {}
 
-  void AddRef() const {
-    subtle::RefCountedThreadSafeBase::AddRef();
-  }
+    void AddRef() const { subtle::RefCountedThreadSafeBase::AddRef(); }
 
-  void Release() const {
-    if (subtle::RefCountedThreadSafeBase::Release()) {
-      Traits::Destruct(static_cast<const T*>(this));
+    void Release() const {
+        if (subtle::RefCountedThreadSafeBase::Release()) {
+            Traits::Destruct(static_cast<const T*>(this));
+        }
     }
-  }
 
- protected:
-  ~RefCountedThreadSafe() {}
+protected:
+    ~RefCountedThreadSafe() {}
 
- private:
-  friend struct DefaultRefCountedThreadSafeTraits<T>;
-  static void DeleteInternal(const T* x) { delete x; }
+private:
+    friend struct DefaultRefCountedThreadSafeTraits<T>;
+    static void DeleteInternal(const T* x) { delete x; }
 
-  DISALLOW_COPY_AND_ASSIGN(RefCountedThreadSafe);
+    DISALLOW_COPY_AND_ASSIGN(RefCountedThreadSafe);
 };
 
 //
 // A thread-safe wrapper for some piece of data so we can place other
 // things in scoped_refptrs<>.
 //
-template<typename T>
+template <typename T>
 class RefCountedData
-    : public butil::RefCountedThreadSafe< butil::RefCountedData<T> > {
- public:
-  RefCountedData() : data() {}
-  RefCountedData(const T& in_value) : data(in_value) {}
+    : public butil::RefCountedThreadSafe<butil::RefCountedData<T> > {
+public:
+    RefCountedData() : data() {}
+    RefCountedData(const T& in_value) : data(in_value) {}
 
-  T data;
+    T data;
 
- private:
-  friend class butil::RefCountedThreadSafe<butil::RefCountedData<T> >;
-  ~RefCountedData() {}
+private:
+    friend class butil::RefCountedThreadSafe<butil::RefCountedData<T> >;
+    ~RefCountedData() {}
 };
 
 }  // namespace butil
@@ -263,90 +256,81 @@ class RefCountedData
 //
 template <class T>
 class scoped_refptr {
- public:
-  typedef T element_type;
+public:
+    typedef T element_type;
 
-  scoped_refptr() : ptr_(NULL) {
-  }
+    scoped_refptr() : ptr_(NULL) {}
 
-  scoped_refptr(T* p) : ptr_(p) {
-    if (ptr_)
-      ptr_->AddRef();
-  }
+    scoped_refptr(T* p) : ptr_(p) {
+        if (ptr_) ptr_->AddRef();
+    }
 
-  scoped_refptr(const scoped_refptr<T>& r) : ptr_(r.ptr_) {
-    if (ptr_)
-      ptr_->AddRef();
-  }
+    scoped_refptr(const scoped_refptr<T>& r) : ptr_(r.ptr_) {
+        if (ptr_) ptr_->AddRef();
+    }
 
-  template <typename U>
-  scoped_refptr(const scoped_refptr<U>& r) : ptr_(r.get()) {
-    if (ptr_)
-      ptr_->AddRef();
-  }
+    template <typename U>
+    scoped_refptr(const scoped_refptr<U>& r) : ptr_(r.get()) {
+        if (ptr_) ptr_->AddRef();
+    }
 
-  ~scoped_refptr() {
-    if (ptr_)
-      ptr_->Release();
-  }
+    ~scoped_refptr() {
+        if (ptr_) ptr_->Release();
+    }
 
-  T* get() const { return ptr_; }
+    T* get() const { return ptr_; }
 
-  // Allow scoped_refptr<C> to be used in boolean expression
-  // and comparison operations.
-  operator T*() const { return ptr_; }
+    // Allow scoped_refptr<C> to be used in boolean expression
+    // and comparison operations.
+    operator T*() const { return ptr_; }
 
-  T* operator->() const {
-    assert(ptr_ != NULL);
-    return ptr_;
-  }
+    T* operator->() const {
+        assert(ptr_ != NULL);
+        return ptr_;
+    }
 
-  scoped_refptr<T>& operator=(T* p) {
-    // AddRef first so that self assignment should work
-    if (p)
-      p->AddRef();
-    T* old_ptr = ptr_;
-    ptr_ = p;
-    if (old_ptr)
-      old_ptr->Release();
-    return *this;
-  }
+    scoped_refptr<T>& operator=(T* p) {
+        // AddRef first so that self assignment should work
+        if (p) p->AddRef();
+        T* old_ptr = ptr_;
+        ptr_       = p;
+        if (old_ptr) old_ptr->Release();
+        return *this;
+    }
 
-  scoped_refptr<T>& operator=(const scoped_refptr<T>& r) {
-    return *this = r.ptr_;
-  }
+    scoped_refptr<T>& operator=(const scoped_refptr<T>& r) {
+        return *this = r.ptr_;
+    }
 
-  template <typename U>
-  scoped_refptr<T>& operator=(const scoped_refptr<U>& r) {
-    return *this = r.get();
-  }
+    template <typename U>
+    scoped_refptr<T>& operator=(const scoped_refptr<U>& r) {
+        return *this = r.get();
+    }
 
-  void swap(T** pp) {
-    T* p = ptr_;
-    ptr_ = *pp;
-    *pp = p;
-  }
+    void swap(T** pp) {
+        T* p = ptr_;
+        ptr_ = *pp;
+        *pp  = p;
+    }
 
-  void swap(scoped_refptr<T>& r) {
-    swap(&r.ptr_);
-  }
+    void swap(scoped_refptr<T>& r) { swap(&r.ptr_); }
 
-  // Release ownership of ptr_, keeping its reference counter unchanged.
-  T* release() WARN_UNUSED_RESULT {
-      T* saved_ptr = NULL;
-      swap(&saved_ptr);
-      return saved_ptr;
-  }
+    // Release ownership of ptr_, keeping its reference counter unchanged.
+    T* release() WARN_UNUSED_RESULT {
+        T* saved_ptr = NULL;
+        swap(&saved_ptr);
+        return saved_ptr;
+    }
 
- protected:
-  T* ptr_;
+protected:
+    T* ptr_;
 };
 
 // Handy utility for creating a scoped_refptr<T> out of a T* explicitly without
 // having to retype all the template arguments
 template <typename T>
 scoped_refptr<T> make_scoped_refptr(T* t) {
-  return scoped_refptr<T>(t);
+    return scoped_refptr<T>(t);
 }
 
 #endif  // BUTIL_MEMORY_REF_COUNTED_H_

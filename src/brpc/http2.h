@@ -68,7 +68,7 @@ struct H2Settings {
     // as a connection error (Section 5.4.1) of type FLOW_CONTROL_ERROR
     // Default: 256 * 1024
     static const uint32_t DEFAULT_INITIAL_WINDOW_SIZE = 65535;
-    static const uint32_t MAX_WINDOW_SIZE = (1u << 31) - 1;
+    static const uint32_t MAX_WINDOW_SIZE             = (1u << 31) - 1;
     uint32_t stream_window_size;
 
     // Initial window size for connection-level flow control.
@@ -82,7 +82,7 @@ struct H2Settings {
     // connection error(Section 5.4.1) of type PROTOCOL_ERROR.
     // Default: 16384
     static const uint32_t DEFAULT_MAX_FRAME_SIZE = 16384;
-    static const uint32_t MAX_OF_MAX_FRAME_SIZE = 16777215;
+    static const uint32_t MAX_OF_MAX_FRAME_SIZE  = 16777215;
     uint32_t max_frame_size;
 
     // This advisory setting informs a peer of the maximum size of header list
@@ -98,20 +98,20 @@ struct H2Settings {
 std::ostream& operator<<(std::ostream& os, const H2Settings& s);
 
 enum H2Error {
-    H2_NO_ERROR            = 0x0, // Graceful shutdown
-    H2_PROTOCOL_ERROR      = 0x1, // Protocol error detected
-    H2_INTERNAL_ERROR      = 0x2, // Implementation fault
-    H2_FLOW_CONTROL_ERROR  = 0x3, // Flow-control limits exceeded
-    H2_SETTINGS_TIMEOUT    = 0x4, // Settings not acknowledged  
-    H2_STREAM_CLOSED_ERROR = 0x5, // Frame received for closed stream
-    H2_FRAME_SIZE_ERROR    = 0x6, // Frame size incorrect
-    H2_REFUSED_STREAM      = 0x7, // Stream not processed
-    H2_CANCEL              = 0x8, // Stream cancelled
-    H2_COMPRESSION_ERROR   = 0x9, // Compression state not updated
-    H2_CONNECT_ERROR       = 0xa, // TCP connection error for CONNECT method
-    H2_ENHANCE_YOUR_CALM   = 0xb, // Processing capacity exceeded
-    H2_INADEQUATE_SECURITY = 0xc, // Negotiated TLS parameters not acceptable
-    H2_HTTP_1_1_REQUIRED   = 0xd, // Use HTTP/1.1 for the request   
+    H2_NO_ERROR            = 0x0,  // Graceful shutdown
+    H2_PROTOCOL_ERROR      = 0x1,  // Protocol error detected
+    H2_INTERNAL_ERROR      = 0x2,  // Implementation fault
+    H2_FLOW_CONTROL_ERROR  = 0x3,  // Flow-control limits exceeded
+    H2_SETTINGS_TIMEOUT    = 0x4,  // Settings not acknowledged
+    H2_STREAM_CLOSED_ERROR = 0x5,  // Frame received for closed stream
+    H2_FRAME_SIZE_ERROR    = 0x6,  // Frame size incorrect
+    H2_REFUSED_STREAM      = 0x7,  // Stream not processed
+    H2_CANCEL              = 0x8,  // Stream cancelled
+    H2_COMPRESSION_ERROR   = 0x9,  // Compression state not updated
+    H2_CONNECT_ERROR       = 0xa,  // TCP connection error for CONNECT method
+    H2_ENHANCE_YOUR_CALM   = 0xb,  // Processing capacity exceeded
+    H2_INADEQUATE_SECURITY = 0xc,  // Negotiated TLS parameters not acceptable
+    H2_HTTP_1_1_REQUIRED   = 0xd,  // Use HTTP/1.1 for the request
 };
 
 // Get description of the error.
@@ -120,6 +120,6 @@ const char* H2ErrorToString(H2Error e);
 // Convert the error to status code with similar semantics
 int H2ErrorToStatusCode(H2Error e);
 
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BAIDU_RPC_HTTP2_H

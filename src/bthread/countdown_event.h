@@ -46,13 +46,13 @@ public:
     // This method never returns EINTR.
     int wait();
 
-    // Block the current thread until the counter reaches 0 or duetime has expired
-    // Returns 0 on success, error code otherwise. ETIMEDOUT is for timeout.
-    // This method never returns EINTR.
+    // Block the current thread until the counter reaches 0 or duetime has
+    // expired Returns 0 on success, error code otherwise. ETIMEDOUT is for
+    // timeout. This method never returns EINTR.
     int timed_wait(const timespec& duetime);
 
 private:
-    int *_butex;
+    int* _butex;
     bool _wait_was_invoked;
 };
 

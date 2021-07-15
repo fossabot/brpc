@@ -10,7 +10,7 @@
 
 #if defined(__OBJC__)
 #import <Foundation/Foundation.h>
-#else  // __OBJC__
+#else   // __OBJC__
 class NSBundle;
 class NSString;
 #endif  // __OBJC__

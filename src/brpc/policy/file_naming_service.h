@@ -15,24 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#ifndef  BRPC_POLICY_FILE_NAMING_SERVICE
-#define  BRPC_POLICY_FILE_NAMING_SERVICE
+#ifndef BRPC_POLICY_FILE_NAMING_SERVICE
+#define BRPC_POLICY_FILE_NAMING_SERVICE
 
 #include "brpc/naming_service.h"
-
 
 namespace brpc {
 namespace policy {
 
 class FileNamingService : public NamingService {
-friend class ConsulNamingService;
+    friend class ConsulNamingService;
+
 private:
     int RunNamingService(const char* service_name,
                          NamingServiceActions* actions) override;
 
-    int GetServers(const char *service_name,
-                   std::vector<ServerNode>* servers);
+    int GetServers(const char* service_name, std::vector<ServerNode>* servers);
 
     void Describe(std::ostream& os, const DescribeOptions&) const override;
 
@@ -42,7 +40,6 @@ private:
 };
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif  //BRPC_POLICY_FILE_NAMING_SERVICE
+#endif  // BRPC_POLICY_FILE_NAMING_SERVICE

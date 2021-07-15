@@ -18,16 +18,14 @@
 #ifndef BRPC_ACCEPTOR_H
 #define BRPC_ACCEPTOR_H
 
-#include "bthread/bthread.h"                       // bthread_t
-#include "butil/synchronization/condition_variable.h"
-#include "butil/containers/flat_map.h"
 #include "brpc/input_messenger.h"
-
+#include "bthread/bthread.h"  // bthread_t
+#include "butil/containers/flat_map.h"
+#include "butil/synchronization/condition_variable.h"
 
 namespace brpc {
 
-struct ConnectStatistics {
-};
+struct ConnectStatistics {};
 
 // Accept connections from a specific port and then
 // process messages from which it reads
@@ -37,9 +35,9 @@ public:
 
     enum Status {
         UNINITIALIZED = 0,
-        READY = 1,
-        RUNNING = 2,
-        STOPPING = 3,
+        READY         = 1,
+        RUNNING       = 2,
+        STOPPING      = 3,
     };
 
 public:
@@ -83,14 +81,14 @@ private:
     static void OnNewConnections(Socket* m);
 
     static void* CloseIdleConnections(void* arg);
-    
-    // Initialize internal structure. 
+
+    // Initialize internal structure.
     int Initialize();
 
     // Remove the accepted socket `sock' from inside
     void BeforeRecycle(Socket* sock) override;
 
-    bthread_keytable_pool_t* _keytable_pool; // owned by Server
+    bthread_keytable_pool_t* _keytable_pool;  // owned by Server
     Status _status;
     int _idle_timeout_sec;
     bthread_t _close_idle_tid;
@@ -101,14 +99,13 @@ private:
 
     butil::Mutex _map_mutex;
     butil::ConditionVariable _empty_cond;
-    
+
     // The map containing all the accepted sockets
     SocketMap _socket_map;
 
     std::shared_ptr<SocketSSLContext> _ssl_ctx;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_ACCEPTOR_H
+#endif  // BRPC_ACCEPTOR_H

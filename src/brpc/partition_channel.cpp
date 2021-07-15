@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "butil/containers/flat_map.h"
-#include "brpc/log.h"
-#include "brpc/load_balancer.h"
-#include "brpc/details/naming_service_thread.h"
 #include "brpc/partition_channel.h"
+#include "brpc/details/naming_service_thread.h"
 #include "brpc/global.h"
-
+#include "brpc/load_balancer.h"
+#include "brpc/log.h"
+#include "butil/containers/flat_map.h"
 
 namespace brpc {
 
@@ -35,8 +33,7 @@ public:
     PartitionChannelBase();
     ~PartitionChannelBase();
 
-    int Init(int num_partition_kinds,
-             PartitionParser* partition_parser,
+    int Init(int num_partition_kinds, PartitionParser* partition_parser,
              const char* load_balancer_name,
              const PartitionChannelOptions* options);
 
@@ -60,13 +57,10 @@ private:
     PartitionParser* _parser;
 };
 
-PartitionChannelBase::PartitionChannelBase()
-    : _subs(NULL)
-    , _parser(NULL) {
-}
+PartitionChannelBase::PartitionChannelBase() : _subs(NULL), _parser(NULL) {}
 
 PartitionChannelBase::~PartitionChannelBase() {
-    delete [] _subs;
+    delete[] _subs;
     _subs = NULL;
 }
 
@@ -86,7 +80,7 @@ int PartitionChannelBase::Init(int num_partition_kinds,
     if (options_in) {
         options = *options_in;
     }
-    options.succeed_without_server = true;
+    options.succeed_without_server     = true;
     options.log_succeed_without_server = false;
     _subs = new (std::nothrow) SubChannel[num_partition_kinds];
     if (NULL == _subs) {
@@ -100,8 +94,7 @@ int PartitionChannelBase::Init(int num_partition_kinds,
         }
     }
     for (int i = 0; i < num_partition_kinds; ++i) {
-        if (AddChannel(&_subs[i], DOESNT_OWN_CHANNEL,
-                       options.call_mapper.get(),
+        if (AddChannel(&_subs[i], DOESNT_OWN_CHANNEL, options.call_mapper.get(),
                        options.response_merger.get()) != 0) {
             LOG(ERROR) << "Fail to add sub channel[" << i << "]";
             return -1;
@@ -118,7 +111,7 @@ int PartitionChannelBase::Init(int num_partition_kinds,
     _parser = partition_parser;
     return 0;
 }
-    
+
 void PartitionChannelBase::PartitionServersIntoTemps(
     const std::vector<ServerId>& servers) {
     for (int i = 0; i < partition_count(); ++i) {
@@ -159,7 +152,7 @@ size_t PartitionChannelBase::AddServersInBatch(
     }
     return ntotal;
 }
-    
+
 size_t PartitionChannelBase::RemoveServersInBatch(
     const std::vector<ServerId>& servers) {
     PartitionServersIntoTemps(servers);
@@ -187,13 +180,9 @@ void PartitionChannelBase::OnRemovedServers(
 // ================= PartitionChannel ====================
 
 PartitionChannelOptions::PartitionChannelOptions()
-    : ChannelOptions(), fail_limit(-1) {
-}
+    : ChannelOptions(), fail_limit(-1) {}
 
-PartitionChannel::PartitionChannel()
-    : _pchan(NULL)
-    , _parser(NULL) {
-}
+PartitionChannel::PartitionChannel() : _pchan(NULL), _parser(NULL) {}
 
 PartitionChannel::~PartitionChannel() {
     if (_nsthread_ptr) {
@@ -210,8 +199,7 @@ PartitionChannel::~PartitionChannel() {
 
 int PartitionChannel::Init(int num_partition_kinds,
                            PartitionParser* partition_parser,
-                           const char* ns_url, 
-                           const char* load_balancer_name,
+                           const char* ns_url, const char* load_balancer_name,
                            const PartitionChannelOptions* options_in) {
     // Force naming services to register.
     GlobalInitializeOrDie();
@@ -236,13 +224,13 @@ int PartitionChannel::Init(int num_partition_kinds,
         LOG(ERROR) << "Fail to new PartitionChannelBase";
         return -1;
     }
-    if (_pchan->Init(num_partition_kinds, partition_parser,
-                     load_balancer_name, options_in) != 0) {
+    if (_pchan->Init(num_partition_kinds, partition_parser, load_balancer_name,
+                     options_in) != 0) {
         LOG(ERROR) << "Fail to init PartitionChannelBase";
         return -1;
     }
     if (_nsthread_ptr->AddWatcher(
-            _pchan, (options_in ?   options_in->ns_filter : NULL)) != 0) {
+            _pchan, (options_in ? options_in->ns_filter : NULL)) != 0) {
         LOG(ERROR) << "Fail to add PartitionChannelBase as watcher";
         return -1;
     }
@@ -255,8 +243,7 @@ void PartitionChannel::CallMethod(
     const google::protobuf::MethodDescriptor* method,
     google::protobuf::RpcController* controller,
     const google::protobuf::Message* request,
-    google::protobuf::Message* response,
-    google::protobuf::Closure* done) {
+    google::protobuf::Message* response, google::protobuf::Closure* done) {
     if (_pchan != NULL) {
         _pchan->CallMethod(method, controller, request, response, done);
     } else {
@@ -298,8 +285,9 @@ public:
                 continue;
             }
             if (part.num_partition_kinds <= 0) {
-                LOG(ERROR) << "Invalid num_partition_kinds=" << part.num_partition_kinds
-                           << " in tag=`" << servers[i].tag << "'";
+                LOG(ERROR) << "Invalid num_partition_kinds="
+                           << part.num_partition_kinds << " in tag=`"
+                           << servers[i].tag << "'";
                 continue;
             }
             if (part.index < 0 || part.index >= part.num_partition_kinds) {
@@ -307,7 +295,8 @@ public:
                            << servers[i].tag << "'";
                 continue;
             }
-            SubPartitionChannel** ppchan = _part_chan_map.seek(part.num_partition_kinds);
+            SubPartitionChannel** ppchan =
+                _part_chan_map.seek(part.num_partition_kinds);
             SubPartitionChannel* pchan = NULL;
             if (ppchan == NULL) {
                 pchan = new (std::nothrow) SubPartitionChannel;
@@ -334,7 +323,7 @@ public:
                 pchan = *ppchan;
                 CHECK_EQ(part.num_partition_kinds, pchan->partition_count());
             }
-            
+
             if (pchan->tmp.capacity() == 0) {
                 pchan->tmp.reserve(16);
             }
@@ -349,12 +338,12 @@ public:
             if (!it->second->tmp.empty()) {
                 size_t n = it->second->AddServersInBatch(it->second->tmp);
                 it->second->num_servers += n;
-                RPC_VLOG << "Added " << n << " servers to partition="
-                         << it->first;
+                RPC_VLOG << "Added " << n
+                         << " servers to partition=" << it->first;
             }
         }
     }
-    
+
     void OnRemovedServers(const std::vector<ServerId>& servers) {
         PartitionServersIntoTemps(servers);
         std::vector<int> erased_parts;
@@ -364,8 +353,8 @@ public:
             if (!partchan->tmp.empty()) {
                 size_t n = partchan->RemoveServersInBatch(partchan->tmp);
                 partchan->num_servers -= n;
-                RPC_VLOG << "Removed " << n << " servers from partition="
-                         << it->first;
+                RPC_VLOG << "Removed " << n
+                         << " servers from partition=" << it->first;
                 if (partchan->num_servers <= 0) {
                     CHECK_EQ(0, partchan->num_servers);
                     const int npart = partchan->partition_count();
@@ -381,21 +370,17 @@ public:
         }
     }
 
-    Partitioner()
-        : _schan(NULL)
-        , _parser(NULL)
-    {}
+    Partitioner() : _schan(NULL), _parser(NULL) {}
 
     ~Partitioner() {
         // Do nothing. _schan deletes all sub channels.
     }
-    
-    int Init(SelectiveChannel* schan,
-             PartitionParser* parser,
+
+    int Init(SelectiveChannel* schan, PartitionParser* parser,
              const char* load_balancer_name,
              const PartitionChannelOptions* options) {
-        _schan = schan;
-        _parser = parser;
+        _schan              = schan;
+        _parser             = parser;
         _load_balancer_name = load_balancer_name;
         if (options) {
             _options = *options;
@@ -415,7 +400,7 @@ private:
         std::vector<ServerId> tmp;
     };
     typedef butil::FlatMap<int, SubPartitionChannel*> PartChanMap;
-    
+
     PartChanMap _part_chan_map;
     SelectiveChannel* _schan;
     PartitionParser* _parser;
@@ -424,9 +409,7 @@ private:
 };
 
 DynamicPartitionChannel::DynamicPartitionChannel()
-    : _partitioner(NULL)
-    , _parser(NULL) {
-}
+    : _partitioner(NULL), _parser(NULL) {}
 
 DynamicPartitionChannel::~DynamicPartitionChannel() {
     if (_nsthread_ptr) {
@@ -441,11 +424,10 @@ DynamicPartitionChannel::~DynamicPartitionChannel() {
     _parser = NULL;
 }
 
-int DynamicPartitionChannel::Init(
-    PartitionParser* partition_parser,
-    const char* ns_url, 
-    const char* load_balancer_name,
-    const PartitionChannelOptions* options_in) {
+int DynamicPartitionChannel::Init(PartitionParser* partition_parser,
+                                  const char* ns_url,
+                                  const char* load_balancer_name,
+                                  const PartitionChannelOptions* options_in) {
     GlobalInitializeOrDie();
     if (NULL == partition_parser) {
         LOG(ERROR) << "Parameter[partition_parser] must be non-NULL";
@@ -468,8 +450,8 @@ int DynamicPartitionChannel::Init(
         LOG(ERROR) << "Fail to new Partitioner";
         return -1;
     }
-    if (_partitioner->Init(&_schan, partition_parser,
-                           load_balancer_name, options_in) != 0) {
+    if (_partitioner->Init(&_schan, partition_parser, load_balancer_name,
+                           options_in) != 0) {
         LOG(ERROR) << "Fail to init Partitioner";
         return -1;
     }
@@ -487,9 +469,8 @@ void DynamicPartitionChannel::CallMethod(
     const google::protobuf::MethodDescriptor* method,
     google::protobuf::RpcController* controller,
     const google::protobuf::Message* request,
-    google::protobuf::Message* response,
-    google::protobuf::Closure* done) {
+    google::protobuf::Message* response, google::protobuf::Closure* done) {
     _schan.CallMethod(method, controller, request, response, done);
 }
 
-} // namespace brpc
+}  // namespace brpc

@@ -17,11 +17,11 @@
 
 #include "brpc/policy/redis_authenticator.h"
 
+#include "brpc/redis_command.h"
 #include "butil/base64.h"
 #include "butil/iobuf.h"
 #include "butil/string_printf.h"
 #include "butil/sys_byteorder.h"
-#include "brpc/redis_command.h"
 
 namespace brpc {
 namespace policy {

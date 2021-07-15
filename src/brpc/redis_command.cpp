@@ -15,10 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include "butil/logging.h"
-#include "brpc/log.h"
 #include "brpc/redis_command.h"
+#include "brpc/log.h"
+#include "butil/logging.h"
 
 namespace brpc {
 
@@ -30,8 +29,8 @@ inline size_t AppendDecimal(char* outbuf, unsigned long d) {
     size_t n = sizeof(buf);
     do {
         const unsigned long q = d / 10;
-        buf[--n] = d - q * 10 + '0';
-        d = q;
+        buf[--n]              = d - q * 10 + '0';
+        d                     = q;
     } while (d);
     fast_memcpy(outbuf, buf + n, sizeof(buf) - n);
     return sizeof(buf) - n;
@@ -43,16 +42,16 @@ inline size_t AppendDecimal(char* outbuf, unsigned long d) {
 // vs. ~400ns while using snprintf() vs. AppendDecimal() respectively.
 inline void AppendHeader(std::string& buf, char fc, unsigned long value) {
     char header[32];
-    header[0] = fc;
-    size_t len = AppendDecimal(header + 1, value);
+    header[0]       = fc;
+    size_t len      = AppendDecimal(header + 1, value);
     header[len + 1] = '\r';
     header[len + 2] = '\n';
     buf.append(header, len + 3);
 }
 inline void AppendHeader(butil::IOBuf& buf, char fc, unsigned long value) {
     char header[32];
-    header[0] = fc;
-    size_t len = AppendDecimal(header + 1, value);
+    header[0]       = fc;
+    size_t len      = AppendDecimal(header + 1, value);
     header[len + 1] = '\r';
     header[len + 2] = '\n';
     buf.append(header, len + 3);
@@ -72,8 +71,8 @@ static void FlushComponent(std::string* out, std::string* compbuf, int* ncomp) {
 // Some code is copied or modified from redisvFormatCommand() in
 // https://github.com/redis/hiredis/blob/master/hiredis.c to keep close
 // compatibility with hiredis.
-butil::Status
-RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
+butil::Status RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt,
+                                  va_list ap) {
     if (outbuf == NULL || fmt == NULL) {
         return butil::Status(EINVAL, "Param[outbuf] or [fmt] is NULL");
     }
@@ -82,11 +81,11 @@ RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
     nocount_buf.reserve(fmt_len * 3 / 2 + 16);
     std::string compbuf;  // A component
     compbuf.reserve(fmt_len + 16);
-    const char* c = fmt;
-    int ncomponent = 0;
-    char quote_char = 0;
+    const char* c         = fmt;
+    int ncomponent        = 0;
+    char quote_char       = 0;
     const char* quote_pos = fmt;
-    int nargs = 0;
+    int nargs             = 0;
     for (; *c; ++c) {
         if (*c != '%' || c[1] == '\0') {
             if (*c == ' ') {
@@ -96,21 +95,23 @@ RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
                     FlushComponent(&nocount_buf, &compbuf, &ncomponent);
                 }
             } else if (*c == '"' || *c == '\'') {  // Check quotation.
-                if (!quote_char) {  // begin quote
+                if (!quote_char) {                 // begin quote
                     quote_char = *c;
-                    quote_pos = c;
+                    quote_pos  = c;
                     if (!compbuf.empty()) {
                         FlushComponent(&nocount_buf, &compbuf, &ncomponent);
                     }
                 } else if (quote_char == *c) {
-                    const char last_char = (compbuf.empty() ? 0 : compbuf.back());
+                    const char last_char =
+                        (compbuf.empty() ? 0 : compbuf.back());
                     if (last_char == '\\') {
-                        // Even if the preceding chars are two consecutive backslashes
+                        // Even if the preceding chars are two consecutive
+                        // backslashes
                         // (\\), still do the escaping, which is the behavior of
                         // official redis-cli.
                         compbuf.pop_back();
                         compbuf.push_back(*c);
-                    } else { // end quote
+                    } else {  // end quote
                         quote_char = 0;
                         FlushComponent(&nocount_buf, &compbuf, &ncomponent);
                     }
@@ -121,12 +122,12 @@ RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
                 compbuf.push_back(*c);
             }
         } else {
-            char *arg;
+            char* arg;
             size_t size;
 
-            switch(c[1]) {
+            switch (c[1]) {
             case 's':
-                arg = va_arg(ap, char*);
+                arg  = va_arg(ap, char*);
                 size = strlen(arg);
                 if (size > 0) {
                     compbuf.append(arg, size);
@@ -134,7 +135,7 @@ RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
                 ++nargs;
                 break;
             case 'b':
-                arg = va_arg(ap, char*);
+                arg  = va_arg(ap, char*);
                 size = va_arg(ap, size_t);
                 if (size > 0) {
                     compbuf.append(arg, size);
@@ -147,15 +148,15 @@ RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
             default: {
                 /* Try to detect printf format */
                 static const char intfmts[] = "diouxX";
-                static const char flags[] = "#0-+ ";
+                static const char flags[]   = "#0-+ ";
                 char _format[24];
                 char _printed[40];
-                const char *_p = c+1;
-                size_t _l = 0;
+                const char* _p = c + 1;
+                size_t _l      = 0;
                 va_list _cpy;
 
                 /* Flags */
-                while (*_p != '\0' && strchr(flags,*_p) != NULL) _p++;
+                while (*_p != '\0' && strchr(flags, *_p) != NULL) _p++;
 
                 /* Field width */
                 while (*_p != '\0' && isdigit(*_p)) _p++;
@@ -170,22 +171,22 @@ RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
                 va_copy(_cpy, ap);
 
                 /* Integer conversion (without modifiers) */
-                if (strchr(intfmts,*_p) != NULL) {
-                    va_arg(ap,int);
+                if (strchr(intfmts, *_p) != NULL) {
+                    va_arg(ap, int);
                     goto fmt_valid;
                 }
 
                 /* Double conversion (without modifiers) */
-                if (strchr("eEfFgGaA",*_p) != NULL) {
-                    va_arg(ap,double);
+                if (strchr("eEfFgGaA", *_p) != NULL) {
+                    va_arg(ap, double);
                     goto fmt_valid;
                 }
 
                 /* Size: char */
                 if (_p[0] == 'h' && _p[1] == 'h') {
                     _p += 2;
-                    if (*_p != '\0' && strchr(intfmts,*_p) != NULL) {
-                        va_arg(ap,int); /* char gets promoted to int */
+                    if (*_p != '\0' && strchr(intfmts, *_p) != NULL) {
+                        va_arg(ap, int); /* char gets promoted to int */
                         goto fmt_valid;
                     }
                     goto fmt_invalid;
@@ -194,8 +195,8 @@ RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
                 /* Size: short */
                 if (_p[0] == 'h') {
                     _p += 1;
-                    if (*_p != '\0' && strchr(intfmts,*_p) != NULL) {
-                        va_arg(ap,int); /* short gets promoted to int */
+                    if (*_p != '\0' && strchr(intfmts, *_p) != NULL) {
+                        va_arg(ap, int); /* short gets promoted to int */
                         goto fmt_valid;
                     }
                     goto fmt_invalid;
@@ -204,8 +205,8 @@ RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
                 /* Size: long long */
                 if (_p[0] == 'l' && _p[1] == 'l') {
                     _p += 2;
-                    if (*_p != '\0' && strchr(intfmts,*_p) != NULL) {
-                        va_arg(ap,long long);
+                    if (*_p != '\0' && strchr(intfmts, *_p) != NULL) {
+                        va_arg(ap, long long);
                         goto fmt_valid;
                     }
                     goto fmt_invalid;
@@ -214,13 +215,13 @@ RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
                 /* Size: long */
                 if (_p[0] == 'l') {
                     _p += 1;
-                    if (*_p != '\0' && strchr(intfmts,*_p) != NULL) {
-                        va_arg(ap,long);
+                    if (*_p != '\0' && strchr(intfmts, *_p) != NULL) {
+                        va_arg(ap, long);
                         goto fmt_valid;
                     }
                     goto fmt_invalid;
                 }
-                
+
             fmt_invalid:
                 va_end(_cpy);
                 return butil::Status(EINVAL, "Invalid format");
@@ -228,10 +229,11 @@ RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
             fmt_valid:
                 ++nargs;
                 _l = _p + 1 - c;
-                if (_l < sizeof(_format)-2) {
+                if (_l < sizeof(_format) - 2) {
                     memcpy(_format, c, _l);
                     _format[_l] = '\0';
-                    int plen = vsnprintf(_printed, sizeof(_printed), _format, _cpy);
+                    int plen =
+                        vsnprintf(_printed, sizeof(_printed), _format, _cpy);
                     if (plen > 0) {
                         compbuf.append(_printed, plen);
                     }
@@ -243,7 +245,7 @@ RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
                 break;
             }  // end default
             }  // end switch
-            
+
             ++c;
         }
     }
@@ -255,15 +257,16 @@ RedisCommandFormatV(butil::IOBuf* outbuf, const char* fmt, va_list ap) {
         return butil::Status(EINVAL, "Unmatched quote: ...%.*s... (offset=%lu)",
                              (int)ctx_size, ctx_begin, quote_pos - fmt);
     }
-    
+
     if (!compbuf.empty()) {
         FlushComponent(&nocount_buf, &compbuf, &ncomponent);
     }
 
     LOG_IF(ERROR, nargs == 0) << "You must call RedisCommandNoFormat() "
-        "to replace RedisCommandFormatV without any args (to avoid potential "
-        "formatting of conversion specifiers)";
-    
+                                 "to replace RedisCommandFormatV without any "
+                                 "args (to avoid potential "
+                                 "formatting of conversion specifiers)";
+
     AppendHeader(*outbuf, '*', ncomponent);
     outbuf->append(nocount_buf);
     return butil::Status::OK();
@@ -277,8 +280,8 @@ butil::Status RedisCommandFormat(butil::IOBuf* buf, const char* fmt, ...) {
     return st;
 }
 
-butil::Status
-RedisCommandNoFormat(butil::IOBuf* outbuf, const butil::StringPiece& cmd) {
+butil::Status RedisCommandNoFormat(butil::IOBuf* outbuf,
+                                   const butil::StringPiece& cmd) {
     if (outbuf == NULL || cmd == NULL) {
         return butil::Status(EINVAL, "Param[outbuf] or [cmd] is NULL");
     }
@@ -287,8 +290,8 @@ RedisCommandNoFormat(butil::IOBuf* outbuf, const butil::StringPiece& cmd) {
     nocount_buf.reserve(cmd_len * 3 / 2 + 16);
     std::string compbuf;  // A component
     compbuf.reserve(cmd_len + 16);
-    int ncomponent = 0;
-    char quote_char = 0;
+    int ncomponent        = 0;
+    char quote_char       = 0;
     const char* quote_pos = cmd.data();
     for (const char* c = cmd.data(); c != cmd.data() + cmd.size(); ++c) {
         if (*c == ' ') {
@@ -298,21 +301,22 @@ RedisCommandNoFormat(butil::IOBuf* outbuf, const butil::StringPiece& cmd) {
                 FlushComponent(&nocount_buf, &compbuf, &ncomponent);
             }
         } else if (*c == '"' || *c == '\'') {  // Check quotation.
-            if (!quote_char) {  // begin quote
+            if (!quote_char) {                 // begin quote
                 quote_char = *c;
-                quote_pos = c;
+                quote_pos  = c;
                 if (!compbuf.empty()) {
                     FlushComponent(&nocount_buf, &compbuf, &ncomponent);
                 }
             } else if (quote_char == *c) {
                 const char last_char = (compbuf.empty() ? 0 : compbuf.back());
                 if (last_char == '\\') {
-                    // Even if the preceding chars are two consecutive backslashes
+                    // Even if the preceding chars are two consecutive
+                    // backslashes
                     // (\\), still do the escaping, which is the behavior of
                     // official redis-cli.
                     compbuf.pop_back();
                     compbuf.push_back(*c);
-                } else { // end quote
+                } else {  // end quote
                     quote_char = 0;
                     FlushComponent(&nocount_buf, &compbuf, &ncomponent);
                 }
@@ -326,12 +330,12 @@ RedisCommandNoFormat(butil::IOBuf* outbuf, const butil::StringPiece& cmd) {
     if (quote_char) {
         const char* ctx_begin =
             quote_pos - std::min((size_t)(quote_pos - cmd.data()), CTX_WIDTH);
-        size_t ctx_size =
-            std::min((size_t)(cmd.data() + cmd.size() - ctx_begin), CTX_WIDTH * 2 + 1);
+        size_t ctx_size = std::min(
+            (size_t)(cmd.data() + cmd.size() - ctx_begin), CTX_WIDTH * 2 + 1);
         return butil::Status(EINVAL, "Unmatched quote: ...%.*s... (offset=%lu)",
                              (int)ctx_size, ctx_begin, quote_pos - cmd.data());
     }
-    
+
     if (!compbuf.empty()) {
         FlushComponent(&nocount_buf, &compbuf, &ncomponent);
     }
@@ -342,8 +346,8 @@ RedisCommandNoFormat(butil::IOBuf* outbuf, const butil::StringPiece& cmd) {
 }
 
 butil::Status RedisCommandByComponents(butil::IOBuf* output,
-                                      const butil::StringPiece* components,
-                                      size_t ncomponents) {
+                                       const butil::StringPiece* components,
+                                       size_t ncomponents) {
     if (output == NULL) {
         return butil::Status(EINVAL, "Param[output] is NULL");
     }
@@ -357,9 +361,7 @@ butil::Status RedisCommandByComponents(butil::IOBuf* output,
 }
 
 RedisCommandParser::RedisCommandParser()
-    : _parsing_array(false)
-    , _length(0)
-    , _index(0) {}
+    : _parsing_array(false), _length(0), _index(0) {}
 
 ParseError RedisCommandParser::Consume(butil::IOBuf& buf,
                                        std::vector<butil::StringPiece>* args,
@@ -377,14 +379,14 @@ ParseError RedisCommandParser::Consume(butil::IOBuf& buf,
         return PARSE_ERROR_ABSOLUTELY_WRONG;
     }
     char intbuf[32];  // enough for fc + 64-bit decimal + \r\n
-    const size_t ncopied = buf.copy_to(intbuf, sizeof(intbuf) - 1);
-    intbuf[ncopied] = '\0';
+    const size_t ncopied  = buf.copy_to(intbuf, sizeof(intbuf) - 1);
+    intbuf[ncopied]       = '\0';
     const size_t crlf_pos = butil::StringPiece(intbuf, ncopied).find("\r\n");
     if (crlf_pos == butil::StringPiece::npos) {  // not enough data
         return PARSE_ERROR_NOT_ENOUGH_DATA;
     }
-    char* endptr = NULL;
-    int64_t value = strtoll(intbuf + 1/*skip fc*/, &endptr, 10);
+    char* endptr  = NULL;
+    int64_t value = strtoll(intbuf + 1 /*skip fc*/, &endptr, 10);
     if (endptr != intbuf + crlf_pos) {
         LOG(ERROR) << '`' << intbuf + 1 << "' is not a valid 64-bit decimal";
         return PARSE_ERROR_ABSOLUTELY_WRONG;
@@ -394,15 +396,15 @@ ParseError RedisCommandParser::Consume(butil::IOBuf& buf,
         return PARSE_ERROR_ABSOLUTELY_WRONG;
     }
     if (!_parsing_array) {
-        buf.pop_front(crlf_pos + 2/*CRLF*/);
+        buf.pop_front(crlf_pos + 2 /*CRLF*/);
         _parsing_array = true;
-        _length = value;
-        _index = 0;
+        _length        = value;
+        _index         = 0;
         _args.resize(value);
         return Consume(buf, args, arena);
     }
     CHECK(_index < _length) << "a complete command has been parsed. "
-            "impl of RedisCommandParser::Parse is buggy";
+                               "impl of RedisCommandParser::Parse is buggy";
     const int64_t len = value;  // `value' is length of the string
     if (len < 0) {
         LOG(ERROR) << "string in command is nil!";
@@ -410,14 +412,15 @@ ParseError RedisCommandParser::Consume(butil::IOBuf& buf,
     }
     if (len > (int64_t)std::numeric_limits<uint32_t>::max()) {
         LOG(ERROR) << "string in command is too long! max length=2^32-1,"
-            " actually=" << len;
+                      " actually="
+                   << len;
         return PARSE_ERROR_ABSOLUTELY_WRONG;
     }
-    if (buf.size() < crlf_pos + 2 + (size_t)len + 2/*CRLF*/) {
+    if (buf.size() < crlf_pos + 2 + (size_t)len + 2 /*CRLF*/) {
         return PARSE_ERROR_NOT_ENOUGH_DATA;
     }
-    buf.pop_front(crlf_pos + 2/*CRLF*/);
-    char* d = (char*)arena->allocate((len/8 + 1) * 8);
+    buf.pop_front(crlf_pos + 2 /*CRLF*/);
+    char* d = (char*)arena->allocate((len / 8 + 1) * 8);
     buf.cutn(d, len);
     d[len] = '\0';
     _args[_index].set(d, len);
@@ -443,9 +446,9 @@ ParseError RedisCommandParser::Consume(butil::IOBuf& buf,
 
 void RedisCommandParser::Reset() {
     _parsing_array = false;
-    _length = 0;
-    _index = 0;
+    _length        = 0;
+    _index         = 0;
     _args.clear();
 }
 
-} // namespace brpc
+}  // namespace brpc

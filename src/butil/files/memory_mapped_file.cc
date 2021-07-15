@@ -9,45 +9,39 @@
 
 namespace butil {
 
-MemoryMappedFile::~MemoryMappedFile() {
-  CloseHandles();
-}
+MemoryMappedFile::~MemoryMappedFile() { CloseHandles(); }
 
 bool MemoryMappedFile::Initialize(const FilePath& file_name) {
-  if (IsValid())
-    return false;
+    if (IsValid()) return false;
 
-  file_.Initialize(file_name, File::FLAG_OPEN | File::FLAG_READ);
+    file_.Initialize(file_name, File::FLAG_OPEN | File::FLAG_READ);
 
-  if (!file_.IsValid()) {
-    DLOG(ERROR) << "Couldn't open " << file_name.AsUTF8Unsafe();
-    return false;
-  }
+    if (!file_.IsValid()) {
+        DLOG(ERROR) << "Couldn't open " << file_name.AsUTF8Unsafe();
+        return false;
+    }
 
-  if (!MapFileToMemory()) {
-    CloseHandles();
-    return false;
-  }
+    if (!MapFileToMemory()) {
+        CloseHandles();
+        return false;
+    }
 
-  return true;
+    return true;
 }
 
 bool MemoryMappedFile::Initialize(File file) {
-  if (IsValid())
-    return false;
+    if (IsValid()) return false;
 
-  file_ = file.Pass();
+    file_ = file.Pass();
 
-  if (!MapFileToMemory()) {
-    CloseHandles();
-    return false;
-  }
+    if (!MapFileToMemory()) {
+        CloseHandles();
+        return false;
+    }
 
-  return true;
+    return true;
 }
 
-bool MemoryMappedFile::IsValid() const {
-  return data_ != NULL;
-}
+bool MemoryMappedFile::IsValid() const { return data_ != NULL; }
 
 }  // namespace butil

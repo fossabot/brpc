@@ -15,26 +15,24 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#ifndef BRPC_HTTP_HEADER_H
+#define BRPC_HTTP_HEADER_H
 
-#ifndef  BRPC_HTTP_HEADER_H
-#define  BRPC_HTTP_HEADER_H
-
-#include "butil/strings/string_piece.h"  // StringPiece
-#include "butil/containers/case_ignored_flat_map.h"
-#include "brpc/uri.h"              // URI
-#include "brpc/http_method.h"      // HttpMethod
-#include "brpc/http_status_code.h"
 #include "brpc/http2.h"
+#include "brpc/http_method.h"  // HttpMethod
+#include "brpc/http_status_code.h"
+#include "brpc/uri.h"  // URI
+#include "butil/containers/case_ignored_flat_map.h"
+#include "butil/strings/string_piece.h"  // StringPiece
 
 // To rpc developers: DON'T put impl. details here, use opaque pointers instead.
-
 
 namespace brpc {
 class InputMessageBase;
 namespace policy {
-void ProcessHttpRequest(InputMessageBase *msg);
+void ProcessHttpRequest(InputMessageBase* msg);
 class H2StreamContext;
-}
+}  // namespace policy
 
 // Non-body part of a HTTP message.
 class HttpHeader {
@@ -45,7 +43,7 @@ public:
     HttpHeader();
 
     // Exchange internal fields with another HttpHeader.
-    void Swap(HttpHeader &rhs);
+    void Swap(HttpHeader& rhs);
 
     // Reset internal fields as if they're just default-constructed.
     void Clear();
@@ -54,12 +52,14 @@ public:
     int major_version() const { return _version.first; }
     int minor_version() const { return _version.second; }
     // Change the http version
-    void set_version(int http_major, int http_minor)
-    { _version = std::make_pair(http_major, http_minor); }
+    void set_version(int http_major, int http_minor) {
+        _version = std::make_pair(http_major, http_minor);
+    }
 
     // True if version of http is earlier than 1.1
-    bool before_http_1_1() const
-    { return (major_version() * 10000 +  minor_version()) <= 10000; }
+    bool before_http_1_1() const {
+        return (major_version() * 10000 + minor_version()) <= 10000;
+    }
 
     // True if the message is from HTTP2.
     bool is_http2() const { return major_version() == 2; }
@@ -71,22 +71,25 @@ public:
     void set_content_type(const std::string& type) { _content_type = type; }
     void set_content_type(const char* type) { _content_type = type; }
     std::string& mutable_content_type() { return _content_type; }
-    
+
     // Get value of a header which is case-insensitive according to:
     //   https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
     // Namely, GetHeader("log-id"), GetHeader("Log-Id"), GetHeader("LOG-ID")
     // point to the same value.
     // Return pointer to the value, NULL on not found.
     // NOTE: Not work for "Content-Type", call content_type() instead.
-    const std::string* GetHeader(const char* key) const
-    { return _headers.seek(key); }
-    const std::string* GetHeader(const std::string& key) const
-    { return _headers.seek(key); }
+    const std::string* GetHeader(const char* key) const {
+        return _headers.seek(key);
+    }
+    const std::string* GetHeader(const std::string& key) const {
+        return _headers.seek(key);
+    }
 
     // Set value of a header.
     // NOTE: Not work for "Content-Type", call set_content_type() instead.
-    void SetHeader(const std::string& key, const std::string& value)
-    { GetOrAddHeader(key) = value; }
+    void SetHeader(const std::string& key, const std::string& value) {
+        GetOrAddHeader(key) = value;
+    }
 
     // Remove a header.
     void RemoveHeader(const char* key) { _headers.erase(key); }
@@ -96,7 +99,7 @@ public:
     // old value and new value with comma(,) according to:
     //   https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
     void AppendHeader(const std::string& key, const butil::StringPiece& value);
-    
+
     // Get header iterators which are invalidated after calling AppendHeader()
     HeaderIterator HeaderBegin() const { return _headers.begin(); }
     HeaderIterator HeaderEnd() const { return _headers.end(); }
@@ -137,10 +140,10 @@ public:
     const std::string& unresolved_path() const { return _unresolved_path; }
 
 private:
-friend class HttpMessage;
-friend class HttpMessageSerializer;
-friend class policy::H2StreamContext;
-friend void policy::ProcessHttpRequest(InputMessageBase *msg);
+    friend class HttpMessage;
+    friend class HttpMessageSerializer;
+    friend class policy::H2StreamContext;
+    friend void policy::ProcessHttpRequest(InputMessageBase* msg);
 
     std::string& GetOrAddHeader(const std::string& key) {
         if (!_headers.initialized()) {
@@ -160,7 +163,6 @@ friend void policy::ProcessHttpRequest(InputMessageBase *msg);
 
 const HttpHeader& DefaultHttpHeader();
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif  //BRPC_HTTP_HEADER_H
+#endif  // BRPC_HTTP_HEADER_H

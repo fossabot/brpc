@@ -17,21 +17,21 @@
 
 // Date: 2015/09/15 10:44:17
 
-#ifndef  BVAR_DETAIL_PERCENTILE_H
-#define  BVAR_DETAIL_PERCENTILE_H
+#ifndef BVAR_DETAIL_PERCENTILE_H
+#define BVAR_DETAIL_PERCENTILE_H
 
-#include <string.h>                     // memset memcmp
-#include <stdint.h>                     // uint32_t
-#include <limits>                       // std::numeric_limits
-#include <ostream>                      // std::ostream
-#include <algorithm>                    // std::sort
-#include <math.h>                       // ceil
-#include "butil/macros.h"                // ARRAY_SIZE
-#include "bvar/reducer.h"               // Reducer
-#include "bvar/window.h"                // Window
-#include "bvar/detail/combiner.h"       // AgentCombiner
-#include "bvar/detail/sampler.h"        // ReducerSampler
+#include <math.h>     // ceil
+#include <stdint.h>   // uint32_t
+#include <string.h>   // memset memcmp
+#include <algorithm>  // std::sort
+#include <limits>     // std::numeric_limits
+#include <ostream>    // std::ostream
 #include "butil/fast_rand.h"
+#include "butil/macros.h"          // ARRAY_SIZE
+#include "bvar/detail/combiner.h"  // AgentCombiner
+#include "bvar/detail/sampler.h"   // ReducerSampler
+#include "bvar/reducer.h"          // Reducer
+#include "bvar/window.h"           // Window
 
 namespace bvar {
 namespace detail {
@@ -48,11 +48,7 @@ inline unsigned long round_of_expectation(unsigned long a, unsigned long b) {
 template <size_t SAMPLE_SIZE>
 class PercentileInterval {
 public:
-    PercentileInterval()
-        : _num_added(0)
-        , _sorted(false)
-        , _num_samples(0) {
-    }
+    PercentileInterval() : _num_added(0), _sorted(false), _num_samples(0) {}
 
     // Get index-th sample in ascending order.
     uint32_t get_sample_at(size_t index) {
@@ -68,7 +64,7 @@ public:
             _sorted = true;
         }
         CHECK_EQ(saved_num, _num_samples) << "You must call get_number() on"
-            " a unchanging PercentileInterval";
+                                             " a unchanging PercentileInterval";
         return _samples[index];
     }
 
@@ -78,7 +74,7 @@ public:
     // This method is invoked when merging ThreadLocalPercentileSamples in to
     // GlobalPercentileSamples
     template <size_t size2>
-    void merge(const PercentileInterval<size2> &rhs) {
+    void merge(const PercentileInterval<size2>& rhs) {
         if (rhs._num_added == 0) {
             return;
         }
@@ -89,22 +85,20 @@ public:
         // the probability of each sample in |rhs| is a1/b1.
         // We are going to randomly pick some samples from |this| and |rhs| to
         // satisfy the constraint that each sample stands for the probability
-        // of 
+        // of
         //     * 1 (SAMPLE_SIZE >= |b0 + b1|), which indicates that no sample
-        //       has been dropped 
+        //       has been dropped
         //     * SAMPLE_SIZE / |b0 + b1| (SAMPLE_SIZE < |b0 + b1|)
         // So we should keep |b0*SAMPLE_SIZE/(b0+b1)| from |this|
         // |b1*SAMPLE_SIZE/(b0+b1)| from |rhs|.
         if (_num_added + rhs._num_added <= SAMPLE_SIZE) {
             // No sample should be dropped
             CHECK_EQ(_num_samples, _num_added)
-                << "_num_added=" << _num_added
-                << " rhs._num_added" << rhs._num_added
-                << " _num_samples=" << _num_samples
+                << "_num_added=" << _num_added << " rhs._num_added"
+                << rhs._num_added << " _num_samples=" << _num_samples
                 << " rhs._num_samples=" << rhs._num_samples
-                << " SAMPLE_SIZE=" << SAMPLE_SIZE
-                << " size2=" << size2;
-            memcpy(_samples + _num_samples, rhs._samples, 
+                << " SAMPLE_SIZE=" << SAMPLE_SIZE << " size2=" << size2;
+            memcpy(_samples + _num_samples, rhs._samples,
                    sizeof(_samples[0]) * rhs._num_samples);
             _num_samples += rhs._num_samples;
         } else {
@@ -117,7 +111,7 @@ public:
             //    _num_added / (_num_added + rhs._num_added) < 1 so that
             //    num_remain < SAMPLE_SIZE = _num_added
             size_t num_remain = round_of_expectation(
-                    _num_added * SAMPLE_SIZE, _num_added + rhs._num_added);
+                _num_added * SAMPLE_SIZE, _num_added + rhs._num_added);
             CHECK_LE(num_remain, _num_samples);
             // Randomly drop samples of this
             for (size_t i = _num_samples; i > num_remain; --i) {
@@ -129,9 +123,10 @@ public:
             DEFINE_SMALL_ARRAY(uint32_t, tmp, rhs._num_samples, 64);
             memcpy(tmp, rhs._samples, sizeof(uint32_t) * rhs._num_samples);
             for (size_t i = 0; i < num_remain_from_rhs; ++i) {
-                const int index = butil::fast_rand_less_than(rhs._num_samples - i);
+                const int index =
+                    butil::fast_rand_less_than(rhs._num_samples - i);
                 _samples[num_remain++] = tmp[index];
-                tmp[index] = tmp[rhs._num_samples - i - 1];
+                tmp[index]             = tmp[rhs._num_samples - i - 1];
             }
             _num_samples = num_remain;
             CHECK_EQ(_num_samples, SAMPLE_SIZE);
@@ -141,21 +136,24 @@ public:
 
     // Randomly pick n samples from mutable_rhs to |this|
     template <size_t size2>
-    void merge_with_expectation(PercentileInterval<size2>& mutable_rhs, size_t n) {
+    void merge_with_expectation(PercentileInterval<size2>& mutable_rhs,
+                                size_t n) {
         CHECK(n <= mutable_rhs._num_samples);
         _num_added += mutable_rhs._num_added;
         if (_num_samples + n <= SAMPLE_SIZE && n == mutable_rhs._num_samples) {
-            memcpy(_samples + _num_samples, mutable_rhs._samples, sizeof(_samples[0]) * n);
+            memcpy(_samples + _num_samples, mutable_rhs._samples,
+                   sizeof(_samples[0]) * n);
             _num_samples += n;
             return;
         }
         for (size_t i = 0; i < n; ++i) {
-            size_t index = butil::fast_rand_less_than(mutable_rhs._num_samples - i);
+            size_t index =
+                butil::fast_rand_less_than(mutable_rhs._num_samples - i);
             if (_num_samples < SAMPLE_SIZE) {
                 _samples[_num_samples++] = mutable_rhs._samples[index];
             } else {
-                _samples[butil::fast_rand_less_than(_num_samples)]
-                        = mutable_rhs._samples[index];
+                _samples[butil::fast_rand_less_than(_num_samples)] =
+                    mutable_rhs._samples[index];
             }
             std::swap(mutable_rhs._samples[index],
                       mutable_rhs._samples[mutable_rhs._num_samples - i - 1]);
@@ -186,8 +184,8 @@ public:
 
     // Remove all samples inside.
     void clear() {
-        _num_added = 0;
-        _sorted = false;
+        _num_added   = 0;
+        _sorted      = false;
         _num_samples = 0;
     }
 
@@ -204,7 +202,7 @@ public:
     uint32_t sample_count() const { return _num_samples; }
 
     // For debuggin.
-    void describe(std::ostream &os) const {
+    void describe(std::ostream& os) const {
         os << "(num_added=" << added_count() << ")[";
         for (size_t j = 0; j < _num_samples; ++j) {
             os << ' ' << _samples[j];
@@ -212,16 +210,18 @@ public:
         os << " ]";
     }
 
-    // True if two PercentileInterval are exactly same, namely same # of added and
-    // same samples, mainly for debuggin.
+    // True if two PercentileInterval are exactly same, namely same # of added
+    // and same samples, mainly for debuggin.
     bool operator==(const PercentileInterval& rhs) const {
         return (_num_added == rhs._num_added &&
                 _num_samples == rhs._num_samples &&
-                memcmp(_samples, rhs._samples,  _num_samples * sizeof(uint32_t)) == 0);
+                memcmp(_samples, rhs._samples,
+                       _num_samples * sizeof(uint32_t)) == 0);
     }
 
 private:
-template <size_t size2> friend class PercentileInterval;
+    template <size_t size2>
+    friend class PercentileInterval;
     BAIDU_CASSERT(SAMPLE_SIZE <= 65536, SAMPLE_SIZE_must_be_16bit);
 
     uint32_t _num_added;
@@ -239,13 +239,11 @@ class AddLatency;
 template <size_t SAMPLE_SIZE_IN>
 class PercentileSamples {
 public:
-friend class AddLatency;
+    friend class AddLatency;
 
     static const size_t SAMPLE_SIZE = SAMPLE_SIZE_IN;
-    
-    PercentileSamples() {
-        memset(this, 0, sizeof(*this));
-    }
+
+    PercentileSamples() { memset(this, 0, sizeof(*this)); }
 
     ~PercentileSamples() {
         for (size_t i = 0; i < NUM_INTERVALS; ++i) {
@@ -261,7 +259,8 @@ friend class AddLatency;
         _num_added = rhs._num_added;
         for (size_t i = 0; i < NUM_INTERVALS; ++i) {
             if (rhs._intervals[i] && !rhs._intervals[i]->empty()) {
-                _intervals[i] = new PercentileInterval<SAMPLE_SIZE>(*rhs._intervals[i]);
+                _intervals[i] =
+                    new PercentileInterval<SAMPLE_SIZE>(*rhs._intervals[i]);
             } else {
                 _intervals[i] = NULL;
             }
@@ -280,7 +279,7 @@ friend class AddLatency;
             }
         }
     }
-    
+
     // Get the `ratio'-ile value. E.g. 0.99 means 99%-ile value.
     // Since we store samples in different intervals internally. We first
     // address the interval by multiplying ratio with _num_added, then
@@ -315,7 +314,7 @@ friend class AddLatency;
 
     // Add samples in another PercentileSamples.
     template <size_t size2>
-    void merge(const PercentileSamples<size2> &rhs) {
+    void merge(const PercentileSamples<size2>& rhs) {
         _num_added += rhs._num_added;
         for (size_t i = 0; i < NUM_INTERVALS; ++i) {
             if (rhs._intervals[i] && !rhs._intervals[i]->empty()) {
@@ -343,8 +342,8 @@ friend class AddLatency;
 
         // Calculate probabilities for each interval
         for (size_t i = 0; i < NUM_INTERVALS; ++i) {
-            size_t total = 0;
-            size_t total_sample=0;
+            size_t total        = 0;
+            size_t total_sample = 0;
             for (Iterator iter = begin; iter != end; ++iter) {
                 if (iter->_intervals[i]) {
                     total += iter->_intervals[i]->added_count();
@@ -355,7 +354,6 @@ friend class AddLatency;
                 // Empty interval
                 continue;
             }
-
 
             // Consider that sub interval took |a| samples out of |b| totally,
             // each sample won the probability of |a/b| according to the
@@ -369,25 +367,25 @@ friend class AddLatency;
                 if (!iter->_intervals[i] || iter->_intervals[i]->empty()) {
                     continue;
                 }
-                typename butil::add_reference<BAIDU_TYPEOF(*(iter->_intervals[i]))>::type
-                        invl = *(iter->_intervals[i]);
+                typename butil::add_reference<BAIDU_TYPEOF(*(
+                    iter->_intervals[i]))>::type invl = *(iter->_intervals[i]);
                 if (total <= SAMPLE_SIZE) {
                     get_interval_at(i).merge_with_expectation(
-                            invl, invl.sample_count());
+                        invl, invl.sample_count());
                     continue;
                 }
-                // Each 
+                // Each
                 const size_t b = invl.added_count();
-                const size_t remain = std::min(
-                        round_of_expectation(b * SAMPLE_SIZE, total),
-                        (size_t)invl.sample_count());
+                const size_t remain =
+                    std::min(round_of_expectation(b * SAMPLE_SIZE, total),
+                             (size_t)invl.sample_count());
                 get_interval_at(i).merge_with_expectation(invl, remain);
             }
         }
     }
 
-   // For debuggin.
-    void describe(std::ostream &os) const {
+    // For debuggin.
+    void describe(std::ostream& os) const {
         os << this << "{num_added=" << _num_added;
         for (size_t i = 0; i < NUM_INTERVALS; ++i) {
             if (_intervals[i] && !_intervals[i]->empty()) {
@@ -409,7 +407,8 @@ friend class AddLatency;
     }
 
 private:
-template <size_t size1> friend class PercentileSamples;
+    template <size_t size1>
+    friend class PercentileSamples;
 
     // Get/create interval on-demand.
     PercentileInterval<SAMPLE_SIZE>& get_interval_at(size_t index) {
@@ -424,16 +423,17 @@ template <size_t size1> friend class PercentileSamples;
     PercentileInterval<SAMPLE_SIZE>* _intervals[NUM_INTERVALS];
 };
 
-template <size_t sz> const size_t PercentileSamples<sz>::SAMPLE_SIZE;
+template <size_t sz>
+const size_t PercentileSamples<sz>::SAMPLE_SIZE;
 
 template <size_t size>
-std::ostream &operator<<(std::ostream &os, const PercentileInterval<size> &p) {
+std::ostream& operator<<(std::ostream& os, const PercentileInterval<size>& p) {
     p.describe(os);
     return os;
 }
 
 template <size_t size>
-std::ostream &operator<<(std::ostream &os, const PercentileSamples<size> &p) {
+std::ostream& operator<<(std::ostream& os, const PercentileSamples<size>& p) {
     p.describe(os);
     return os;
 }
@@ -449,20 +449,20 @@ class Percentile {
 public:
     struct AddPercentileSamples {
         template <size_t size1, size_t size2>
-        void operator()(PercentileSamples<size1> &b1, 
-                        const PercentileSamples<size2> &b2) const {
+        void operator()(PercentileSamples<size1>& b1,
+                        const PercentileSamples<size2>& b2) const {
             b1.merge(b2);
         }
     };
 
-    typedef GlobalPercentileSamples                         value_type;
-    typedef ReducerSampler<Percentile, 
-                           GlobalPercentileSamples,
-                           AddPercentileSamples, VoidOp>    sampler_type;
-    typedef AgentCombiner <GlobalPercentileSamples,
-                           ThreadLocalPercentileSamples,
-                           AddPercentileSamples>            combiner_type;
-    typedef combiner_type::Agent                            agent_type;
+    typedef GlobalPercentileSamples value_type;
+    typedef ReducerSampler<Percentile, GlobalPercentileSamples,
+                           AddPercentileSamples, VoidOp>
+        sampler_type;
+    typedef AgentCombiner<GlobalPercentileSamples, ThreadLocalPercentileSamples,
+                          AddPercentileSamples>
+        combiner_type;
+    typedef combiner_type::Agent agent_type;
     Percentile();
     ~Percentile();
 
@@ -477,15 +477,15 @@ public:
         }
         return _sampler;
     }
-    
+
     value_type reset();
-    
+
     value_type get_value() const;
-    
+
     Percentile& operator<<(int64_t latency);
 
     bool valid() const { return _combiner != NULL && _combiner->valid(); }
-    
+
     // This name is useful for warning negative latencies in operator<<
     void set_debug_name(const butil::StringPiece& name) {
         _debug_name.assign(name.data(), name.size());
@@ -494,12 +494,12 @@ public:
 private:
     DISALLOW_COPY_AND_ASSIGN(Percentile);
 
-    combiner_type*          _combiner;
-    sampler_type*           _sampler;
+    combiner_type* _combiner;
+    sampler_type* _sampler;
     std::string _debug_name;
 };
 
 }  // namespace detail
 }  // namespace bvar
 
-#endif  //BVAR_DETAIL_PERCENTILE_H
+#endif  // BVAR_DETAIL_PERCENTILE_H

@@ -22,14 +22,15 @@
 #include "bthread/execution_queue.h"
 
 #include "butil/memory/singleton_on_pthread_once.h"
-#include "butil/object_pool.h"           // butil::get_object
-#include "butil/resource_pool.h"         // butil::get_resource
+#include "butil/object_pool.h"    // butil::get_object
+#include "butil/resource_pool.h"  // butil::get_resource
 
 namespace bthread {
 
-//May be false on different platforms
-//BAIDU_CASSERT(sizeof(TaskNode) == 128, sizeof_TaskNode_must_be_128);
-//BAIDU_CASSERT(offsetof(TaskNode, static_task_mem) + sizeof(TaskNode().static_task_mem) == 128, sizeof_TaskNode_must_be_128);
+// May be false on different platforms
+// BAIDU_CASSERT(sizeof(TaskNode) == 128, sizeof_TaskNode_must_be_128);
+// BAIDU_CASSERT(offsetof(TaskNode, static_task_mem) +
+// sizeof(TaskNode().static_task_mem) == 128, sizeof_TaskNode_must_be_128);
 BAIDU_CASSERT(sizeof(ExecutionQueue<int>) == sizeof(ExecutionQueueBase),
               sizeof_ExecutionQueue_must_be_the_same_with_ExecutionQueueBase);
 BAIDU_CASSERT(sizeof(TaskIterator<int>) == sizeof(TaskIteratorBase),
@@ -38,46 +39,46 @@ namespace /*anonymous*/ {
 typedef butil::ResourceId<ExecutionQueueBase> slot_id_t;
 
 inline slot_id_t WARN_UNUSED_RESULT slot_of_id(uint64_t id) {
-    slot_id_t slot = { (id & 0xFFFFFFFFul) };
+    slot_id_t slot = {(id & 0xFFFFFFFFul)};
     return slot;
 }
 
 inline uint64_t make_id(uint32_t version, slot_id_t slot) {
     return (((uint64_t)version) << 32) | slot.value;
 }
-}  // namespace anonymous
+}  // namespace
 
 struct ExecutionQueueVars {
     bvar::Adder<int64_t> running_task_count;
     bvar::Adder<int64_t> execq_count;
     bvar::Adder<int64_t> execq_active_count;
-    
+
     ExecutionQueueVars();
 };
 
 ExecutionQueueVars::ExecutionQueueVars()
     : running_task_count("bthread_execq_running_task_count")
     , execq_count("bthread_execq_count")
-    , execq_active_count("bthread_execq_active_count") {
-}
+    , execq_active_count("bthread_execq_active_count") {}
 
 inline ExecutionQueueVars* get_execq_vars() {
     return butil::get_leaky_singleton<ExecutionQueueVars>();
 }
 
 void ExecutionQueueBase::start_execute(TaskNode* node) {
-    node->next = TaskNode::UNCONNECTED;
-    node->status = UNEXECUTED;
+    node->next     = TaskNode::UNCONNECTED;
+    node->status   = UNEXECUTED;
     node->iterated = false;
     if (node->high_priority) {
         // Add _high_priority_tasks before pushing this task into queue to
-        // make sure that _execute_tasks sees the newest number when this 
-        // task is in the queue. Althouth there might be some useless for 
-        // loops in _execute_tasks if this thread is scheduled out at this 
+        // make sure that _execute_tasks sees the newest number when this
+        // task is in the queue. Althouth there might be some useless for
+        // loops in _execute_tasks if this thread is scheduled out at this
         // point, we think it's just fine.
         _high_priority_tasks.fetch_add(1, butil::memory_order_relaxed);
     }
-    TaskNode* const prev_head = _head.exchange(node, butil::memory_order_release);
+    TaskNode* const prev_head =
+        _head.exchange(node, butil::memory_order_release);
     if (prev_head != NULL) {
         node->next = prev_head;
         return;
@@ -85,7 +86,7 @@ void ExecutionQueueBase::start_execute(TaskNode* node) {
     // Get the right to execute the task, start a bthread to avoid deadlock
     // or stack overflow
     node->next = NULL;
-    node->q = this;
+    node->q    = this;
 
     ExecutionQueueVars* const vars = get_execq_vars();
     vars->execq_active_count << 1;
@@ -95,7 +96,8 @@ void ExecutionQueueBase::start_execute(TaskNode* node) {
         TaskNode* tmp = node;
         // return if no more
         if (node->high_priority) {
-            _high_priority_tasks.fetch_sub(niterated, butil::memory_order_relaxed);
+            _high_priority_tasks.fetch_sub(niterated,
+                                           butil::memory_order_relaxed);
         }
         if (!_more_tasks(tmp, &tmp, !node->iterated)) {
             vars->execq_active_count << -1;
@@ -125,15 +127,15 @@ void ExecutionQueueBase::start_execute(TaskNode* node) {
 
 void* ExecutionQueueBase::_execute_tasks(void* arg) {
     ExecutionQueueVars* vars = get_execq_vars();
-    TaskNode* head = (TaskNode*)arg;
-    ExecutionQueueBase* m = (ExecutionQueueBase*)head->q;
-    TaskNode* cur_tail = NULL;
-    bool destroy_queue = false;
+    TaskNode* head           = (TaskNode*)arg;
+    ExecutionQueueBase* m    = (ExecutionQueueBase*)head->q;
+    TaskNode* cur_tail       = NULL;
+    bool destroy_queue       = false;
     for (;;) {
         if (head->iterated) {
             CHECK(head->next != NULL);
             TaskNode* saved_head = head;
-            head = head->next;
+            head                 = head->next;
             m->return_task_node(saved_head);
         }
         int rc = 0;
@@ -141,8 +143,8 @@ void* ExecutionQueueBase::_execute_tasks(void* arg) {
             int nexecuted = 0;
             // Don't care the return value
             rc = m->_execute(head, true, &nexecuted);
-            m->_high_priority_tasks.fetch_sub(
-                    nexecuted, butil::memory_order_relaxed);
+            m->_high_priority_tasks.fetch_sub(nexecuted,
+                                              butil::memory_order_relaxed);
             if (nexecuted == 0) {
                 // Some high_priority tasks are not in queue
                 sched_yield();
@@ -156,12 +158,13 @@ void* ExecutionQueueBase::_execute_tasks(void* arg) {
         // Release TaskNode until uniterated task or last task
         while (head->next != NULL && head->iterated) {
             TaskNode* saved_head = head;
-            head = head->next;
+            head                 = head->next;
             m->return_task_node(saved_head);
         }
         if (cur_tail == NULL) {
-            for (cur_tail = head; cur_tail->next != NULL; 
-                    cur_tail = cur_tail->next) {}
+            for (cur_tail = head; cur_tail->next != NULL;
+                 cur_tail = cur_tail->next) {
+            }
         }
         // break when no more tasks and head has been executed
         if (!m->_more_tasks(cur_tail, &cur_tail, !head->iterated)) {
@@ -177,10 +180,10 @@ void* ExecutionQueueBase::_execute_tasks(void* arg) {
         // Add _join_butex by 2 to make it equal to the next version of the
         // ExecutionQueue from the same slot so that join with old id would
         // return immediatly.
-        // 
+        //
         // 1: release fence to make join sees the newst changes when it sees
         //    the newst _join_butex
-        m->_join_butex->fetch_add(2, butil::memory_order_release/*1*/);
+        m->_join_butex->fetch_add(2, butil::memory_order_release /*1*/);
         butex_wake_all(m->_join_butex);
         vars->execq_count << -1;
         butil::return_resource(slot_of_id(m->_this_id));
@@ -201,9 +204,9 @@ void ExecutionQueueBase::_on_recycle() {
         TaskNode* node = butil::get_object<TaskNode>();
         if (BAIDU_LIKELY(node != NULL)) {
             get_execq_vars()->running_task_count << 1;
-            node->stop_task = true;
+            node->stop_task     = true;
             node->high_priority = false;
-            node->in_place = false;
+            node->in_place      = false;
             start_execute(node);
             break;
         }
@@ -213,7 +216,7 @@ void ExecutionQueueBase::_on_recycle() {
 }
 
 int ExecutionQueueBase::join(uint64_t id) {
-    const slot_id_t slot = slot_of_id(id);
+    const slot_id_t slot        = slot_of_id(id);
     ExecutionQueueBase* const m = butil::address_resource(slot);
     if (m == NULL) {
         // The queue is not created yet, this join is definitely wrong.
@@ -232,7 +235,7 @@ int ExecutionQueueBase::join(uint64_t id) {
 
 int ExecutionQueueBase::stop() {
     const uint32_t id_ver = _version_of_id(_this_id);
-    uint64_t vref = _versioned_ref.load(butil::memory_order_relaxed);
+    uint64_t vref         = _versioned_ref.load(butil::memory_order_relaxed);
     for (;;) {
         if (_version_of_vref(vref) != id_ver) {
             return EINVAL;
@@ -240,9 +243,8 @@ int ExecutionQueueBase::stop() {
         // Try to set version=id_ver+1 (to make later address() return NULL),
         // retry on fail.
         if (_versioned_ref.compare_exchange_strong(
-                    vref, _make_vref(id_ver + 1, _ref_of_vref(vref)),
-                    butil::memory_order_release,
-                    butil::memory_order_relaxed)) {
+                vref, _make_vref(id_ver + 1, _ref_of_vref(vref)),
+                butil::memory_order_release, butil::memory_order_relaxed)) {
             // Set _stopped to make lattern execute() fail immediately
             _stopped.store(true, butil::memory_order_release);
             // Deref additionally which is added at creation so that this
@@ -255,11 +257,12 @@ int ExecutionQueueBase::stop() {
     }
 }
 
-int ExecutionQueueBase::_execute(TaskNode* head, bool high_priority, int* niterated) {
+int ExecutionQueueBase::_execute(TaskNode* head, bool high_priority,
+                                 int* niterated) {
     if (head != NULL && head->stop_task) {
         CHECK(head->next == NULL);
         head->iterated = true;
-        head->status = EXECUTED;
+        head->status   = EXECUTED;
         TaskIteratorBase iter(NULL, this, true, false);
         _execute_func(_meta, _type_specific_function, iter);
         if (niterated) {
@@ -272,8 +275,8 @@ int ExecutionQueueBase::_execute(TaskNode* head, bool high_priority, int* nitera
         _execute_func(_meta, _type_specific_function, iter);
     }
     // We must assign |niterated| with num_iterated even if we couldn't peek
-    // any task to execute at the begining, in which case all the iterated 
-    // tasks have been cancelled at this point. And we must return the 
+    // any task to execute at the begining, in which case all the iterated
+    // tasks have been cancelled at this point. And we must return the
     // correct num_iterated() to the caller to update the counter correctly.
     if (niterated) {
         *niterated = iter.num_iterated();
@@ -290,21 +293,21 @@ TaskNode* const TaskNode::UNCONNECTED = (TaskNode*)-1L;
 
 ExecutionQueueBase::scoped_ptr_t ExecutionQueueBase::address(uint64_t id) {
     scoped_ptr_t ret;
-    const slot_id_t slot = slot_of_id(id);
+    const slot_id_t slot        = slot_of_id(id);
     ExecutionQueueBase* const m = butil::address_resource(slot);
     if (BAIDU_LIKELY(m != NULL)) {
         // acquire fence makes sure this thread sees latest changes before
         // _dereference()
-        const uint64_t vref1 = m->_versioned_ref.fetch_add(
-            1, butil::memory_order_acquire);
+        const uint64_t vref1 =
+            m->_versioned_ref.fetch_add(1, butil::memory_order_acquire);
         const uint32_t ver1 = _version_of_vref(vref1);
         if (ver1 == _version_of_id(id)) {
             ret.reset(m);
             return ret.Pass();
         }
 
-        const uint64_t vref2 = m->_versioned_ref.fetch_sub(
-            1, butil::memory_order_release);
+        const uint64_t vref2 =
+            m->_versioned_ref.fetch_sub(1, butil::memory_order_release);
         const int32_t nref = _ref_of_vref(vref2);
         if (nref > 1) {
             return ret.Pass();
@@ -319,13 +322,14 @@ ExecutionQueueBase::scoped_ptr_t ExecutionQueueBase::address(uint64_t id) {
                             butil::memory_order_relaxed)) {
                         m->_on_recycle();
                         // We don't return m immediatly when the reference count
-                        // reaches 0 as there might be in processing tasks. Instead
-                        // _on_recycle would push a `stop_task', after which
-                        // is excuted m would be finally reset and returned
+                        // reaches 0 as there might be in processing tasks.
+                        // Instead _on_recycle would push a `stop_task', after
+                        // which is excuted m would be finally reset and
+                        // returned
                     }
                 } else {
-                    CHECK(false) << "ref-version=" << ver1
-                                 << " unref-version=" << ver2;
+                    CHECK(false)
+                        << "ref-version=" << ver1 << " unref-version=" << ver2;
                 }
             } else {
                 CHECK_EQ(ver1, ver2);
@@ -338,10 +342,11 @@ ExecutionQueueBase::scoped_ptr_t ExecutionQueueBase::address(uint64_t id) {
     return ret.Pass();
 }
 
-int ExecutionQueueBase::create(uint64_t* id, const ExecutionQueueOptions* options,
+int ExecutionQueueBase::create(uint64_t* id,
+                               const ExecutionQueueOptions* options,
                                execute_func_t execute_func,
-                               clear_task_mem clear_func,
-                               void* meta, void* type_specific_function) {
+                               clear_task_mem clear_func, void* meta,
+                               void* type_specific_function) {
     if (execute_func == NULL || clear_func == NULL) {
         return EINVAL;
     }
@@ -349,22 +354,22 @@ int ExecutionQueueBase::create(uint64_t* id, const ExecutionQueueOptions* option
     slot_id_t slot;
     ExecutionQueueBase* const m = butil::get_resource(&slot, Forbidden());
     if (BAIDU_LIKELY(m != NULL)) {
-        m->_execute_func = execute_func;
-        m->_clear_func = clear_func;
-        m->_meta = meta;
+        m->_execute_func           = execute_func;
+        m->_clear_func             = clear_func;
+        m->_meta                   = meta;
         m->_type_specific_function = type_specific_function;
         CHECK(m->_head.load(butil::memory_order_relaxed) == NULL);
         CHECK_EQ(0, m->_high_priority_tasks.load(butil::memory_order_relaxed));
         ExecutionQueueOptions opt;
         if (options != NULL) {
-            opt = *options;   
+            opt = *options;
         }
         m->_options = opt;
         m->_stopped.store(false, butil::memory_order_relaxed);
-        m->_this_id = make_id(
-                _version_of_vref(m->_versioned_ref.fetch_add(
-                                    1, butil::memory_order_release)), slot);
-        *id = m->_this_id;
+        m->_this_id = make_id(_version_of_vref(m->_versioned_ref.fetch_add(
+                                  1, butil::memory_order_release)),
+                              slot);
+        *id         = m->_this_id;
         get_execq_vars()->execq_count << 1;
         return 0;
     }
@@ -372,8 +377,8 @@ int ExecutionQueueBase::create(uint64_t* id, const ExecutionQueueOptions* option
 }
 
 inline bool TaskIteratorBase::should_break_for_high_priority_tasks() {
-    if (!_high_priority && 
-            _q->_high_priority_tasks.load(butil::memory_order_relaxed) > 0) {
+    if (!_high_priority &&
+        _q->_high_priority_tasks.load(butil::memory_order_relaxed) > 0) {
         _should_break = true;
         return true;
     }
@@ -419,10 +424,10 @@ TaskIteratorBase::~TaskIteratorBase() {
         }
         _head = _head->next;
     }
-    if (_should_break && _cur_node != NULL 
-            && _cur_node->high_priority == _high_priority && _cur_node->iterated) {
+    if (_should_break && _cur_node != NULL &&
+        _cur_node->high_priority == _high_priority && _cur_node->iterated) {
         _cur_node->set_executed();
     }
 }
 
-} // namespace bthread
+}  // namespace bthread

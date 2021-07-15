@@ -15,12 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <google/protobuf/io/gzip_stream.h>    // GzipXXXStream
-#include "butil/logging.h"
 #include "brpc/policy/gzip_compress.h"
+#include <google/protobuf/io/gzip_stream.h>  // GzipXXXStream
 #include "brpc/protocol.h"
-
+#include "butil/logging.h"
 
 namespace brpc {
 namespace policy {
@@ -56,7 +54,7 @@ bool GzipCompress(const google::protobuf::Message& msg, butil::IOBuf* buf) {
 bool GzipDecompress(const butil::IOBuf& data, google::protobuf::Message* msg) {
     butil::IOBufAsZeroCopyInputStream wrapper(data);
     google::protobuf::io::GzipInputStream gzip(
-            &wrapper, google::protobuf::io::GzipInputStream::GZIP);
+        &wrapper, google::protobuf::io::GzipInputStream::GZIP);
     if (!ParsePbFromZeroCopyStream(msg, &gzip)) {
         LogError(gzip);
         return false;
@@ -74,9 +72,9 @@ bool GzipCompress(const butil::IOBuf& msg, butil::IOBuf* buf,
     google::protobuf::io::GzipOutputStream out(&wrapper, gzip_opt);
     butil::IOBufAsZeroCopyInputStream in(msg);
     const void* data_in = NULL;
-    int size_in = 0;
-    void* data_out = NULL;
-    int size_out = 0;
+    int size_in         = 0;
+    void* data_out      = NULL;
+    int size_out        = 0;
     while (1) {
         if (size_out == 0 && !out.Next(&data_out, &size_out)) {
             break;
@@ -109,9 +107,9 @@ inline bool GzipDecompressBase(
     google::protobuf::io::GzipInputStream in(&wrapper, format);
     butil::IOBufAsZeroCopyOutputStream out(msg);
     const void* data_in = NULL;
-    int size_in = 0;
-    void* data_out = NULL;
-    int size_out = 0;
+    int size_in         = 0;
+    void* data_out      = NULL;
+    int size_out        = 0;
     while (1) {
         if (size_out == 0 && !out.Next(&data_out, &size_out)) {
             break;
@@ -126,8 +124,7 @@ inline bool GzipDecompressBase(
         size_out -= size_cp;
         data_out = (char*)data_out + size_cp;
     }
-    if (size_in != 0 ||
-        (size_t)wrapper.ByteCount() != data.size() ||
+    if (size_in != 0 || (size_t)wrapper.ByteCount() != data.size() ||
         in.Next(&data_in, &size_in)) {
         // If any stage is not fully consumed, something went wrong.
         // Here we call in.Next addtitionally to make sure that the gzip
@@ -157,14 +154,14 @@ bool ZlibDecompress(const butil::IOBuf& data, google::protobuf::Message* req) {
 }
 
 bool GzipDecompress(const butil::IOBuf& data, butil::IOBuf* msg) {
-    return GzipDecompressBase(
-        data, msg, google::protobuf::io::GzipInputStream::GZIP);
+    return GzipDecompressBase(data, msg,
+                              google::protobuf::io::GzipInputStream::GZIP);
 }
 
 bool ZlibDecompress(const butil::IOBuf& data, butil::IOBuf* msg) {
-    return GzipDecompressBase(
-        data, msg, google::protobuf::io::GzipInputStream::ZLIB);
+    return GzipDecompressBase(data, msg,
+                              google::protobuf::io::GzipInputStream::ZLIB);
 }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc

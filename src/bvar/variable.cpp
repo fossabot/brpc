@@ -17,20 +17,20 @@
 
 // Date: 2014/09/22 19:04:47
 
-#include <pthread.h>
-#include <set>                                  // std::set
-#include <fstream>                              // std::ifstream
-#include <sstream>                              // std::ostringstream
-#include <gflags/gflags.h>
-#include "butil/macros.h"                        // BAIDU_CASSERT
-#include "butil/containers/flat_map.h"           // butil::FlatMap
-#include "butil/scoped_lock.h"                   // BAIDU_SCOPE_LOCK
-#include "butil/string_splitter.h"               // butil::StringSplitter
-#include "butil/errno.h"                         // berror
-#include "butil/time.h"                          // milliseconds_from_now
-#include "butil/file_util.h"                     // butil::FilePath
-#include "bvar/gflag.h"
 #include "bvar/variable.h"
+#include <gflags/gflags.h>
+#include <pthread.h>
+#include <fstream>                      // std::ifstream
+#include <set>                          // std::set
+#include <sstream>                      // std::ostringstream
+#include "butil/containers/flat_map.h"  // butil::FlatMap
+#include "butil/errno.h"                // berror
+#include "butil/file_util.h"            // butil::FilePath
+#include "butil/macros.h"               // BAIDU_CASSERT
+#include "butil/scoped_lock.h"          // BAIDU_SCOPE_LOCK
+#include "butil/string_splitter.h"      // butil::StringSplitter
+#include "butil/time.h"                 // milliseconds_from_now
+#include "bvar/gflag.h"
 
 namespace bvar {
 
@@ -54,11 +54,11 @@ static bool validate_bvar_abort_on_same_name(const char*, bool v) {
     }
     return true;
 }
-const bool ALLOW_UNUSED dummy_bvar_abort_on_same_name = ::GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_bvar_abort_on_same_name, validate_bvar_abort_on_same_name);
+const bool ALLOW_UNUSED dummy_bvar_abort_on_same_name =
+    ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_bvar_abort_on_same_name,
+                                       validate_bvar_abort_on_same_name);
 
-
-DEFINE_bool(bvar_log_dumpped,  false,
+DEFINE_bool(bvar_log_dumpped, false,
             "[For debugging] print dumpped info"
             " into logstream before call Dumpper");
 
@@ -91,10 +91,10 @@ struct VarMapWithLock : public VarMap {
 // We have to initialize global map on need because bvar is possibly used
 // before main().
 static pthread_once_t s_var_maps_once = PTHREAD_ONCE_INIT;
-static VarMapWithLock* s_var_maps = NULL;
+static VarMapWithLock* s_var_maps     = NULL;
 
 static void init_var_maps() {
-    // It's probably slow to initialize all sub maps, but rpc often expose 
+    // It's probably slow to initialize all sub maps, but rpc often expose
     // variables before user. So this should not be an issue to users.
     s_var_maps = new VarMapWithLock[SUB_MAP_COUNT];
 }
@@ -105,7 +105,7 @@ inline size_t sub_map_index(const std::string& str) {
     }
     size_t h = 0;
     // we're assume that str is ended with '\0', which may not be in general
-    for (const char* p  = str.c_str(); *p; ++p) {
+    for (const char* p = str.c_str(); *p; ++p) {
         h = h * 5 + *p;
     }
     return h & (SUB_MAP_COUNT - 1);
@@ -122,8 +122,9 @@ inline VarMapWithLock& get_var_map(const std::string& name) {
 }
 
 Variable::~Variable() {
-    CHECK(!hide()) << "Subclass of Variable MUST call hide() manually in their"
-        " dtors to avoid displaying a variable that is just destructing";
+    CHECK(!hide())
+        << "Subclass of Variable MUST call hide() manually in their"
+           " dtors to avoid displaying a variable that is just destructing";
 }
 
 int Variable::expose_impl(const butil::StringPiece& prefix,
@@ -153,14 +154,14 @@ int Variable::expose_impl(const butil::StringPiece& prefix,
         }
     }
     to_underscored_name(&_name, name);
-    
+
     VarMapWithLock& m = get_var_map(_name);
     {
         BAIDU_SCOPED_LOCK(m.mutex);
         VarEntry* entry = m.seek(_name);
         if (entry == NULL) {
-            entry = &m[_name];
-            entry->var = this;
+            entry                 = &m[_name];
+            entry->var            = this;
             entry->display_filter = display_filter;
             return 0;
         }
@@ -174,7 +175,7 @@ int Variable::expose_impl(const butil::StringPiece& prefix,
         // abort the program if needed.
         s_bvar_may_abort = true;
     }
-        
+
     LOG(ERROR) << "Already exposed `" << _name << "' whose value is `"
                << describe_exposed(_name) << '\'';
     _name.clear();
@@ -212,14 +213,14 @@ void Variable::list_exposed(std::vector<std::string>* names,
         std::unique_lock<pthread_mutex_t> mu(m.mutex);
         size_t n = 0;
         for (VarMap::const_iterator it = m.begin(); it != m.end(); ++it) {
-            if (++n >= 256/*max iterated one pass*/) {
+            if (++n >= 256 /*max iterated one pass*/) {
                 VarMap::PositionHint hint;
                 m.save_iterator(it, &hint);
                 n = 0;
                 mu.unlock();  // yield
                 mu.lock();
                 it = m.restore_iterator(hint);
-                if (it == m.begin()) { // resized
+                if (it == m.begin()) {  // resized
                     names->clear();
                 }
                 if (it == m.end()) {
@@ -234,7 +235,7 @@ void Variable::list_exposed(std::vector<std::string>* names,
 }
 
 size_t Variable::count_exposed() {
-    size_t n = 0;
+    size_t n                 = 0;
     VarMapWithLock* var_maps = get_var_maps();
     for (size_t i = 0; i < SUB_MAP_COUNT; ++i) {
         n += var_maps[i].size();
@@ -282,8 +283,7 @@ void Variable::get_value(boost::any* value) const {
 }
 #endif
 
-int Variable::describe_series_exposed(const std::string& name,
-                                      std::ostream& os,
+int Variable::describe_series_exposed(const std::string& name, std::ostream& os,
                                       const SeriesOptions& options) {
     VarMapWithLock& m = get_var_map(name);
     BAIDU_SCOPED_LOCK(m.mutex);
@@ -329,25 +329,23 @@ private:
     size_t _size;
 };
 
-CharArrayStreamBuf::~CharArrayStreamBuf() {
-    free(_data);
-}
+CharArrayStreamBuf::~CharArrayStreamBuf() { free(_data); }
 
 int CharArrayStreamBuf::overflow(int ch) {
     if (ch == std::streambuf::traits_type::eof()) {
         return ch;
     }
     size_t new_size = std::max(_size * 3 / 2, (size_t)64);
-    char* new_data = (char*)malloc(new_size);
+    char* new_data  = (char*)malloc(new_size);
     if (BAIDU_UNLIKELY(new_data == NULL)) {
         setp(NULL, NULL);
         return std::streambuf::traits_type::eof();
     }
     memcpy(new_data, _data, _size);
     free(_data);
-    _data = new_data;
+    _data                 = new_data;
     const size_t old_size = _size;
-    _size = new_size;
+    _size                 = new_size;
     setp(_data, _data + new_size);
     pbump(old_size);
     // if size == 1, this function will call overflow again.
@@ -359,10 +357,7 @@ int CharArrayStreamBuf::sync() {
     return 0;
 }
 
-void CharArrayStreamBuf::reset() {
-    setp(_data, _data + _size);
-}
-
+void CharArrayStreamBuf::reset() { setp(_data, _data + _size); }
 
 // Written by Jack Handy
 // <A href="mailto:jakkhandy@hotmail.com">jakkhandy@hotmail.com</A>
@@ -384,13 +379,13 @@ inline bool wildcmp(const char* wild, const char* str, char question_mark) {
                 return true;
             }
             mp = wild;
-            cp = str+1;
+            cp = str + 1;
         } else if (*wild == *str || *wild == question_mark) {
             ++wild;
             ++str;
         } else {
             wild = mp;
-            str = cp++;
+            str  = cp++;
         }
     }
 
@@ -402,18 +397,16 @@ inline bool wildcmp(const char* wild, const char* str, char question_mark) {
 
 class WildcardMatcher {
 public:
-    WildcardMatcher(const std::string& wildcards,
-                    char question_mark,
+    WildcardMatcher(const std::string& wildcards, char question_mark,
                     bool on_both_empty)
-        : _question_mark(question_mark)
-        , _on_both_empty(on_both_empty) {
+        : _question_mark(question_mark), _on_both_empty(on_both_empty) {
         if (wildcards.empty()) {
             return;
         }
         std::string name;
-        const char wc_pattern[3] = { '*', question_mark, '\0' };
-        for (butil::StringMultiSplitter sp(wildcards.c_str(), ",;");
-             sp != NULL; ++sp) {
+        const char wc_pattern[3] = {'*', question_mark, '\0'};
+        for (butil::StringMultiSplitter sp(wildcards.c_str(), ",;"); sp != NULL;
+             ++sp) {
             name.assign(sp.field(), sp.length());
             if (name.find_first_of(wc_pattern) != std::string::npos) {
                 if (_wcs.empty()) {
@@ -425,7 +418,7 @@ public:
             }
         }
     }
-    
+
     bool match(const std::string& name) const {
         if (!_exact.empty()) {
             if (_exact.find(name) != _exact.end()) {
@@ -455,8 +448,7 @@ private:
 DumpOptions::DumpOptions()
     : quote_string(true)
     , question_mark('?')
-    , display_filter(DISPLAY_ON_PLAIN_TEXT)
-{}
+    , display_filter(DISPLAY_ON_PLAIN_TEXT) {}
 
 int Variable::dump_exposed(Dumper* dumper, const DumpOptions* poptions) {
     if (NULL == dumper) {
@@ -470,25 +462,22 @@ int Variable::dump_exposed(Dumper* dumper, const DumpOptions* poptions) {
     CharArrayStreamBuf streambuf;
     std::ostream os(&streambuf);
     int count = 0;
-    WildcardMatcher black_matcher(opt.black_wildcards,
-                                  opt.question_mark,
+    WildcardMatcher black_matcher(opt.black_wildcards, opt.question_mark,
                                   false);
-    WildcardMatcher white_matcher(opt.white_wildcards,
-                                  opt.question_mark,
-                                  true);
+    WildcardMatcher white_matcher(opt.white_wildcards, opt.question_mark, true);
 
     std::ostringstream dumpped_info;
     const bool log_dummped = FLAGS_bvar_log_dumpped;
 
     if (white_matcher.wildcards().empty() &&
         !white_matcher.exact_names().empty()) {
-        for (std::set<std::string>::const_iterator
-                 it = white_matcher.exact_names().begin();
+        for (std::set<std::string>::const_iterator it =
+                 white_matcher.exact_names().begin();
              it != white_matcher.exact_names().end(); ++it) {
             const std::string& name = *it;
             if (!black_matcher.match(name)) {
-                if (bvar::Variable::describe_exposed(
-                        name, os, opt.quote_string, opt.display_filter) != 0) {
+                if (bvar::Variable::describe_exposed(name, os, opt.quote_string,
+                                                     opt.display_filter) != 0) {
                     continue;
                 }
                 if (log_dummped) {
@@ -507,12 +496,12 @@ int Variable::dump_exposed(Dumper* dumper, const DumpOptions* poptions) {
         bvar::Variable::list_exposed(&varnames, opt.display_filter);
         // Sort the names to make them more readable.
         std::sort(varnames.begin(), varnames.end());
-        for (std::vector<std::string>::const_iterator
-                 it = varnames.begin(); it != varnames.end(); ++it) {
+        for (std::vector<std::string>::const_iterator it = varnames.begin();
+             it != varnames.end(); ++it) {
             const std::string& name = *it;
             if (white_matcher.match(name) && !black_matcher.match(name)) {
-                if (bvar::Variable::describe_exposed(
-                        name, os, opt.quote_string, opt.display_filter) != 0) {
+                if (bvar::Variable::describe_exposed(name, os, opt.quote_string,
+                                                     opt.display_filter) != 0) {
                     continue;
                 }
                 if (log_dummped) {
@@ -531,7 +520,6 @@ int Variable::dump_exposed(Dumper* dumper, const DumpOptions* poptions) {
     }
     return count;
 }
-
 
 // ============= export to files ==============
 
@@ -552,9 +540,8 @@ std::string read_command_name() {
     if (command_name.size() >= 2UL && command_name[0] == '(' &&
         butil::back_char(command_name) == ')') {
         // remove parenthesis.
-        to_underscored_name(&s,
-                            butil::StringPiece(command_name.data() + 1, 
-                                              command_name.size() - 2UL));
+        to_underscored_name(&s, butil::StringPiece(command_name.data() + 1,
+                                                   command_name.size() - 2UL));
     } else {
         to_underscored_name(&s, command_name);
     }
@@ -563,12 +550,13 @@ std::string read_command_name() {
 
 class FileDumper : public Dumper {
 public:
-    FileDumper(const std::string& filename, butil::StringPiece s/*prefix*/)
+    FileDumper(const std::string& filename, butil::StringPiece s /*prefix*/)
         : _filename(filename), _fp(NULL) {
         // setting prefix.
         // remove trailing spaces.
         const char* p = s.data() + s.size();
-        for (; p != s.data() && isspace(p[-1]); --p) {}
+        for (; p != s.data() && isspace(p[-1]); --p) {
+        }
         s.remove_suffix(s.data() + s.size() - p);
         // normalize it.
         if (!s.empty()) {
@@ -579,16 +567,15 @@ public:
         }
     }
 
-    ~FileDumper() {
-        close();
-    }
+    ~FileDumper() { close(); }
     void close() {
         if (_fp) {
             fclose(_fp);
             _fp = NULL;
         }
     }
-    bool dump(const std::string& name, const butil::StringPiece& desc) override {
+    bool dump(const std::string& name,
+              const butil::StringPiece& desc) override {
         if (_fp == NULL) {
             butil::File::Error error;
             butil::FilePath dir = butil::FilePath(_filename).DirName();
@@ -603,17 +590,16 @@ public:
                 return false;
             }
         }
-        if (fprintf(_fp, "%.*s%.*s : %.*s\r\n",
-                    (int)_prefix.size(), _prefix.data(),
-                    (int)name.size(), name.data(),
+        if (fprintf(_fp, "%.*s%.*s : %.*s\r\n", (int)_prefix.size(),
+                    _prefix.data(), (int)name.size(), name.data(),
                     (int)desc.size(), desc.data()) < 0) {
             PLOG(ERROR) << "Fail to write into " << _filename;
             return false;
         }
         return true;
     }
-private:
 
+private:
     std::string _filename;
     FILE* _fp;
     std::string _prefix;
@@ -621,8 +607,8 @@ private:
 
 class FileDumperGroup : public Dumper {
 public:
-    FileDumperGroup(std::string tabs, std::string filename, 
-                     butil::StringPiece s/*prefix*/) {
+    FileDumperGroup(std::string tabs, std::string filename,
+                    butil::StringPiece s /*prefix*/) {
         butil::FilePath path(filename);
         if (path.FinalExtension() == ".data") {
             // .data will be appended later
@@ -630,16 +616,16 @@ public:
         }
 
         for (butil::KeyValuePairsSplitter sp(tabs, ';', '='); sp; ++sp) {
-            std::string key = sp.key().as_string();
+            std::string key   = sp.key().as_string();
             std::string value = sp.value().as_string();
-            FileDumper *f = new FileDumper(
-                    path.AddExtension(key).AddExtension("data").value(), s);
-            WildcardMatcher *m = new WildcardMatcher(value, '?', true);
+            FileDumper* f     = new FileDumper(
+                path.AddExtension(key).AddExtension("data").value(), s);
+            WildcardMatcher* m = new WildcardMatcher(value, '?', true);
             dumpers.push_back(std::make_pair(f, m));
         }
-        dumpers.push_back(std::make_pair(
-                    new FileDumper(path.AddExtension("data").value(), s), 
-                    (WildcardMatcher *)NULL));
+        dumpers.push_back(
+            std::make_pair(new FileDumper(path.AddExtension("data").value(), s),
+                           (WildcardMatcher*)NULL));
     }
     ~FileDumperGroup() {
         for (size_t i = 0; i < dumpers.size(); ++i) {
@@ -649,7 +635,8 @@ public:
         dumpers.clear();
     }
 
-    bool dump(const std::string& name, const butil::StringPiece& desc) override {
+    bool dump(const std::string& name,
+              const butil::StringPiece& desc) override {
         for (size_t i = 0; i < dumpers.size() - 1; ++i) {
             if (dumpers[i].second->match(name)) {
                 return dumpers[i].first->dump(name, desc);
@@ -658,30 +645,37 @@ public:
         // dump to default file
         return dumpers.back().first->dump(name, desc);
     }
+
 private:
-    std::vector<std::pair<FileDumper *, WildcardMatcher*> > dumpers;
+    std::vector<std::pair<FileDumper*, WildcardMatcher*> > dumpers;
 };
 
 static pthread_once_t dumping_thread_once = PTHREAD_ONCE_INIT;
-static bool created_dumping_thread = false;
-static pthread_mutex_t dump_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t dump_cond = PTHREAD_COND_INITIALIZER;
+static bool created_dumping_thread        = false;
+static pthread_mutex_t dump_mutex         = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t dump_cond           = PTHREAD_COND_INITIALIZER;
 
 DEFINE_bool(bvar_dump, false,
             "Create a background thread dumping all bvar periodically, "
             "all bvar_dump_* flags are not effective when this flag is off");
 DEFINE_int32(bvar_dump_interval, 10, "Seconds between consecutive dump");
-DEFINE_string(bvar_dump_file, "monitor/bvar.<app>.data", "Dump bvar into this file");
-DEFINE_string(bvar_dump_include, "", "Dump bvar matching these wildcards, "
+DEFINE_string(bvar_dump_file, "monitor/bvar.<app>.data",
+              "Dump bvar into this file");
+DEFINE_string(bvar_dump_include, "",
+              "Dump bvar matching these wildcards, "
               "separated by semicolon(;), empty means including all");
-DEFINE_string(bvar_dump_exclude, "", "Dump bvar excluded from these wildcards, "
+DEFINE_string(bvar_dump_exclude, "",
+              "Dump bvar excluded from these wildcards, "
               "separated by semicolon(;), empty means no exclusion");
-DEFINE_string(bvar_dump_prefix, "<app>", "Every dumped name starts with this prefix");
-DEFINE_string(bvar_dump_tabs, "latency=*_latency*"
-                              "; qps=*_qps*"
-                              "; error=*_error*"
-                              "; system=*process_*,*malloc_*,*kernel_*",
-              "Dump bvar into different tabs according to the filters (seperated by semicolon), "
+DEFINE_string(bvar_dump_prefix, "<app>",
+              "Every dumped name starts with this prefix");
+DEFINE_string(bvar_dump_tabs,
+              "latency=*_latency*"
+              "; qps=*_qps*"
+              "; error=*_error*"
+              "; system=*process_*,*malloc_*,*kernel_*",
+              "Dump bvar into different tabs according to the filters "
+              "(seperated by semicolon), "
               "format: *(tab_name=wildcards;)");
 
 #if !defined(BVAR_NOT_LINK_DEFAULT_VARIABLES)
@@ -707,12 +701,12 @@ static void* dumping_thread(void*) {
             return NULL;
         }
         if (!GFLAGS_NS::GetCommandLineOption("bvar_dump_include",
-                                          &options.white_wildcards)) {
+                                             &options.white_wildcards)) {
             LOG(ERROR) << "Fail to get gflag bvar_dump_include";
             return NULL;
         }
         if (!GFLAGS_NS::GetCommandLineOption("bvar_dump_exclude",
-                                          &options.black_wildcards)) {
+                                             &options.black_wildcards)) {
             LOG(ERROR) << "Fail to get gflag bvar_dump_exclude";
             return NULL;
         }
@@ -727,13 +721,13 @@ static void* dumping_thread(void*) {
 
         if (FLAGS_bvar_dump && !filename.empty()) {
             // Replace first <app> in filename with program name. We can't use
-            // pid because a same binary should write the data to the same 
-            // place, otherwise restarting of app may confuse noah with a lot 
+            // pid because a same binary should write the data to the same
+            // place, otherwise restarting of app may confuse noah with a lot
             // of *.data. noah takes 1.5 days to figure out that some data is
             // outdated and to be removed.
             const size_t pos = filename.find("<app>");
             if (pos != std::string::npos) {
-                filename.replace(pos, 5/*<app>*/, command_name);
+                filename.replace(pos, 5 /*<app>*/, command_name);
             }
             if (last_filename != filename) {
                 last_filename = filename;
@@ -742,8 +736,8 @@ static void* dumping_thread(void*) {
             }
             const size_t pos2 = prefix.find("<app>");
             if (pos2 != std::string::npos) {
-                prefix.replace(pos2, 5/*<app>*/, command_name);
-            }            
+                prefix.replace(pos2, 5 /*<app>*/, command_name);
+            }
             FileDumperGroup dumper(tabs, filename, prefix);
             int nline = Variable::dump_exposed(&dumper, &options);
             if (nline < 0) {
@@ -784,7 +778,7 @@ static void launch_dumping_thread() {
 // Start dumping_thread for only once.
 static bool enable_dumping_thread() {
     pthread_once(&dumping_thread_once, launch_dumping_thread);
-    return created_dumping_thread; 
+    return created_dumping_thread;
 }
 
 static bool validate_bvar_dump(const char*, bool enabled) {
@@ -793,12 +787,12 @@ static bool validate_bvar_dump(const char*, bool enabled) {
     }
     return true;
 }
-const bool ALLOW_UNUSED dummy_bvar_dump = ::GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_bvar_dump, validate_bvar_dump);
+const bool ALLOW_UNUSED dummy_bvar_dump =
+    ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_bvar_dump, validate_bvar_dump);
 
 // validators (to make these gflags reloadable in brpc)
 static bool validate_bvar_dump_interval(const char*, int32_t v) {
-    // FIXME: -bvar_dump_interval is actually unreloadable but we need to 
+    // FIXME: -bvar_dump_interval is actually unreloadable but we need to
     // check validity of it, so we still add this validator. In practice
     // this is just fine since people rarely have the intention of modifying
     // this flag at runtime.
@@ -808,12 +802,14 @@ static bool validate_bvar_dump_interval(const char*, int32_t v) {
     }
     return true;
 }
-const bool ALLOW_UNUSED dummy_bvar_dump_interval = ::GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_bvar_dump_interval, validate_bvar_dump_interval);
+const bool ALLOW_UNUSED dummy_bvar_dump_interval =
+    ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_bvar_dump_interval,
+                                       validate_bvar_dump_interval);
 
-static bool validate_bvar_log_dumpped(const char *, bool) { return true; }
-const bool ALLOW_UNUSED dummy_bvar_log_dumpped = ::GFLAGS_NS::RegisterFlagValidator(
-        &FLAGS_bvar_log_dumpped, validate_bvar_log_dumpped);
+static bool validate_bvar_log_dumpped(const char*, bool) { return true; }
+const bool ALLOW_UNUSED dummy_bvar_log_dumpped =
+    ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_bvar_log_dumpped,
+                                       validate_bvar_log_dumpped);
 
 static bool wakeup_dumping_thread(const char*, const std::string&) {
     // We're modifying a flag, wake up dumping_thread to generate
@@ -822,22 +818,27 @@ static bool wakeup_dumping_thread(const char*, const std::string&) {
     return true;
 }
 
-const bool ALLOW_UNUSED dummy_bvar_dump_file = ::GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_bvar_dump_file, wakeup_dumping_thread);
-const bool ALLOW_UNUSED dummy_bvar_dump_filter = ::GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_bvar_dump_include, wakeup_dumping_thread);
-const bool ALLOW_UNUSED dummy_bvar_dump_exclude = ::GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_bvar_dump_exclude, wakeup_dumping_thread);
-const bool ALLOW_UNUSED dummy_bvar_dump_prefix = ::GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_bvar_dump_prefix, wakeup_dumping_thread);
-const bool ALLOW_UNUSED dummy_bvar_dump_tabs = ::GFLAGS_NS::RegisterFlagValidator(
-    &FLAGS_bvar_dump_tabs, wakeup_dumping_thread);
+const bool ALLOW_UNUSED dummy_bvar_dump_file =
+    ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_bvar_dump_file,
+                                       wakeup_dumping_thread);
+const bool ALLOW_UNUSED dummy_bvar_dump_filter =
+    ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_bvar_dump_include,
+                                       wakeup_dumping_thread);
+const bool ALLOW_UNUSED dummy_bvar_dump_exclude =
+    ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_bvar_dump_exclude,
+                                       wakeup_dumping_thread);
+const bool ALLOW_UNUSED dummy_bvar_dump_prefix =
+    ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_bvar_dump_prefix,
+                                       wakeup_dumping_thread);
+const bool ALLOW_UNUSED dummy_bvar_dump_tabs =
+    ::GFLAGS_NS::RegisterFlagValidator(&FLAGS_bvar_dump_tabs,
+                                       wakeup_dumping_thread);
 
 void to_underscored_name(std::string* name, const butil::StringPiece& src) {
-    name->reserve(name->size() + src.size() + 8/*just guess*/);
+    name->reserve(name->size() + src.size() + 8 /*just guess*/);
     for (const char* p = src.data(); p != src.data() + src.size(); ++p) {
         if (isalpha(*p)) {
-            if (*p < 'a') { // upper cases
+            if (*p < 'a') {  // upper cases
                 if (p != src.data() && !isupper(p[-1]) &&
                     butil::back_char(*name) != '_') {
                     name->push_back('_');

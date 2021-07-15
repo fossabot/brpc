@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_SERVER_ID_H
 #define BRPC_SERVER_ID_H
 
@@ -23,9 +22,9 @@
 // on internal structures, use opaque pointers instead.
 
 #include <vector>
-#include "butil/containers/hash_tables.h"   // hash
-#include "butil/containers/flat_map.h"
 #include "brpc/socket_id.h"
+#include "butil/containers/flat_map.h"
+#include "butil/containers/hash_tables.h"  // hash
 
 namespace brpc {
 
@@ -39,12 +38,15 @@ struct ServerId {
     SocketId id;
     std::string tag;
 };
-inline bool operator==(const ServerId& id1, const ServerId& id2)
-{ return id1.id == id2.id && id1.tag == id2.tag; }
-inline bool operator!=(const ServerId& id1, const ServerId& id2)
-{ return !(id1 == id2); }
-inline bool operator<(const ServerId& id1, const ServerId& id2)
-{ return id1.id != id2.id ? (id1.id < id2.id) : (id1.tag < id2.tag); }
+inline bool operator==(const ServerId& id1, const ServerId& id2) {
+    return id1.id == id2.id && id1.tag == id2.tag;
+}
+inline bool operator!=(const ServerId& id1, const ServerId& id2) {
+    return !(id1 == id2);
+}
+inline bool operator<(const ServerId& id1, const ServerId& id2) {
+    return id1.id != id2.id ? (id1.id < id2.id) : (id1.tag < id2.tag);
+}
 inline std::ostream& operator<<(std::ostream& os, const ServerId& tsid) {
     os << tsid.id;
     if (!tsid.tag.empty()) {
@@ -70,17 +72,17 @@ public:
     // Remove 1 duplication of all SocketId in servers respectively.
     // Returns list of SocketId that do not exist after.
     std::vector<SocketId>& RemoveServers(const std::vector<ServerId>& servers);
+
 private:
     butil::FlatMap<SocketId, int> _nref_map;
     std::vector<SocketId> _tmp;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 namespace BUTIL_HASH_NAMESPACE {
 #if defined(COMPILER_GCC)
-template<>
+template <>
 struct hash<brpc::ServerId> {
     std::size_t operator()(const ::brpc::ServerId& tagged_id) const {
         return hash<std::string>()(tagged_id.tag) * 101 + tagged_id.id;
@@ -91,6 +93,6 @@ inline size_t hash_value(const ::brpc::ServerId& tagged_id) {
     return hash_value(tagged_id.tag) * 101 + tagged_id.id;
 }
 #endif  // COMPILER
-}
+}  // namespace BUTIL_HASH_NAMESPACE
 
 #endif  // BRPC_SERVER_ID_H

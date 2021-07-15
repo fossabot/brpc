@@ -15,12 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_SOCKETS_SERVICE_H
 #define BRPC_SOCKETS_SERVICE_H
 
 #include "brpc/builtin_service.pb.h"
-
 
 namespace brpc {
 
@@ -32,7 +30,6 @@ public:
                         ::google::protobuf::Closure* done);
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_SOCKETS_SERVICE_H
+#endif  // BRPC_SOCKETS_SERVICE_H

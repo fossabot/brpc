@@ -15,27 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
+#include "brpc/uri.h"                  // URI
+#include "brpc/details/http_parser.h"  // http_parser_parse_url
 #include "brpc/log.h"
-#include "brpc/details/http_parser.h"      // http_parser_parse_url
-#include "brpc/uri.h"                      // URI
-
 
 namespace brpc {
 
-URI::URI() 
-    : _port(-1)
-    , _query_was_modified(false)
-    , _initialized_query_map(false)
-{}
+URI::URI()
+    : _port(-1), _query_was_modified(false), _initialized_query_map(false) {}
 
-URI::~URI() {
-}
+URI::~URI() {}
 
 void URI::Clear() {
     _st.reset();
-    _port = -1;
-    _query_was_modified = false;
+    _port                  = -1;
+    _query_was_modified    = false;
     _initialized_query_map = false;
     _host.clear();
     _path.clear();
@@ -46,7 +40,7 @@ void URI::Clear() {
     _query_map.clear();
 }
 
-void URI::Swap(URI &rhs) {
+void URI::Swap(URI& rhs) {
     _st.swap(rhs._st);
     std::swap(_port, rhs._port);
     std::swap(_query_was_modified, rhs._query_was_modified);
@@ -61,7 +55,7 @@ void URI::Swap(URI &rhs) {
 }
 
 // Parse queries, which is case-sensitive
-static void ParseQueries(URI::QueryMap& query_map, const std::string &query) {
+static void ParseQueries(URI::QueryMap& query_map, const std::string& query) {
     query_map.clear();
     if (query.empty()) {
         return;
@@ -79,8 +73,7 @@ static void ParseQueries(URI::QueryMap& query_map, const std::string &query) {
 }
 
 inline const char* SplitHostAndPort(const char* host_begin,
-                                    const char* host_end,
-                                    int* port) {
+                                    const char* host_end, int* port) {
     uint64_t port_raw = 0;
     uint64_t multiply = 1;
     for (const char* q = host_end - 1; q > host_begin; --q) {
@@ -99,41 +92,270 @@ inline const char* SplitHostAndPort(const char* host_begin,
 }
 
 static bool is_all_spaces(const char* p) {
-    for (; *p == ' '; ++p) {}
+    for (; *p == ' '; ++p) {
+    }
     return !*p;
 }
 
-const char URI_PARSE_CONTINUE = 0;
-const char URI_PARSE_CHECK = 1;
-const char URI_PARSE_BREAK = 2;
-static const char g_url_parsing_fast_action_map_raw[] = {
-    0/*-128*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*-118*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*-108*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*-98*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*-88*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*-78*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*-68*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*-58*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*-48*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*-38*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*-28*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*-18*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*-8*/, 0, 0, 0, 0, 0, 0, 0, URI_PARSE_BREAK/*\0*/, 0,
-    0/*2*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*12*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*22*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    URI_PARSE_CHECK/* */, 0, 0, URI_PARSE_BREAK/*#*/, 0, 0, 0, 0, 0, 0,
-    0/*42*/, 0, 0, 0, 0, URI_PARSE_BREAK/*/*/, 0, 0, 0, 0,
-    0/*52*/, 0, 0, 0, 0, 0, URI_PARSE_CHECK/*:*/, 0, 0, 0,
-    0/*62*/, URI_PARSE_BREAK/*?*/, URI_PARSE_CHECK/*@*/, 0, 0, 0, 0, 0, 0, 0,
-    0/*72*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*82*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*92*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*102*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*112*/, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0/*122*/, 0, 0, 0, 0, 0
-};
+const char URI_PARSE_CONTINUE                         = 0;
+const char URI_PARSE_CHECK                            = 1;
+const char URI_PARSE_BREAK                            = 2;
+static const char g_url_parsing_fast_action_map_raw[] = {0 /*-128*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*-118*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*-108*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*-98*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*-88*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*-78*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*-68*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*-58*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*-48*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*-38*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*-28*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*-18*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*-8*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         URI_PARSE_BREAK /*\0*/,
+                                                         0,
+                                                         0 /*2*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*12*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*22*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         URI_PARSE_CHECK /* */,
+                                                         0,
+                                                         0,
+                                                         URI_PARSE_BREAK /*#*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*42*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         URI_PARSE_BREAK /*/*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*52*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         URI_PARSE_CHECK /*:*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*62*/,
+                                                         URI_PARSE_BREAK /*?*/,
+                                                         URI_PARSE_CHECK /*@*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*72*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*82*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*92*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*102*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*112*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0 /*122*/,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0,
+                                                         0};
 static const char* const g_url_parsing_fast_action_map =
     g_url_parsing_fast_action_map_raw + 128;
 
@@ -141,15 +363,16 @@ static const char* const g_url_parsing_fast_action_map =
 // ignoring of scheme("http://")
 int URI::SetHttpURL(const char* url) {
     Clear();
-    
+
     const char* p = url;
     // skip heading blanks
     if (*p == ' ') {
-        for (++p; *p == ' '; ++p) {}
+        for (++p; *p == ' '; ++p) {
+        }
     }
     const char* start = p;
     // Find end of host, locate scheme and user_info during the searching
-    bool need_scheme = true;
+    bool need_scheme    = true;
     bool need_user_info = true;
     for (; true; ++p) {
         const char action = g_url_parsing_fast_action_map[(int)*p];
@@ -183,7 +406,7 @@ int URI::SetHttpURL(const char* url) {
     const char* host_end = SplitHostAndPort(start, p, &_port);
     _host.assign(start, host_end - start);
     if (*p == '/') {
-        start = p; //slash pointed by p is counted into _path
+        start = p;  // slash pointed by p is counted into _path
         ++p;
         for (; *p && *p != '?' && *p != '#'; ++p) {
             if (*p == ' ') {
@@ -225,16 +448,17 @@ int URI::SetHttpURL(const char* url) {
     return 0;
 }
 
-int ParseURL(const char* url,
-             std::string* scheme_out, std::string* host_out, int* port_out) {
+int ParseURL(const char* url, std::string* scheme_out, std::string* host_out,
+             int* port_out) {
     const char* p = url;
     // skip heading blanks
     if (*p == ' ') {
-        for (++p; *p == ' '; ++p) {}
+        for (++p; *p == ' '; ++p) {
+        }
     }
     const char* start = p;
     // Find end of host, locate scheme and user_info during the searching
-    bool need_scheme = true;
+    bool need_scheme    = true;
     bool need_user_info = true;
     for (; true; ++p) {
         const char action = g_url_parsing_fast_action_map[(int)*p];
@@ -256,7 +480,7 @@ int ParseURL(const char* url,
         } else if (*p == '@') {
             if (need_user_info) {
                 need_user_info = false;
-                start = p + 1;
+                start          = p + 1;
             }
         } else if (*p == ' ') {
             if (!is_all_spaces(p + 1)) {
@@ -266,7 +490,7 @@ int ParseURL(const char* url,
             break;
         }
     }
-    int port = -1;
+    int port             = -1;
     const char* host_end = SplitHostAndPort(start, p, &port);
     if (host_out) {
         host_out->assign(start, host_end - start);
@@ -292,7 +516,7 @@ void URI::Print(std::ostream& os) const {
     }
     PrintWithoutHost(os);
 }
-    
+
 void URI::PrintWithoutHost(std::ostream& os) const {
     if (_path.empty()) {
         // According to rfc2616#section-5.1.2, the absolute path
@@ -329,11 +553,12 @@ void URI::InitializeQueryMap() const {
         CHECK_EQ(0, _query_map.init(QUERY_MAP_INITIAL_BUCKET));
     }
     ParseQueries(_query_map, _query);
-    _query_was_modified = false;
+    _query_was_modified    = false;
     _initialized_query_map = true;
 }
 
-void URI::AppendQueryString(std::string* query, bool append_question_mark) const {
+void URI::AppendQueryString(std::string* query,
+                            bool append_question_mark) const {
     if (_query_map.empty()) {
         return;
     }
@@ -388,22 +613,25 @@ void URI::SetH2Path(const char* h2_path) {
     _path.clear();
     _query.clear();
     _fragment.clear();
-    _query_was_modified = false;
+    _query_was_modified    = false;
     _initialized_query_map = false;
     _query_map.clear();
 
-    const char* p = h2_path;
+    const char* p     = h2_path;
     const char* start = p;
-    for (; *p && *p != '?' && *p != '#'; ++p) {}
+    for (; *p && *p != '?' && *p != '#'; ++p) {
+    }
     _path.assign(start, p - start);
     if (*p == '?') {
         start = ++p;
-        for (; *p && *p != '#'; ++p) {}
+        for (; *p && *p != '#'; ++p) {
+        }
         _query.assign(start, p - start);
     }
     if (*p == '#') {
         start = ++p;
-        for (; *p; ++p) {}
+        for (; *p; ++p) {
+        }
         _fragment.assign(start, p - start);
     }
 }
@@ -413,8 +641,7 @@ QueryRemover::QueryRemover(const std::string* str)
     , _qs(str->data(), str->data() + str->size())
     , _iterated_len(0)
     , _removed_current_key_value(false)
-    , _ever_removed(false) {
-}
+    , _ever_removed(false) {}
 
 QueryRemover& QueryRemover::operator++() {
     if (!_qs) {
@@ -430,7 +657,8 @@ QueryRemover& QueryRemover::operator++() {
             _modified_query.push_back('&');
             _iterated_len += 1;
         }
-        _modified_query.append(key_and_value().data(), key_and_value().length());
+        _modified_query.append(key_and_value().data(),
+                               key_and_value().length());
         _iterated_len += key_and_value().length();
     } else {
         _removed_current_key_value = false;
@@ -450,7 +678,8 @@ void QueryRemover::remove_current_key_and_value() {
     if (!_ever_removed) {
         _ever_removed = true;
         size_t offset = key().data() - _query->data();
-        size_t len = offset - ((offset > 0 && (*_query)[offset - 1] == '&')? 1: 0);
+        size_t len =
+            offset - ((offset > 0 && (*_query)[offset - 1] == '&') ? 1 : 0);
         _modified_query.append(_query->data(), len);
         _iterated_len += len;
     }
@@ -465,7 +694,8 @@ std::string QueryRemover::modified_query() {
     // find out where the remaining string starts
     if (_removed_current_key_value) {
         size_t size = key_and_value().length();
-        while (offset + size < _query->size() && (*_query)[offset + size] == '&') {
+        while (offset + size < _query->size() &&
+               (*_query)[offset + size] == '&') {
             // ingore unnecessary '&'
             size += 1;
         }
@@ -481,8 +711,7 @@ std::string QueryRemover::modified_query() {
     return _modified_query;
 }
 
-void append_query(std::string *query_string,
-                  const butil::StringPiece& key,
+void append_query(std::string* query_string, const butil::StringPiece& key,
                   const butil::StringPiece& value) {
     if (!query_string->empty() && butil::back_char(*query_string) != '?') {
         query_string->push_back('&');
@@ -492,4 +721,4 @@ void append_query(std::string *query_string,
     query_string->append(value.data(), value.size());
 }
 
-} // namespace brpc
+}  // namespace brpc

@@ -15,51 +15,46 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <google/protobuf/descriptor.h>         // MethodDescriptor
-#include <google/protobuf/message.h>            // Message
 #include <gflags/gflags.h>
-#include "butil/time.h" 
-#include "butil/iobuf.h"                         // butil::IOBuf
-#include "brpc/controller.h"               // Controller
-#include "brpc/socket.h"                   // Socket
-#include "brpc/server.h"                   // Server
-#include "brpc/span.h"
-#include "brpc/mongo_head.h"
-#include "brpc/details/server_private_accessor.h"
+#include <google/protobuf/descriptor.h>  // MethodDescriptor
+#include <google/protobuf/message.h>     // Message
+#include "brpc/controller.h"             // Controller
 #include "brpc/details/controller_private_accessor.h"
+#include "brpc/details/server_private_accessor.h"
+#include "brpc/details/usercode_backup_pool.h"
+#include "brpc/mongo_head.h"
 #include "brpc/mongo_service_adaptor.h"
+#include "brpc/policy/mongo.pb.h"
 #include "brpc/policy/most_common_message.h"
 #include "brpc/policy/nshead_protocol.h"
-#include "brpc/policy/mongo.pb.h"
-#include "brpc/details/usercode_backup_pool.h"
+#include "brpc/server.h"  // Server
+#include "brpc/socket.h"  // Socket
+#include "brpc/span.h"
+#include "butil/iobuf.h"  // butil::IOBuf
+#include "butil/time.h"
 
 extern "C" {
 void bthread_assign_data(void* data);
 }
 
-
 namespace brpc {
 namespace policy {
 
 struct SendMongoResponse : public google::protobuf::Closure {
-    SendMongoResponse(const Server *server) :
-        status(NULL),
-        received_us(0L),
-        server(server) {}
+    SendMongoResponse(const Server* server)
+        : status(NULL), received_us(0L), server(server) {}
     ~SendMongoResponse();
     void Run();
 
     MethodStatus* status;
     int64_t received_us;
-    const Server *server;
+    const Server* server;
     Controller cntl;
     MongoRequest req;
     MongoResponse res;
 };
 
-SendMongoResponse::~SendMongoResponse() {
-    LogErrorTextAndDelete(false)(&cntl);
-}
+SendMongoResponse::~SendMongoResponse() { LogErrorTextAndDelete(false)(&cntl); }
 
 void SendMongoResponse::Run() {
     std::unique_ptr<SendMongoResponse> delete_self(this);
@@ -70,23 +65,20 @@ void SendMongoResponse::Run() {
         socket->SetFailed();
         return;
     }
-    
+
     const MongoServiceAdaptor* adaptor =
-            server->options().mongo_service_adaptor;
+        server->options().mongo_service_adaptor;
     butil::IOBuf res_buf;
     if (cntl.Failed()) {
         adaptor->SerializeError(res.header().response_to(), &res_buf);
     } else if (res.has_message()) {
         mongo_head_t header = {
-            res.header().message_length(),
-            res.header().request_id(),
-            res.header().response_to(),
-            res.header().op_code()
-        };
+            res.header().message_length(), res.header().request_id(),
+            res.header().response_to(), res.header().op_code()};
         res_buf.append(static_cast<const void*>(&header), sizeof(mongo_head_t));
-        int32_t response_flags = res.response_flags();
-        int64_t cursor_id = res.cursor_id();
-        int32_t starting_from = res.starting_from();
+        int32_t response_flags  = res.response_flags();
+        int64_t cursor_id       = res.cursor_id();
+        int32_t starting_from   = res.starting_from();
         int32_t number_returned = res.number_returned();
         res_buf.append(&response_flags, sizeof(response_flags));
         res_buf.append(&cursor_id, sizeof(cursor_id));
@@ -107,17 +99,18 @@ void SendMongoResponse::Run() {
     }
 }
 
-ParseResult ParseMongoMessage(butil::IOBuf* source,
-                              Socket* socket, bool /*read_eof*/, const void *arg) {
+ParseResult ParseMongoMessage(butil::IOBuf* source, Socket* socket,
+                              bool /*read_eof*/, const void* arg) {
     const Server* server = static_cast<const Server*>(arg);
-    const MongoServiceAdaptor* adaptor = server->options().mongo_service_adaptor;
+    const MongoServiceAdaptor* adaptor =
+        server->options().mongo_service_adaptor;
     if (NULL == adaptor) {
         // The server does not enable mongo adaptor.
         return MakeParseError(PARSE_ERROR_TRY_OTHERS);
     }
 
     char buf[sizeof(mongo_head_t)];
-    const char *p = (const char *)source->fetch(buf, sizeof(buf));
+    const char* p = (const char*)source->fetch(buf, sizeof(buf));
     if (NULL == p) {
         return MakeParseError(PARSE_ERROR_NOT_ENOUGH_DATA);
     }
@@ -142,9 +135,9 @@ ParseResult ParseMongoMessage(butil::IOBuf* source,
     // created by the last Query). The context is stored in
     // socket::_input_message, and created at the first time when msg
     // comes over the socket.
-    Destroyable *socket_context_msg = socket->parsing_context();
+    Destroyable* socket_context_msg = socket->parsing_context();
     if (NULL == socket_context_msg) {
-        MongoContext *context = adaptor->CreateSocketContext();
+        MongoContext* context = adaptor->CreateSocketContext();
         if (NULL == context) {
             return MakeParseError(PARSE_ERROR_NO_RESOURCE);
         }
@@ -155,7 +148,7 @@ ParseResult ParseMongoMessage(butil::IOBuf* source,
     source->cutn(&msg->meta, sizeof(buf));
     size_t act_body_len = source->cutn(&msg->payload, body_len - sizeof(buf));
     if (act_body_len != body_len - sizeof(buf)) {
-        CHECK(false);     // Very unlikely, unless memory is corrupted.
+        CHECK(false);  // Very unlikely, unless memory is corrupted.
         return MakeParseError(PARSE_ERROR_TRY_OTHERS);
     }
     return MakeMessage(msg);
@@ -167,31 +160,32 @@ void EndRunningCallMethodInPool(
     const ::google::protobuf::MethodDescriptor* method,
     ::google::protobuf::RpcController* controller,
     const ::google::protobuf::Message* request,
-    ::google::protobuf::Message* response,
-    ::google::protobuf::Closure* done);
+    ::google::protobuf::Message* response, ::google::protobuf::Closure* done);
 
 void ProcessMongoRequest(InputMessageBase* msg_base) {
-    DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
+    DestroyingPtr<MostCommonMessage> msg(
+        static_cast<MostCommonMessage*>(msg_base));
     SocketUniquePtr socket_guard(msg->ReleaseSocket());
-    Socket* socket = socket_guard.get();
+    Socket* socket       = socket_guard.get();
     const Server* server = static_cast<const Server*>(msg_base->arg());
     ScopedNonServiceError non_service_error(server);
 
     char buf[sizeof(mongo_head_t)];
-    const char *p = (const char *)msg->meta.fetch(buf, sizeof(buf));
-    const mongo_head_t *header = (const mongo_head_t*)p;
+    const char* p              = (const char*)msg->meta.fetch(buf, sizeof(buf));
+    const mongo_head_t* header = (const mongo_head_t*)p;
 
-    const google::protobuf::ServiceDescriptor* srv_des = MongoService::descriptor();
+    const google::protobuf::ServiceDescriptor* srv_des =
+        MongoService::descriptor();
     if (1 != srv_des->method_count()) {
         LOG(WARNING) << "method count:" << srv_des->method_count()
                      << " of MongoService should be equal to 1!";
     }
 
-    const Server::MethodProperty *mp =
-            ServerPrivateAccessor(server)
-            .FindMethodPropertyByFullName(srv_des->method(0)->full_name());
+    const Server::MethodProperty* mp =
+        ServerPrivateAccessor(server).FindMethodPropertyByFullName(
+            srv_des->method(0)->full_name());
 
-    MongoContextMessage *context_msg =
+    MongoContextMessage* context_msg =
         dynamic_cast<MongoContextMessage*>(socket->parsing_context());
     if (NULL == context_msg) {
         LOG(WARNING) << "socket context wasn't set correctly";
@@ -223,71 +217,77 @@ void ProcessMongoRequest(InputMessageBase* msg_base) {
             break;
         }
 
-        if (!ServerPrivateAccessor(server).AddConcurrency(&(mongo_done->cntl))) {
-            mongo_done->cntl.SetFailed(
-                ELIMIT, "Reached server's max_concurrency=%d",
-                server->options().max_concurrency);
+        if (!ServerPrivateAccessor(server).AddConcurrency(
+                &(mongo_done->cntl))) {
+            mongo_done->cntl.SetFailed(ELIMIT,
+                                       "Reached server's max_concurrency=%d",
+                                       server->options().max_concurrency);
             break;
         }
         if (FLAGS_usercode_in_pthread && TooManyUserCode()) {
-            mongo_done->cntl.SetFailed(ELIMIT, "Too many user code to run when"
+            mongo_done->cntl.SetFailed(ELIMIT,
+                                       "Too many user code to run when"
                                        " -usercode_in_pthread is on");
             break;
         }
 
         if (NULL == mp ||
             mp->service->GetDescriptor() == BadMethodService::descriptor()) {
-            mongo_done->cntl.SetFailed(ENOMETHOD, "Fail to find default_method");
+            mongo_done->cntl.SetFailed(ENOMETHOD,
+                                       "Fail to find default_method");
             break;
         }
         // Switch to service-specific error.
         non_service_error.release();
         MethodStatus* method_status = mp->status;
-        mongo_done->status = method_status;
+        mongo_done->status          = method_status;
         if (method_status) {
             int rejected_cc = 0;
             if (!method_status->OnRequested(&rejected_cc)) {
                 mongo_done->cntl.SetFailed(
-                    ELIMIT, "Rejected by %s's ConcurrencyLimiter, concurrency=%d",
+                    ELIMIT,
+                    "Rejected by %s's ConcurrencyLimiter, concurrency=%d",
                     mp->method->full_name().c_str(), rejected_cc);
                 break;
             }
         }
-        
+
         if (!MongoOp_IsValid(header->op_code)) {
-            mongo_done->cntl.SetFailed(EREQUEST, "Unknown op_code:%d", header->op_code);
+            mongo_done->cntl.SetFailed(EREQUEST, "Unknown op_code:%d",
+                                       header->op_code);
             break;
         }
-        
+
         mongo_done->cntl.set_log_id(header->request_id);
-        const std::string &body_str = msg->payload.to_string();
+        const std::string& body_str = msg->payload.to_string();
         mongo_done->req.set_message(body_str.c_str(), body_str.size());
-        mongo_done->req.mutable_header()->set_message_length(header->message_length);
+        mongo_done->req.mutable_header()->set_message_length(
+            header->message_length);
         mongo_done->req.mutable_header()->set_request_id(header->request_id);
         mongo_done->req.mutable_header()->set_response_to(header->response_to);
         mongo_done->req.mutable_header()->set_op_code(
-                static_cast<MongoOp>(header->op_code));
+            static_cast<MongoOp>(header->op_code));
         mongo_done->res.mutable_header()->set_response_to(header->request_id);
         mongo_done->received_us = msg->received_us();
 
-        google::protobuf::Service* svc = mp->service;
+        google::protobuf::Service* svc                   = mp->service;
         const google::protobuf::MethodDescriptor* method = mp->method;
         accessor.set_method(method);
-        
+
         if (!FLAGS_usercode_in_pthread) {
-            return svc->CallMethod(
-                method, &(mongo_done->cntl), &(mongo_done->req),
-                &(mongo_done->res), mongo_done);
+            return svc->CallMethod(method, &(mongo_done->cntl),
+                                   &(mongo_done->req), &(mongo_done->res),
+                                   mongo_done);
         }
         if (BeginRunningUserCode()) {
-            return svc->CallMethod(
-                method, &(mongo_done->cntl), &(mongo_done->req),
-                &(mongo_done->res), mongo_done);
+            return svc->CallMethod(method, &(mongo_done->cntl),
+                                   &(mongo_done->req), &(mongo_done->res),
+                                   mongo_done);
             return EndRunningUserCodeInPlace();
         } else {
-            return EndRunningCallMethodInPool(
-                svc, method, &(mongo_done->cntl), &(mongo_done->req),
-                &(mongo_done->res), mongo_done);
+            return EndRunningCallMethodInPool(svc, method, &(mongo_done->cntl),
+                                              &(mongo_done->req),
+                                              &(mongo_done->res), mongo_done);
         }
     } while (false);
 
@@ -295,4 +295,4 @@ void ProcessMongoRequest(InputMessageBase* msg_base) {
 }
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc

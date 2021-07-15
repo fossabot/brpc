@@ -15,10 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_EXTENSION_INL_H
 #define BRPC_EXTENSION_INL_H
-
 
 namespace brpc {
 
@@ -35,8 +33,7 @@ Extension<T>::Extension() {
 }
 
 template <typename T>
-Extension<T>::~Extension() {
-}
+Extension<T>::~Extension() {}
 
 template <typename T>
 int Extension<T>::Register(const std::string& name, T* instance) {
@@ -77,8 +74,9 @@ T* Extension<T>::Find(const char* name) {
 template <typename T>
 void Extension<T>::List(std::ostream& os, char separator) {
     BAIDU_SCOPED_LOCK(_map_mutex);
-    for (typename butil::CaseIgnoredFlatMap<T*>::iterator
-             it = _instance_map.begin(); it != _instance_map.end(); ++it) {
+    for (typename butil::CaseIgnoredFlatMap<T*>::iterator it =
+             _instance_map.begin();
+         it != _instance_map.end(); ++it) {
         // private extensions which is not intended to be seen by users starts
         // with underscore.
         if (it->first.data()[0] != '_') {
@@ -90,7 +88,6 @@ void Extension<T>::List(std::ostream& os, char separator) {
     }
 }
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_EXTENSION_INL_H

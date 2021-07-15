@@ -22,7 +22,7 @@
 #ifndef BTHREAD_COMLOG_INITIALIZER_H
 #define BTHREAD_COMLOG_INITIALIZER_H
 
-#include <com_log.h>                       // com_openlog_r, com_closelog_r
+#include <com_log.h>  // com_openlog_r, com_closelog_r
 #include "butil/macros.h"
 
 namespace bthread {
@@ -39,11 +39,11 @@ public:
             com_closelog_r();
         }
     }
-    
+
 private:
     DISALLOW_COPY_AND_ASSIGN(ComlogInitializer);
 };
 
-}
+}  // namespace bthread
 
-#endif // BTHREAD_COMLOG_INITIALIZER_H
+#endif  // BTHREAD_COMLOG_INITIALIZER_H

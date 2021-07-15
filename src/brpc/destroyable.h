@@ -15,12 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_DESTROYABLE_H
 #define BRPC_DESTROYABLE_H
 
-#include "butil/unique_ptr.h"           // std::unique_ptr
-
+#include "butil/unique_ptr.h"  // std::unique_ptr
 
 namespace brpc {
 
@@ -31,10 +29,15 @@ public:
 };
 
 namespace detail {
-template <typename T> struct Destroyer {
-    void operator()(T* obj) const { if (obj) { obj->Destroy(); } }
+template <typename T>
+struct Destroyer {
+    void operator()(T* obj) const {
+        if (obj) {
+            obj->Destroy();
+        }
+    }
 };
-}
+}  // namespace detail
 
 // A special unique_ptr that calls "obj->Destroy()" instead of "delete obj".
 template <typename T>
@@ -43,7 +46,6 @@ struct DestroyingPtr : public std::unique_ptr<T, detail::Destroyer<T> > {
     DestroyingPtr(T* p) : std::unique_ptr<T, detail::Destroyer<T> >(p) {}
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_DESTROYABLE_H

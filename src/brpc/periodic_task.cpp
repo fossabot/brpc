@@ -15,20 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
+#include "brpc/periodic_task.h"
 #include <bthread/bthread.h>
 #include <bthread/unstable.h>
-#include "brpc/periodic_task.h"
 
 namespace brpc {
 
-PeriodicTask::~PeriodicTask() {
-}
+PeriodicTask::~PeriodicTask() {}
 
 static void* PeriodicTaskThread(void* arg) {
     PeriodicTask* task = static_cast<PeriodicTask*>(arg);
     timespec abstime;
-    if (!task->OnTriggeringTask(&abstime)) { // end
+    if (!task->OnTriggeringTask(&abstime)) {  // end
         task->OnDestroyingTask();
         return NULL;
     }
@@ -38,8 +36,8 @@ static void* PeriodicTaskThread(void* arg) {
 
 static void RunPeriodicTaskThread(void* arg) {
     bthread_t th = 0;
-    int rc = bthread_start_background(
-        &th, &BTHREAD_ATTR_NORMAL, PeriodicTaskThread, arg);
+    int rc       = bthread_start_background(&th, &BTHREAD_ATTR_NORMAL,
+                                      PeriodicTaskThread, arg);
     if (rc != 0) {
         LOG(ERROR) << "Fail to start PeriodicTaskThread";
         static_cast<PeriodicTask*>(arg)->OnDestroyingTask();
@@ -47,14 +45,15 @@ static void RunPeriodicTaskThread(void* arg) {
     }
 }
 
-void PeriodicTaskManager::StartTaskAt(PeriodicTask* task, const timespec& abstime) {
+void PeriodicTaskManager::StartTaskAt(PeriodicTask* task,
+                                      const timespec& abstime) {
     if (task == NULL) {
         LOG(ERROR) << "Param[task] is NULL";
         return;
     }
     bthread_timer_t timer_id;
-    const int rc = bthread_timer_add(
-        &timer_id, abstime, RunPeriodicTaskThread, task);
+    const int rc =
+        bthread_timer_add(&timer_id, abstime, RunPeriodicTaskThread, task);
     if (rc != 0) {
         LOG(ERROR) << "Fail to add timer for RunPerodicTaskThread";
         task->OnDestroyingTask();
@@ -62,4 +61,4 @@ void PeriodicTaskManager::StartTaskAt(PeriodicTask* task, const timespec& abstim
     }
 }
 
-} // namespace brpc
+}  // namespace brpc

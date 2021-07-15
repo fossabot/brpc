@@ -17,12 +17,12 @@
 
 // Date: Thu Dec 31 13:35:39 CST 2015
 
-#include <limits>          // numeric_limits
+#include "butil/fast_rand.h"
 #include <math.h>
+#include <limits>  // numeric_limits
 #include "butil/basictypes.h"
 #include "butil/macros.h"
-#include "butil/time.h"     // gettimeofday_us()
-#include "butil/fast_rand.h"
+#include "butil/time.h"  // gettimeofday_us()
 
 namespace butil {
 
@@ -33,27 +33,27 @@ typedef uint64_t SplitMix64Seed;
 // solely for seeding xorshift128+.
 inline uint64_t splitmix64_next(SplitMix64Seed* seed) {
     uint64_t z = (*seed += UINT64_C(0x9E3779B97F4A7C15));
-    z = (z ^ (z >> 30)) * UINT64_C(0xBF58476D1CE4E5B9);
-    z = (z ^ (z >> 27)) * UINT64_C(0x94D049BB133111EB);
+    z          = (z ^ (z >> 30)) * UINT64_C(0xBF58476D1CE4E5B9);
+    z          = (z ^ (z >> 27)) * UINT64_C(0x94D049BB133111EB);
     return z ^ (z >> 31);
 }
 
 // xorshift128+ is the fastest generator passing BigCrush without systematic
 // failures
 inline uint64_t xorshift128_next(FastRandSeed* seed) {
-    uint64_t s1 = seed->s[0];
+    uint64_t s1       = seed->s[0];
     const uint64_t s0 = seed->s[1];
-    seed->s[0] = s0;
-    s1 ^= s1 << 23; // a
-    seed->s[1] = s1 ^ s0 ^ (s1 >> 18) ^ (s0 >> 5); // b, c
+    seed->s[0]        = s0;
+    s1 ^= s1 << 23;                                 // a
+    seed->s[1] = s1 ^ s0 ^ (s1 >> 18) ^ (s0 >> 5);  // b, c
     return seed->s[1] + s0;
 }
 
 // seed xorshift128+ with splitmix64.
 void init_fast_rand_seed(FastRandSeed* seed) {
     SplitMix64Seed seed4seed = butil::gettimeofday_us();
-    seed->s[0] = splitmix64_next(&seed4seed);
-    seed->s[1] = splitmix64_next(&seed4seed);
+    seed->s[0]               = splitmix64_next(&seed4seed);
+    seed->s[1]               = splitmix64_next(&seed4seed);
 }
 
 inline uint64_t fast_rand_impl(uint64_t range, FastRandSeed* seed) {
@@ -63,7 +63,7 @@ inline uint64_t fast_rand_impl(uint64_t range, FastRandSeed* seed) {
     // last one, the probability of taking any value inside [0, range-1] is
     // same. If the value falls into last interval, we retry the process until
     // the value falls into other intervals. If min/max are limited to 32-bits,
-    // the retrying is rare. The amortized retrying count at maximum is 1 when 
+    // the retrying is rare. The amortized retrying count at maximum is 1 when
     // range equals 2^32. A corner case is that even if the range is power of
     // 2(e.g. min=0 max=65535) in which case the retrying can be avoided, we
     // still retry currently. The reason is just to keep the code simpler
@@ -77,7 +77,7 @@ inline uint64_t fast_rand_impl(uint64_t range, FastRandSeed* seed) {
 }
 
 // Seeds for different threads are stored separately in thread-local storage.
-static __thread FastRandSeed _tls_seed = { { 0, 0 } };
+static __thread FastRandSeed _tls_seed = {{0, 0}};
 
 // True if the seed is (probably) uninitialized. There's definitely false
 // positive, but it's OK for us.
@@ -92,9 +92,7 @@ uint64_t fast_rand() {
     return xorshift128_next(&_tls_seed);
 }
 
-uint64_t fast_rand(FastRandSeed* seed) {
-    return xorshift128_next(seed);
-}
+uint64_t fast_rand(FastRandSeed* seed) { return xorshift128_next(seed); }
 
 uint64_t fast_rand_less_than(uint64_t range) {
     if (range == 0) {
@@ -115,8 +113,8 @@ int64_t fast_rand_in_64(int64_t min, int64_t max) {
             return min;
         }
         const int64_t tmp = min;
-        min = max;
-        max = tmp;
+        min               = max;
+        max               = tmp;
     }
     int64_t range = max - min + 1;
     if (range == 0) {
@@ -135,8 +133,8 @@ uint64_t fast_rand_in_u64(uint64_t min, uint64_t max) {
             return min;
         }
         const uint64_t tmp = min;
-        min = max;
-        max = tmp;
+        min                = max;
+        max                = tmp;
     }
     uint64_t range = max - min + 1;
     if (range == 0) {
@@ -148,9 +146,11 @@ uint64_t fast_rand_in_u64(uint64_t min, uint64_t max) {
 
 inline double fast_rand_double(FastRandSeed* seed) {
     // Copied from rand_util.cc
-    COMPILE_ASSERT(std::numeric_limits<double>::radix == 2, otherwise_use_scalbn);
+    COMPILE_ASSERT(std::numeric_limits<double>::radix == 2,
+                   otherwise_use_scalbn);
     static const int kBits = std::numeric_limits<double>::digits;
-    uint64_t random_bits = xorshift128_next(seed) & ((UINT64_C(1) << kBits) - 1);
+    uint64_t random_bits =
+        xorshift128_next(seed) & ((UINT64_C(1) << kBits) - 1);
     double result = ldexp(static_cast<double>(random_bits), -1 * kBits);
     return result;
 }
@@ -173,19 +173,19 @@ void fast_rand_bytes(void* output, size_t output_length) {
         uint64_t r = fast_rand();
         for (size_t i = 0; i < m; ++i) {
             p[i] = (r & 0xFF);
-            r = (r >> 8);
+            r    = (r >> 8);
         }
     }
 }
 
 std::string fast_rand_printable(size_t length) {
     std::string result(length, 0);
-    const size_t halflen = length/2;
+    const size_t halflen = length / 2;
     fast_rand_bytes(&result[0], halflen);
     for (size_t i = 0; i < halflen; ++i) {
-        const uint8_t b = result[halflen - 1 - i];
-        result[length - 1 - 2*i] = 'A' + (b & 0xF);
-        result[length - 2 - 2*i] = 'A' + (b >> 4);
+        const uint8_t b            = result[halflen - 1 - i];
+        result[length - 1 - 2 * i] = 'A' + (b & 0xF);
+        result[length - 2 - 2 * i] = 'A' + (b >> 4);
     }
     if (halflen * 2 != length) {
         result[0] = 'A' + (fast_rand() % 16);

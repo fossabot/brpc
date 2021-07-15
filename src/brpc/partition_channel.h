@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_PARTITION_CHANNEL_H
 #define BRPC_PARTITION_CHANNEL_H
 
@@ -23,8 +22,7 @@
 // on internal structures, use opaque pointers instead.
 
 #include "brpc/parallel_channel.h"
-#include "brpc/selective_channel.h" // For DynamicPartitionChannel
-
+#include "brpc/selective_channel.h"  // For DynamicPartitionChannel
 
 namespace brpc {
 
@@ -85,9 +83,9 @@ public:
     // usages.
     // For example:
     //   num_partition_kinds = 3
-    //   partition_parser = parse N/M as Partition{index=N, num_partition_kinds=M}
-    //   naming_service = s1(tag=1/3) s2(tag=2/3) s3(tag=0/3) s4(tag=1/4) s5(tag=2/3)
-    //   load_balancer = rr
+    //   partition_parser = parse N/M as Partition{index=N,
+    //   num_partition_kinds=M} naming_service = s1(tag=1/3) s2(tag=2/3)
+    //   s3(tag=0/3) s4(tag=1/4) s5(tag=2/3) load_balancer = rr
     // 3 sub channels(c0,c1,c2) will be created:
     //   - c0 sends requests to s3 because the tag=0/3 means s3 is the first
     //     partition kind in 3 kinds.
@@ -100,10 +98,8 @@ public:
     //                               /   c0 -> s3      (rr)
     //   request -> PartitionChannel --  c1 -> s1      (rr)
     //                               \   c2 -> s2, s5  (rr)
-    int Init(int num_partition_kinds,
-             PartitionParser* partition_parser,
-             const char* naming_service_url, 
-             const char* load_balancer_name,
+    int Init(int num_partition_kinds, PartitionParser* partition_parser,
+             const char* naming_service_url, const char* load_balancer_name,
              const PartitionChannelOptions* options);
 
     // Access sub channels corresponding to partitions in parallel.
@@ -126,11 +122,11 @@ private:
 };
 
 // As the name implies, this combo channel discovers differently partitioned
-// servers and builds sub PartitionChannels on-the-fly for different groups 
-// of servers. When multiple partitioning methods co-exist, traffic is 
-// splitted based on capacities, namely # of servers in groups. The main 
-// purpose of this channel is to transit from one partitioning method to 
-// another smoothly. For example, with proper deployment, servers can be 
+// servers and builds sub PartitionChannels on-the-fly for different groups
+// of servers. When multiple partitioning methods co-exist, traffic is
+// splitted based on capacities, namely # of servers in groups. The main
+// purpose of this channel is to transit from one partitioning method to
+// another smoothly. For example, with proper deployment, servers can be
 // changed from M-partitions to N-partitions losslessly without changing the
 // client code.
 class DynamicPartitionChannel : public ChannelBase {
@@ -138,14 +134,13 @@ public:
     DynamicPartitionChannel();
     ~DynamicPartitionChannel();
 
-    // Unlike PartitionChannel, DynamicPartitionChannel does not need 
-    // `num_partition_kinds'. It discovers and groups differently partitioned 
+    // Unlike PartitionChannel, DynamicPartitionChannel does not need
+    // `num_partition_kinds'. It discovers and groups differently partitioned
     // servers automatically.
-    int Init(PartitionParser* partition_parser,
-             const char* naming_service_url, 
+    int Init(PartitionParser* partition_parser, const char* naming_service_url,
              const char* load_balancer_name,
              const PartitionChannelOptions* options);
-    
+
     // Access partitions according to their capacities.
     void CallMethod(const google::protobuf::MethodDescriptor* method,
                     google::protobuf::RpcController* controller,
@@ -168,7 +163,6 @@ private:
     PartitionParser* _parser;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_PARTITION_CHANNEL_H

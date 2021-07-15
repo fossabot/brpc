@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_HEALTH_CHECK_MANAGER_H
 #define BRPC_HEALTH_CHECK_MANAGER_H
 
@@ -34,7 +33,7 @@ class PeriodicTask {
 public:
     virtual ~PeriodicTask();
     virtual bool OnTriggeringTask(timespec* next_abstime) = 0;
-    virtual void OnDestroyingTask() = 0;
+    virtual void OnDestroyingTask()                       = 0;
 };
 
 class PeriodicTaskManager {
@@ -42,7 +41,6 @@ public:
     static void StartTaskAt(PeriodicTask* task, const timespec& abstime);
 };
 
-
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_HEALTH_CHECK_MANAGER_H

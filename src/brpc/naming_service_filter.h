@@ -15,12 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_NAMING_SERVICE_FILTER_H
 #define BRPC_NAMING_SERVICE_FILTER_H
 
-#include "brpc/naming_service.h"      // ServerNode
-
+#include "brpc/naming_service.h"  // ServerNode
 
 namespace brpc {
 
@@ -33,8 +31,6 @@ public:
     virtual bool Accept(const ServerNode& server) const = 0;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-
-#endif // BRPC_NAMING_SERVICE_FILTER_H
+#endif  // BRPC_NAMING_SERVICE_FILTER_H

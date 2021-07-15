@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_RESTFUL_H
 #define BRPC_RESTFUL_H
 
 #include <string>
-#include "butil/strings/string_piece.h"
 #include "brpc/server.h"
-
+#include "butil/strings/string_piece.h"
 
 namespace brpc {
 
@@ -73,8 +71,7 @@ public:
     bool AddMethod(const RestfulMethodPath& path,
                    google::protobuf::Service* service,
                    const Server::MethodProperty::OpaqueParams& params,
-                   const std::string& method_name,
-                   MethodStatus* status);
+                   const std::string& method_name, MethodStatus* status);
 
     // Remove by RestfulMethodPath::to_string() of the path to AddMethod()
     // Returns number of methods removed (should be 1 or 0 currently)
@@ -85,30 +82,29 @@ public:
 
     // Called after by Server at starting moment, to refresh _sorted_paths
     void PrepareForFinding();
-    
+
     // Find the method by path.
     // Time complexity in worst-case is #slashes-in-input * log(#paths-stored)
-    const Server::MethodProperty*
-    FindMethodProperty(const butil::StringPiece& method_path,
-                       std::string* unresolved_path) const;
+    const Server::MethodProperty* FindMethodProperty(
+        const butil::StringPiece& method_path,
+        std::string* unresolved_path) const;
 
     const std::string& service_name() const { return _service_name; }
 
     // Number of methods in this map. Only for UT right now.
     size_t size() const { return _dedup_map.size(); }
-    
+
 private:
     DISALLOW_COPY_AND_ASSIGN(RestfulMap);
-    
+
     std::string _service_name;
-    // refreshed each time 
+    // refreshed each time
     PathList _sorted_paths;
     DedupMap _dedup_map;
 };
 
 std::ostream& operator<<(std::ostream& os, const RestfulMethodPath&);
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_RESTFUL_H

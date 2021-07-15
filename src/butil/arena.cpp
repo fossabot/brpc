@@ -17,23 +17,19 @@
 
 // Date: Fri Jun  5 18:25:40 CST 2015
 
+#include "butil/arena.h"
 #include <stdlib.h>
 #include <algorithm>
-#include "butil/arena.h"
 
 namespace butil {
 
-ArenaOptions::ArenaOptions()
-    : initial_block_size(64)
-    , max_block_size(8192)
-{}
+ArenaOptions::ArenaOptions() : initial_block_size(64), max_block_size(8192) {}
 
 Arena::Arena(const ArenaOptions& options)
     : _cur_block(NULL)
     , _isolated_blocks(NULL)
     , _block_size(options.initial_block_size)
-    , _options(options) {
-}
+    , _options(options) {}
 
 Arena::~Arena() {
     while (_cur_block != NULL) {
@@ -53,8 +49,8 @@ void Arena::swap(Arena& other) {
     std::swap(_isolated_blocks, other._isolated_blocks);
     std::swap(_block_size, other._block_size);
     const ArenaOptions tmp = _options;
-    _options = other._options;
-    other._options = tmp;
+    _options               = other._options;
+    other._options         = tmp;
 }
 
 void Arena::clear() {
@@ -64,16 +60,16 @@ void Arena::clear() {
 }
 
 void* Arena::allocate_new_block(size_t n) {
-    Block* b = (Block*)malloc(offsetof(Block, data) + n);
-    b->next = _isolated_blocks;
-    b->alloc_size = n;
-    b->size = n;
+    Block* b         = (Block*)malloc(offsetof(Block, data) + n);
+    b->next          = _isolated_blocks;
+    b->alloc_size    = n;
+    b->size          = n;
     _isolated_blocks = b;
     return b->data;
 }
 
 void* Arena::allocate_in_other_blocks(size_t n) {
-    if (n > _block_size / 4) { // put outlier on separate blocks.
+    if (n > _block_size / 4) {  // put outlier on separate blocks.
         return allocate_new_block(n);
     }
     // Waste the left space. At most 1/4 of allocated spaces are wasted.
@@ -90,9 +86,9 @@ void* Arena::allocate_in_other_blocks(size_t n) {
     if (NULL == b) {
         return NULL;
     }
-    b->next = NULL;
+    b->next       = NULL;
     b->alloc_size = n;
-    b->size = new_size;
+    b->size       = new_size;
     if (_cur_block) {
         _cur_block->next = _isolated_blocks;
         _isolated_blocks = _cur_block;

@@ -8,8 +8,6 @@ namespace butil {
 
 DefaultClock::~DefaultClock() {}
 
-Time DefaultClock::Now() {
-  return Time::Now();
-}
+Time DefaultClock::Now() { return Time::Now(); }
 
 }  // namespace butil

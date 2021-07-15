@@ -24,9 +24,9 @@
 #include <utility>
 
 #include "butil/basictypes.h"
-#include "butil/strings/string16.h"
 #include "butil/build_config.h"
-#include "butil/third_party/murmurhash3/murmurhash3.h"   // fmix64
+#include "butil/strings/string16.h"
+#include "butil/third_party/murmurhash3/murmurhash3.h"  // fmix64
 
 #if defined(COMPILER_MSVC)
 #include <hash_map>
@@ -72,12 +72,12 @@ namespace BUTIL_HASH_NAMESPACE {
 // narrower than |long long|.  This is probably good enough for what we will
 // use it for.
 
-#define DEFINE_TRIVIAL_HASH(integral_type) \
-    template<> \
-    struct hash<integral_type> { \
-      std::size_t operator()(integral_type value) const { \
-        return static_cast<std::size_t>(value); \
-      } \
+#define DEFINE_TRIVIAL_HASH(integral_type)                  \
+    template <>                                             \
+    struct hash<integral_type> {                            \
+        std::size_t operator()(integral_type value) const { \
+            return static_cast<std::size_t>(value);         \
+        }                                                   \
     }
 
 DEFINE_TRIVIAL_HASH(long long);
@@ -92,15 +92,15 @@ DEFINE_TRIVIAL_HASH(unsigned long long);
 // versions prior to 4.3.2 are unable to compile <tr1/functional> when RTTI
 // is disabled, as it is in our build.
 
-#define DEFINE_STRING_HASH(string_type) \
-    template<> \
-    struct hash<string_type> { \
-      std::size_t operator()(const string_type& s) const { \
-        std::size_t result = 0; \
-        for (string_type::const_iterator i = s.begin(); i != s.end(); ++i) \
-          result = (result * 131) + *i; \
-        return result; \
-      } \
+#define DEFINE_STRING_HASH(string_type)                                        \
+    template <>                                                                \
+    struct hash<string_type> {                                                 \
+        std::size_t operator()(const string_type& s) const {                   \
+            std::size_t result = 0;                                            \
+            for (string_type::const_iterator i = s.begin(); i != s.end(); ++i) \
+                result = (result * 131) + *i;                                  \
+            return result;                                                     \
+        }                                                                      \
     }
 
 DEFINE_STRING_HASH(std::string);
@@ -122,9 +122,9 @@ using BUTIL_HASH_NAMESPACE::hash_set;
 
 // Implement hashing for pairs of at-most 32 bit integer values.
 inline std::size_t HashInts32(uint32_t value1, uint32_t value2) {
-  uint64_t value1_64 = value1;
-  uint64_t hash64 = (value1_64 << 32) | value2;
-  return static_cast<size_t>(fmix64(hash64));
+    uint64_t value1_64 = value1;
+    uint64_t hash64    = (value1_64 << 32) | value2;
+    return static_cast<size_t>(fmix64(hash64));
 }
 
 // Implement hashing for pairs of up-to 64-bit integer values.
@@ -133,39 +133,39 @@ inline std::size_t HashInts32(uint32_t value1, uint32_t value2) {
 // http://opendatastructures.org/versions/edition-0.1d/ods-java/node33.html#SECTION00832000000000000000
 // Then we reduce our result to 32 bits if required, similar to above.
 inline std::size_t HashInts64(uint64_t value1, uint64_t value2) {
-  uint32_t short_random1 = 842304669U;
-  uint32_t short_random2 = 619063811U;
-  uint32_t short_random3 = 937041849U;
-  uint32_t short_random4 = 3309708029U;
+    uint32_t short_random1 = 842304669U;
+    uint32_t short_random2 = 619063811U;
+    uint32_t short_random3 = 937041849U;
+    uint32_t short_random4 = 3309708029U;
 
-  uint32_t value1a = static_cast<uint32_t>(value1 & 0xffffffff);
-  uint32_t value1b = static_cast<uint32_t>((value1 >> 32) & 0xffffffff);
-  uint32_t value2a = static_cast<uint32_t>(value2 & 0xffffffff);
-  uint32_t value2b = static_cast<uint32_t>((value2 >> 32) & 0xffffffff);
+    uint32_t value1a = static_cast<uint32_t>(value1 & 0xffffffff);
+    uint32_t value1b = static_cast<uint32_t>((value1 >> 32) & 0xffffffff);
+    uint32_t value2a = static_cast<uint32_t>(value2 & 0xffffffff);
+    uint32_t value2b = static_cast<uint32_t>((value2 >> 32) & 0xffffffff);
 
-  uint64_t product1 = static_cast<uint64_t>(value1a) * short_random1;
-  uint64_t product2 = static_cast<uint64_t>(value1b) * short_random2;
-  uint64_t product3 = static_cast<uint64_t>(value2a) * short_random3;
-  uint64_t product4 = static_cast<uint64_t>(value2b) * short_random4;
+    uint64_t product1 = static_cast<uint64_t>(value1a) * short_random1;
+    uint64_t product2 = static_cast<uint64_t>(value1b) * short_random2;
+    uint64_t product3 = static_cast<uint64_t>(value2a) * short_random3;
+    uint64_t product4 = static_cast<uint64_t>(value2b) * short_random4;
 
-  uint64_t hash64 = product1 + product2 + product3 + product4;
+    uint64_t hash64 = product1 + product2 + product3 + product4;
 
-  if (sizeof(std::size_t) >= sizeof(uint64_t))
-    return static_cast<std::size_t>(hash64);
+    if (sizeof(std::size_t) >= sizeof(uint64_t))
+        return static_cast<std::size_t>(hash64);
 
-  uint64_t odd_random = 1578233944LL << 32 | 194370989LL;
-  uint32_t shift_random = 20591U << 16;
+    uint64_t odd_random   = 1578233944LL << 32 | 194370989LL;
+    uint32_t shift_random = 20591U << 16;
 
-  hash64 = hash64 * odd_random + shift_random;
-  std::size_t high_bits = static_cast<std::size_t>(
-      hash64 >> (8 * (sizeof(uint64_t) - sizeof(std::size_t))));
-  return high_bits;
+    hash64                = hash64 * odd_random + shift_random;
+    std::size_t high_bits = static_cast<std::size_t>(
+        hash64 >> (8 * (sizeof(uint64_t) - sizeof(std::size_t))));
+    return high_bits;
 }
 
-#define DEFINE_32BIT_PAIR_HASH(Type1, Type2) \
-inline std::size_t HashPair(Type1 value1, Type2 value2) { \
-  return HashInts32(value1, value2); \
-}
+#define DEFINE_32BIT_PAIR_HASH(Type1, Type2)                  \
+    inline std::size_t HashPair(Type1 value1, Type2 value2) { \
+        return HashInts32(value1, value2);                    \
+    }
 
 DEFINE_32BIT_PAIR_HASH(int16_t, int16_t);
 DEFINE_32BIT_PAIR_HASH(int16_t, uint16_t);
@@ -186,10 +186,10 @@ DEFINE_32BIT_PAIR_HASH(uint32_t, uint32_t);
 
 #undef DEFINE_32BIT_PAIR_HASH
 
-#define DEFINE_64BIT_PAIR_HASH(Type1, Type2) \
-inline std::size_t HashPair(Type1 value1, Type2 value2) { \
-  return HashInts64(value1, value2); \
-}
+#define DEFINE_64BIT_PAIR_HASH(Type1, Type2)                  \
+    inline std::size_t HashPair(Type1 value1, Type2 value2) { \
+        return HashInts64(value1, value2);                    \
+    }
 
 DEFINE_64BIT_PAIR_HASH(int16_t, int64_t);
 DEFINE_64BIT_PAIR_HASH(int16_t, uint64_t);
@@ -220,39 +220,37 @@ namespace BUTIL_HASH_NAMESPACE {
 // Implement methods for hashing a pair of integers, so they can be used as
 // keys in STL containers.
 
-// NOTE(gejun): Specialize ptr as well which is supposed to work with 
+// NOTE(gejun): Specialize ptr as well which is supposed to work with
 // containers by default
 
 #if defined(COMPILER_MSVC)
 
-template<typename Type1, typename Type2>
+template <typename Type1, typename Type2>
 inline std::size_t hash_value(const std::pair<Type1, Type2>& value) {
-  return butil::HashPair(value.first, value.second);
+    return butil::HashPair(value.first, value.second);
 }
-template<typename Type>
+template <typename Type>
 inline std::size_t hash_value(Type* ptr) {
-  return (uintptr_t)ptr;
+    return (uintptr_t)ptr;
 }
 
 #elif defined(COMPILER_GCC)
-template<typename Type1, typename Type2>
+template <typename Type1, typename Type2>
 struct hash<std::pair<Type1, Type2> > {
-  std::size_t operator()(std::pair<Type1, Type2> value) const {
-    return butil::HashPair(value.first, value.second);
-  }
+    std::size_t operator()(std::pair<Type1, Type2> value) const {
+        return butil::HashPair(value.first, value.second);
+    }
 };
-template<typename Type>
+template <typename Type>
 struct hash<Type*> {
-  std::size_t operator()(Type* ptr) const {
-    return (uintptr_t)ptr;
-  }
+    std::size_t operator()(Type* ptr) const { return (uintptr_t)ptr; }
 };
 
 #else
 #error define hash<std::pair<Type1, Type2> > for your compiler
 #endif  // COMPILER
 
-}
+}  // namespace BUTIL_HASH_NAMESPACE
 
 #undef DEFINE_PAIR_HASH_FUNCTION_START
 #undef DEFINE_PAIR_HASH_FUNCTION_END

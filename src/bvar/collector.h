@@ -20,10 +20,10 @@
 #ifndef BVAR_COLLECTOR_H
 #define BVAR_COLLECTOR_H
 
+#include "butil/atomicops.h"
 #include "butil/containers/linked_list.h"
 #include "butil/fast_rand.h"
 #include "butil/time.h"
-#include "butil/atomicops.h"
 #include "bvar/passive_status.h"
 
 namespace bvar {
@@ -39,7 +39,7 @@ struct CollectorSpeedLimit {
 
 static const size_t COLLECTOR_SAMPLING_BASE = 16384;
 
-#define BVAR_COLLECTOR_SPEED_LIMIT_INITIALIZER                          \
+#define BVAR_COLLECTOR_SPEED_LIMIT_INITIALIZER \
     { ::bvar::COLLECTOR_SAMPLING_BASE, false, BUTIL_STATIC_ATOMIC_INIT(0), 0 }
 
 class Collected;
@@ -57,7 +57,7 @@ public:
 class Collected : public butil::LinkNode<Collected> {
 public:
     virtual ~Collected() {}
-    
+
     // Sumbit the sample for later dumping, a sample can only be submitted once.
     // submit() is implemented as writing a value to bvar::Reducer which does
     // not compete globally. This function generally does not alter the
@@ -110,17 +110,19 @@ public:
 // by collecting thread to control the samples collected per second.
 // This function should cost less than 10ns in most cases.
 inline size_t is_collectable(CollectorSpeedLimit* speed_limit) {
-    if (speed_limit->ever_grabbed) { // most common case
+    if (speed_limit->ever_grabbed) {  // most common case
         const size_t sampling_range = speed_limit->sampling_range;
         // fast_rand is faster than fast_rand_in
-        if ((butil::fast_rand() & (COLLECTOR_SAMPLING_BASE - 1)) >= sampling_range) {
+        if ((butil::fast_rand() & (COLLECTOR_SAMPLING_BASE - 1)) >=
+            sampling_range) {
             return 0;
         }
         return sampling_range;
     }
     // Slower, only runs before -bvar_collector_expected_per_second samples are
     // collected to calculate a more reasonable sampling_range for the type.
-    extern size_t is_collectable_before_first_time_grabbed(CollectorSpeedLimit*);
+    extern size_t is_collectable_before_first_time_grabbed(
+        CollectorSpeedLimit*);
     return is_collectable_before_first_time_grabbed(speed_limit);
 }
 
@@ -128,6 +130,7 @@ inline size_t is_collectable(CollectorSpeedLimit* speed_limit) {
 class DisplaySamplingRatio {
 public:
     DisplaySamplingRatio(const char* name, const CollectorSpeedLimit*);
+
 private:
     bvar::PassiveStatus<double> _var;
 };

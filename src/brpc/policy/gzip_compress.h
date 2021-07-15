@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_GZIP_COMPRESS_H
 #define BRPC_POLICY_GZIP_COMPRESS_H
 
-#include <google/protobuf/message.h>              // Message
 #include <google/protobuf/io/gzip_stream.h>
-#include "butil/iobuf.h"                           // butil::IOBuf
-
+#include <google/protobuf/message.h>  // Message
+#include "butil/iobuf.h"              // butil::IOBuf
 
 namespace brpc {
 namespace policy {
@@ -46,7 +44,6 @@ bool GzipDecompress(const butil::IOBuf& in, butil::IOBuf* out);
 bool ZlibDecompress(const butil::IOBuf& in, butil::IOBuf* out);
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_POLICY_GZIP_COMPRESS_H
+#endif  // BRPC_POLICY_GZIP_COMPRESS_H

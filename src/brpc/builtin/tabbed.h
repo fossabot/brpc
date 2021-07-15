@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_BUILTIN_TABBED_H
 #define BRPC_BUILTIN_TABBED_H
 
@@ -43,6 +42,7 @@ public:
     size_t size() const { return _list.size(); }
     const TabInfo& operator[](size_t i) const { return _list[i]; }
     void resize(size_t newsize) { _list.resize(newsize); }
+
 private:
     TabInfoList(const TabInfoList&);
     void operator=(const TabInfoList&);
@@ -66,7 +66,8 @@ private:
 //     ...
 //     if (use_html) {
 //       os << "<!DOCTYPE html><html><head>\n"
-//          << "<script language=\"javascript\" type=\"text/javascript\" src=\"/js/jquery_min\"></script>\n"
+//          << "<script language=\"javascript\" type=\"text/javascript\"
+//          src=\"/js/jquery_min\"></script>\n"
 //          << brpc::TabsHead() << "</head><body>";
 //       cntl->server()->PrintTabsBody(os, "my_tab");
 //     }
@@ -78,11 +79,10 @@ private:
 // Note: don't forget the jquery.
 class Tabbed {
 public:
-    virtual ~Tabbed() = default;
+    virtual ~Tabbed()                                     = default;
     virtual void GetTabInfo(TabInfoList* info_list) const = 0;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_BUILTIN_TABBED_H
+#endif  // BRPC_BUILTIN_TABBED_H

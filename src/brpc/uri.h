@@ -15,11 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#ifndef BRPC_URI_H
+#define BRPC_URI_H
 
-#ifndef  BRPC_URI_H
-#define  BRPC_URI_H
-
-#include <string>                   // std::string
+#include <string>  // std::string
 #include "butil/containers/flat_map.h"
 #include "butil/status.h"
 #include "butil/string_splitter.h"
@@ -27,23 +26,27 @@
 // To brpc developers: This is a class exposed to end-user. DON'T put impl.
 // details in this header, use opaque pointers instead.
 
-
 namespace brpc {
 
 // The class for URI scheme : http://en.wikipedia.org/wiki/URI_scheme
 //
 //  foo://username:password@example.com:8042/over/there/index.dtb?type=animal&name=narwhal#nose
-//  \_/   \_______________/ \_________/ \__/            \___/ \_/ \______________________/ \__/
-//   |           |               |       |                |    |            |                |
-//   |       userinfo           host    port              |    |          query          fragment
-//   |    \________________________________/\_____________|____|/ \__/        \__/
+//  \_/   \_______________/ \_________/ \__/            \___/ \_/
+//  \______________________/ \__/
+//   |           |               |       |                |    |            | |
+//   |       userinfo           host    port              |    |          query
+//   fragment |    \________________________________/\_____________|____|/ \__/
+//   \__/
 // scheme                 |                          |    |    |    |          |
 //                    authority                      |    |    |    |          |
-//                                                 path   |    |    interpretable as keys
+//                                                 path   |    | interpretable
+//                                                 as keys
 //                                                        |    |
-//        \_______________________________________________|____|/       \____/     \_____/
-//                             |                          |    |          |           |
-//                     hierarchical part                  |    |    interpretable as values
+//        \_______________________________________________|____|/       \____/
+//        \_____/
+//                             |                          |    |          | |
+//                     hierarchical part                  |    | interpretable
+//                     as values
 //                                                        |    |
 //                                   interpretable as filename |
 //                                                             |
@@ -60,10 +63,10 @@ public:
     ~URI();
 
     // Exchange internal fields with another URI.
-    void Swap(URI &rhs);
+    void Swap(URI& rhs);
 
     // Reset internal fields as if they're just default-constructed.
-    void Clear(); 
+    void Clear();
 
     // Decompose `url' and set into corresponding fields.
     // heading and trailing spaces are allowed and skipped.
@@ -78,10 +81,10 @@ public:
     const butil::Status& status() const { return _st; }
 
     // Sub fields. Empty string if the field is not set.
-	const std::string& scheme() const { return _scheme; }
+    const std::string& scheme() const { return _scheme; }
     BAIDU_DEPRECATED const std::string& schema() const { return scheme(); }
     const std::string& host() const { return _host; }
-    int port() const { return _port; } // -1 on unset.
+    int port() const { return _port; }  // -1 on unset.
     const std::string& path() const { return _path; }
     const std::string& user_info() const { return _user_info; }
     const std::string& fragment() const { return _fragment; }
@@ -102,13 +105,15 @@ public:
     // Set path/query/fragment with the input in form of "path?query#fragment"
     void SetH2Path(const char* h2_path);
     void SetH2Path(const std::string& path) { SetH2Path(path.c_str()); }
-    
+
     // Get the value of a CASE-SENSITIVE key.
     // Returns pointer to the value, NULL when the key does not exist.
-    const std::string* GetQuery(const char* key) const
-    { return get_query_map().seek(key); }
-    const std::string* GetQuery(const std::string& key) const
-    { return get_query_map().seek(key); }
+    const std::string* GetQuery(const char* key) const {
+        return get_query_map().seek(key);
+    }
+    const std::string* GetQuery(const std::string& key) const {
+        return get_query_map().seek(key);
+    }
 
     // Add key/value pair. Override existing value.
     void SetQuery(const std::string& key, const std::string& value);
@@ -131,7 +136,7 @@ public:
     void Print(std::ostream& os) const;
 
 private:
-friend class HttpMessage;
+    friend class HttpMessage;
 
     void InitializeQueryMap() const;
 
@@ -145,26 +150,27 @@ friend class HttpMessage;
     // Iterate _query_map and append all queries to `query'
     void AppendQueryString(std::string* query, bool append_question_mark) const;
 
-    butil::Status                            _st;
-    int                                     _port;
-    mutable bool                            _query_was_modified;
-    mutable bool                            _initialized_query_map;
-    std::string                             _host;
-    std::string                             _path;
-    std::string                             _user_info;
-    std::string                             _fragment;
-    std::string                             _scheme;
-    mutable std::string                     _query;
+    butil::Status _st;
+    int _port;
+    mutable bool _query_was_modified;
+    mutable bool _initialized_query_map;
+    std::string _host;
+    std::string _path;
+    std::string _user_info;
+    std::string _fragment;
+    std::string _scheme;
+    mutable std::string _query;
     mutable QueryMap _query_map;
 };
 
 // Parse host/port/scheme from `url' if the corresponding parameter is not NULL.
 // Returns 0 on success, -1 otherwise.
-int ParseURL(const char* url, std::string* scheme, std::string* host, int* port);
+int ParseURL(const char* url, std::string* scheme, std::string* host,
+             int* port);
 
 inline void URI::SetQuery(const std::string& key, const std::string& value) {
     get_query_map()[key] = value;
-    _query_was_modified = true;
+    _query_was_modified  = true;
 }
 
 inline size_t URI::RemoveQuery(const char* key) {
@@ -201,26 +207,23 @@ inline std::ostream& operator<<(std::ostream& os, const URI& uri) {
 class QuerySplitter : public butil::KeyValuePairsSplitter {
 public:
     inline QuerySplitter(const char* str_begin, const char* str_end)
-        : KeyValuePairsSplitter(str_begin, str_end, '&', '=')
-    {}
+        : KeyValuePairsSplitter(str_begin, str_end, '&', '=') {}
 
     inline QuerySplitter(const char* str_begin)
-        : KeyValuePairsSplitter(str_begin, '&', '=')
-    {}
+        : KeyValuePairsSplitter(str_begin, '&', '=') {}
 
-    inline QuerySplitter(const butil::StringPiece &sp)
-        : KeyValuePairsSplitter(sp, '&', '=')
-    {}
+    inline QuerySplitter(const butil::StringPiece& sp)
+        : KeyValuePairsSplitter(sp, '&', '=') {}
 };
 
-// A class to remove some specific keys in a query string, 
+// A class to remove some specific keys in a query string,
 // when removal is over, call modified_query() to get modified
 // query.
 class QueryRemover {
 public:
     QueryRemover(const std::string* str);
 
-    butil::StringPiece key() { return _qs.key();}
+    butil::StringPiece key() { return _qs.key(); }
     butil::StringPiece value() { return _qs.value(); }
     butil::StringPiece key_and_value() { return _qs.key_and_value(); }
 
@@ -233,7 +236,7 @@ public:
     // After this function is called, current query will be removed from
     // modified_query(), calling this function more than once has no effect.
     void remove_current_key_and_value();
- 
+
     // Return the modified query string
     std::string modified_query();
 
@@ -253,24 +256,22 @@ private:
 // "key1=value1" -> "key1=value1&key=value"
 // "/some/path?" -> "/some/path?key=value"
 // "/some/path?key1=value1" -> "/some/path?key1=value1&key=value"
-void append_query(std::string *query_string,
-                  const butil::StringPiece& key,
+void append_query(std::string* query_string, const butil::StringPiece& key,
                   const butil::StringPiece& value);
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #if __cplusplus < 201103L  // < C++11
-#include <algorithm>  // std::swap until C++11
+#include <algorithm>       // std::swap until C++11
 #else
 #include <utility>  // std::swap since C++11
-#endif  // __cplusplus < 201103L
+#endif              // __cplusplus < 201103L
 
 namespace std {
-template<>
-inline void swap(brpc::URI &lhs, brpc::URI &rhs) {
+template <>
+inline void swap(brpc::URI& lhs, brpc::URI& rhs) {
     lhs.Swap(rhs);
 }
 }  // namespace std
 
-#endif  //BRPC_URI_H
+#endif  // BRPC_URI_H

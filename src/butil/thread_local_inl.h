@@ -40,11 +40,13 @@ public:
     static BAIDU_THREAD_LOCAL T* value;
 };
 
-template <typename T> BAIDU_THREAD_LOCAL T* ThreadLocalHelper<T>::value = NULL;
+template <typename T>
+BAIDU_THREAD_LOCAL T* ThreadLocalHelper<T>::value = NULL;
 
 }  // namespace detail
 
-template <typename T> inline T* get_thread_local() {
+template <typename T>
+inline T* get_thread_local() {
     return detail::ThreadLocalHelper<T>::get();
 }
 

@@ -32,15 +32,17 @@ void __lsan_do_leak_check();
 }  // extern "C"
 
 class ScopedLeakSanitizerDisabler {
- public:
-  ScopedLeakSanitizerDisabler() { __lsan_disable(); }
-  ~ScopedLeakSanitizerDisabler() { __lsan_enable(); }
- private:
-  DISALLOW_COPY_AND_ASSIGN(ScopedLeakSanitizerDisabler);
+public:
+    ScopedLeakSanitizerDisabler() { __lsan_disable(); }
+    ~ScopedLeakSanitizerDisabler() { __lsan_enable(); }
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(ScopedLeakSanitizerDisabler);
 };
 
-#define ANNOTATE_SCOPED_MEMORY_LEAK \
-    ScopedLeakSanitizerDisabler leak_sanitizer_disabler; static_cast<void>(0)
+#define ANNOTATE_SCOPED_MEMORY_LEAK                      \
+    ScopedLeakSanitizerDisabler leak_sanitizer_disabler; \
+    static_cast<void>(0)
 
 #define ANNOTATE_LEAKING_OBJECT_PTR(X) __lsan_ignore_object(X);
 

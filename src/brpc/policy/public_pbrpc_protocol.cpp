@@ -15,23 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <google/protobuf/descriptor.h>            // MethodDescriptor
-#include <google/protobuf/message.h>               // Message
-#include <gflags/gflags.h>
-#include "butil/third_party/snappy/snappy.h"        // snappy::Compress
-#include "butil/time.h"
-#include "brpc/controller.h"                       // Controller
-#include "brpc/socket.h"                           // Socket
-#include "brpc/server.h"                           // Server
-#include "brpc/details/server_private_accessor.h"
-#include "brpc/span.h"
-#include "brpc/compress.h"                          // ParseFromCompressedData
-#include "brpc/details/controller_private_accessor.h"
-#include "brpc/policy/public_pbrpc_meta.pb.h"       // PublicRpcRequestMeta
 #include "brpc/policy/public_pbrpc_protocol.h"
+#include <gflags/gflags.h>
+#include <google/protobuf/descriptor.h>  // MethodDescriptor
+#include <google/protobuf/message.h>     // Message
+#include "brpc/compress.h"               // ParseFromCompressedData
+#include "brpc/controller.h"             // Controller
+#include "brpc/details/controller_private_accessor.h"
+#include "brpc/details/server_private_accessor.h"
 #include "brpc/policy/most_common_message.h"
-
+#include "brpc/policy/public_pbrpc_meta.pb.h"  // PublicRpcRequestMeta
+#include "brpc/server.h"                       // Server
+#include "brpc/socket.h"                       // Socket
+#include "brpc/span.h"
+#include "butil/third_party/snappy/snappy.h"  // snappy::Compress
+#include "butil/time.h"
 
 namespace brpc {
 namespace policy {
@@ -49,18 +47,19 @@ namespace policy {
 // 4 - Lots of fields such as `charset' seem to be useless
 // 5 - Only support snappy compression. No authentication
 
-static const std::string VERSION = "pbrpc=1.0";
-static const std::string CHARSET = "utf-8";
+static const std::string VERSION      = "pbrpc=1.0";
+static const std::string CHARSET      = "utf-8";
 static const std::string SUCCESS_TEXT = "success";
-static const char* TIME_FORMAT = "%Y%m%d%H%M%S";
-static const char* PROVIDER = "__pbrpc__";
-static const uint32_t CONTENT_TYPE = 1;
-static const uint32_t COMPRESS_TYPE = 1;
-static const uint32_t NSHEAD_VERSION = 1000;
+static const char* TIME_FORMAT        = "%Y%m%d%H%M%S";
+static const char* PROVIDER           = "__pbrpc__";
+static const uint32_t CONTENT_TYPE    = 1;
+static const uint32_t COMPRESS_TYPE   = 1;
+static const uint32_t NSHEAD_VERSION  = 1000;
 
-void PublicPbrpcServiceAdaptor::ParseNsheadMeta(
-    const Server& svr, const NsheadMessage& request, Controller* cntl,
-    NsheadMeta* out_meta) const {
+void PublicPbrpcServiceAdaptor::ParseNsheadMeta(const Server& svr,
+                                                const NsheadMessage& request,
+                                                Controller* cntl,
+                                                NsheadMeta* out_meta) const {
     PublicPbrpcRequest pbreq;
     if (!ParsePbFromIOBuf(&pbreq, request.body)) {
         cntl->CloseConnection("Fail to parse from PublicPbrpcRequest");
@@ -72,10 +71,12 @@ void PublicPbrpcServiceAdaptor::ParseNsheadMeta(
     }
     const RequestHead& head = pbreq.requesthead();
     const RequestBody& body = pbreq.requestbody(0);
-    const Server::MethodProperty *sp = ServerPrivateAccessor(&svr)
-        .FindMethodPropertyByNameAndIndex(body.service(), body.method_id());
+    const Server::MethodProperty* sp =
+        ServerPrivateAccessor(&svr).FindMethodPropertyByNameAndIndex(
+            body.service(), body.method_id());
     if (NULL == sp) {
-        cntl->SetFailed(ENOMETHOD, "Fail to find method by service=%s method_id=%u",
+        cntl->SetFailed(ENOMETHOD,
+                        "Fail to find method by service=%s method_id=%u",
                         body.service().c_str(), body.method_id());
         return;
     }
@@ -99,11 +100,12 @@ void PublicPbrpcServiceAdaptor::ParseNsheadMeta(
 }
 
 void PublicPbrpcServiceAdaptor::ParseRequestFromIOBuf(
-    const NsheadMeta& meta, const NsheadMessage& raw_req,
-    Controller* cntl, google::protobuf::Message* pb_req) const {
+    const NsheadMeta& meta, const NsheadMessage& raw_req, Controller* cntl,
+    google::protobuf::Message* pb_req) const {
     CompressType type = meta.compress_type();
     if (!ParseFromCompressedData(raw_req.body, pb_req, type)) {
-        cntl->SetFailed(EREQUEST, "Fail to parse request message, "
+        cntl->SetFailed(EREQUEST,
+                        "Fail to parse request message, "
                         "CompressType=%s, request_size=%" PRIu64,
                         CompressTypeToCStr(type),
                         (uint64_t)raw_req.body.length());
@@ -130,29 +132,33 @@ void PublicPbrpcServiceAdaptor::SerializeResponseToIOBuf(
         head->set_text(SUCCESS_TEXT);
         std::string* response_str = body->mutable_serialized_response();
         if (!pb_res->SerializeToString(response_str)) {
-            cntl->CloseConnection("Close connection due to failure of "
-                                     "serializing user's response");
+            cntl->CloseConnection(
+                "Close connection due to failure of "
+                "serializing user's response");
             return;
         }
         if (cntl->response_compress_type() == COMPRESS_TYPE_SNAPPY) {
             std::string tmp;
-            butil::snappy::Compress(response_str->data(), response_str->size(), &tmp);
+            butil::snappy::Compress(response_str->data(), response_str->size(),
+                                    &tmp);
             response_str->swap(tmp);
             head->set_compress_type(COMPRESS_TYPE);
         }
     }
     butil::IOBufAsZeroCopyOutputStream wrapper(&raw_res->body);
     if (!whole_res.SerializeToZeroCopyStream(&wrapper)) {
-        cntl->CloseConnection("Close connection due to failure of "
-                                 "serializing the whole response");
+        cntl->CloseConnection(
+            "Close connection due to failure of "
+            "serializing the whole response");
         return;
     }
 }
 
 void ProcessPublicPbrpcResponse(InputMessageBase* msg_base) {
     const int64_t start_parse_us = butil::cpuwide_time_us();
-    DestroyingPtr<MostCommonMessage> msg(static_cast<MostCommonMessage*>(msg_base));
-    
+    DestroyingPtr<MostCommonMessage> msg(
+        static_cast<MostCommonMessage*>(msg_base));
+
     PublicPbrpcResponse pbres;
     if (!ParsePbFromIOBuf(&pbres, msg->payload)) {
         LOG(WARNING) << "Fail to parse from PublicPbrpcResponse";
@@ -164,15 +170,15 @@ void ProcessPublicPbrpcResponse(InputMessageBase* msg_base) {
     }
     const ResponseHead& head = pbres.responsehead();
     const ResponseBody& body = pbres.responsebody(0);
-    const bthread_id_t cid = { static_cast<uint64_t>(body.id()) };
-    Controller* cntl = NULL;
-    const int rc = bthread_id_lock(cid, (void**)&cntl);
+    const bthread_id_t cid   = {static_cast<uint64_t>(body.id())};
+    Controller* cntl         = NULL;
+    const int rc             = bthread_id_lock(cid, (void**)&cntl);
     if (rc != 0) {
         LOG_IF(ERROR, rc != EINVAL && rc != EPERM)
             << "Fail to lock correlation_id=" << cid << ": " << berror(rc);
         return;
     }
-    
+
     ControllerPrivateAccessor accessor(cntl);
     Span* span = accessor.span();
     if (span) {
@@ -188,8 +194,9 @@ void ProcessPublicPbrpcResponse(InputMessageBase* msg_base) {
     } else {
         // Parse response message iff error code from meta is 0
         const std::string& res_data = body.serialized_response();
-        CompressType type = (head.compress_type() == COMPRESS_TYPE ?
-                             COMPRESS_TYPE_SNAPPY : COMPRESS_TYPE_NONE);
+        CompressType type =
+            (head.compress_type() == COMPRESS_TYPE ? COMPRESS_TYPE_SNAPPY
+                                                   : COMPRESS_TYPE_NONE);
         bool parse_result = false;
         if (type == COMPRESS_TYPE_SNAPPY) {
             butil::IOBuf tmp;
@@ -199,10 +206,11 @@ void ProcessPublicPbrpcResponse(InputMessageBase* msg_base) {
             parse_result = ParsePbFromString(cntl->response(), res_data);
         }
         if (!parse_result) {
-            cntl->SetFailed(ERESPONSE, "Fail to parse response message, "
-                                  "CompressType=%s, response_size=%" PRIu64, 
-                                  CompressTypeToCStr(type),
-                                  (uint64_t)res_data.length());
+            cntl->SetFailed(ERESPONSE,
+                            "Fail to parse response message, "
+                            "CompressType=%s, response_size=%" PRIu64,
+                            CompressTypeToCStr(type),
+                            (uint64_t)res_data.length());
         } else {
             cntl->set_response_compress_type(type);
         }
@@ -217,19 +225,19 @@ void SerializePublicPbrpcRequest(butil::IOBuf* buf, Controller* cntl,
                                  const google::protobuf::Message* request) {
     CompressType type = cntl->request_compress_type();
     if (type != COMPRESS_TYPE_NONE && type != COMPRESS_TYPE_SNAPPY) {
-        cntl->SetFailed(EREQUEST, "public_pbrpc doesn't support "
-                        "compress type=%d", type);
+        cntl->SetFailed(EREQUEST,
+                        "public_pbrpc doesn't support "
+                        "compress type=%d",
+                        type);
         return;
     }
     return SerializeRequestDefault(buf, cntl, request);
 }
-       
-void PackPublicPbrpcRequest(butil::IOBuf* buf,
-                            SocketMessage**,
+
+void PackPublicPbrpcRequest(butil::IOBuf* buf, SocketMessage**,
                             uint64_t correlation_id,
                             const google::protobuf::MethodDescriptor* method,
-                            Controller* controller,
-                            const butil::IOBuf& request,
+                            Controller* controller, const butil::IOBuf& request,
                             const Authenticator* /*not supported*/) {
     PublicPbrpcRequest pbreq;
     RequestHead* head = pbreq.mutable_requesthead();
@@ -238,7 +246,8 @@ void PackPublicPbrpcRequest(butil::IOBuf* buf,
 
     head->set_from_host(butil::ip2str(butil::my_ip()).c_str());
     head->set_content_type(CONTENT_TYPE);
-    bool short_connection = (controller->connection_type() == CONNECTION_TYPE_SHORT);
+    bool short_connection =
+        (controller->connection_type() == CONNECTION_TYPE_SHORT);
     head->set_connection(!short_connection);
     head->set_charset(CHARSET);
     char time_buf[128];
@@ -255,17 +264,17 @@ void PackPublicPbrpcRequest(butil::IOBuf* buf,
     body->set_version(VERSION);
     body->set_charset(CHARSET);
     body->set_service(method->service()->name());
-    body->set_method_id(method->index());    
+    body->set_method_id(method->index());
     body->set_id(correlation_id);
     std::string* request_str = body->mutable_serialized_request();
     request.copy_to(request_str);
 
     nshead_t nshead;
     memset(&nshead, 0, sizeof(nshead_t));
-    nshead.log_id = controller->log_id();
+    nshead.log_id    = controller->log_id();
     nshead.magic_num = NSHEAD_MAGICNUM;
     snprintf(nshead.provider, sizeof(nshead.provider), "%s", PROVIDER);
-    nshead.version = NSHEAD_VERSION;
+    nshead.version  = NSHEAD_VERSION;
     nshead.body_len = pbreq.ByteSize();
     buf->append(&nshead, sizeof(nshead));
 
@@ -284,5 +293,4 @@ void PackPublicPbrpcRequest(butil::IOBuf* buf,
 }
 
 }  // namespace policy
-} // namespace brpc
-
+}  // namespace brpc

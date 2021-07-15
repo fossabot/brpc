@@ -20,10 +20,10 @@
 // Date: Wed Mar 14 17:44:58 CST 2018
 
 #include "bthread/sys_futex.h"
-#include "butil/scoped_lock.h"
-#include "butil/atomicops.h"
 #include <pthread.h>
 #include <unordered_map>
+#include "butil/atomicops.h"
+#include "butil/scoped_lock.h"
 
 #if defined(OS_MACOSX)
 
@@ -31,8 +31,7 @@ namespace bthread {
 
 class SimuFutex {
 public:
-    SimuFutex() : counts(0)
-                , ref(0) {
+    SimuFutex() : counts(0), ref(0) {
         pthread_mutex_init(&lock, NULL);
         pthread_cond_init(&cond, NULL);
     }
@@ -48,7 +47,7 @@ public:
     int32_t ref;
 };
 
-static pthread_mutex_t s_futex_map_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t s_futex_map_mutex  = PTHREAD_MUTEX_INITIALIZER;
 static pthread_once_t init_futex_map_once = PTHREAD_ONCE_INIT;
 static std::unordered_map<void*, SimuFutex>* s_futex_map = NULL;
 static void InitFutexMap() {
@@ -77,20 +76,23 @@ int futex_wait_private(void* addr1, int expected, const timespec* timeout) {
             ++simu_futex.counts;
             if (timeout) {
                 timespec timeout_abs = butil::timespec_from_now(*timeout);
-                if ((rc = pthread_cond_timedwait(&simu_futex.cond, &simu_futex.lock, &timeout_abs)) != 0) {
+                if ((rc = pthread_cond_timedwait(
+                         &simu_futex.cond, &simu_futex.lock, &timeout_abs)) !=
+                    0) {
                     errno = rc;
-                    rc = -1;
+                    rc    = -1;
                 }
             } else {
-                if ((rc = pthread_cond_wait(&simu_futex.cond, &simu_futex.lock)) != 0) {
+                if ((rc = pthread_cond_wait(&simu_futex.cond,
+                                            &simu_futex.lock)) != 0) {
                     errno = rc;
-                    rc = -1;
+                    rc    = -1;
                 }
             }
             --simu_futex.counts;
         } else {
             errno = EAGAIN;
-            rc = -1;
+            rc    = -1;
         }
     }
 
@@ -118,10 +120,10 @@ int futex_wake_private(void* addr1, int nwake) {
     mu.unlock();
 
     int nwakedup = 0;
-    int rc = 0;
+    int rc       = 0;
     {
         std::unique_lock<pthread_mutex_t> mu1(simu_futex.lock);
-        nwake = (nwake < simu_futex.counts)? nwake: simu_futex.counts;
+        nwake = (nwake < simu_futex.counts) ? nwake : simu_futex.counts;
         for (int i = 0; i < nwake; ++i) {
             if ((rc = pthread_cond_signal(&simu_futex.cond)) != 0) {
                 errno = rc;
@@ -140,6 +142,6 @@ int futex_wake_private(void* addr1, int nwake) {
     return nwakedup;
 }
 
-} // namespace bthread
+}  // namespace bthread
 
 #endif

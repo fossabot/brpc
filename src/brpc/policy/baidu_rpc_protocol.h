@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_POLICY_BRPC_PROTOCOL_H
 #define BRPC_POLICY_BRPC_PROTOCOL_H
 
@@ -25,8 +24,8 @@ namespace brpc {
 namespace policy {
 
 // Parse binary format of baidu_std
-ParseResult ParseRpcMessage(butil::IOBuf* source, Socket *socket, bool read_eof,
-                            const void *arg);
+ParseResult ParseRpcMessage(butil::IOBuf* source, Socket* socket, bool read_eof,
+                            const void* arg);
 
 // Actions to a (client) request in baidu_std format
 void ProcessRpcRequest(InputMessageBase* msg);
@@ -38,15 +37,12 @@ void ProcessRpcResponse(InputMessageBase* msg);
 bool VerifyRpcRequest(const InputMessageBase* msg);
 
 // Pack `request' to `method' into `buf'.
-void PackRpcRequest(butil::IOBuf* buf,
-                    SocketMessage**,
-                    uint64_t correlation_id,
+void PackRpcRequest(butil::IOBuf* buf, SocketMessage**, uint64_t correlation_id,
                     const google::protobuf::MethodDescriptor* method,
-                    Controller* controller,
-                    const butil::IOBuf& request,
+                    Controller* controller, const butil::IOBuf& request,
                     const Authenticator* auth);
 
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
 #endif  // BRPC_POLICY_BRPC_PROTOCOL_H

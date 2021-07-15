@@ -15,30 +15,28 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #define INTERNAL_SUPPRESS_PROTOBUF_FIELD_DEPRECATION
 #include "brpc/thrift_message.h"
 
 #include <algorithm>
 #include "butil/logging.h"
 
-#include <google/protobuf/stubs/once.h>
-#include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/descriptor.h>
+#include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/reflection_ops.h>
+#include <google/protobuf/stubs/once.h>
 #include <google/protobuf/wire_format.h>
 
 namespace brpc {
 
-ThriftFramedMessage::ThriftFramedMessage()
-    : ::google::protobuf::Message() {
+ThriftFramedMessage::ThriftFramedMessage() : ::google::protobuf::Message() {
     SharedCtor();
 }
 
 void ThriftFramedMessage::SharedCtor() {
-    field_id = THRIFT_INVALID_FID;
+    field_id          = THRIFT_INVALID_FID;
     _own_raw_instance = false;
-    _raw_instance = nullptr;
+    _raw_instance     = nullptr;
 }
 
 ThriftFramedMessage::~ThriftFramedMessage() {
@@ -48,8 +46,7 @@ ThriftFramedMessage::~ThriftFramedMessage() {
     }
 }
 
-void ThriftFramedMessage::SharedDtor() {
-}
+void ThriftFramedMessage::SharedDtor() {}
 
 const ::google::protobuf::Descriptor* ThriftFramedMessage::descriptor() {
     return ThriftFramedMessageBase::descriptor();
@@ -64,13 +61,14 @@ void ThriftFramedMessage::Clear() {
     if (_own_raw_instance) {
         delete _raw_instance;
         _own_raw_instance = false;
-        _raw_instance = NULL;
+        _raw_instance     = NULL;
     }
 }
 
 bool ThriftFramedMessage::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
-#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+#define DO_(EXPRESSION) \
+    if (!(EXPRESSION)) return false
     ::google::protobuf::uint32 tag;
     while ((tag = input->ReadTag()) != 0) {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
@@ -83,8 +81,7 @@ bool ThriftFramedMessage::MergePartialFromCodedStream(
 }
 
 void ThriftFramedMessage::SerializeWithCachedSizes(
-    ::google::protobuf::io::CodedOutputStream*) const {
-}
+    ::google::protobuf::io::CodedOutputStream*) const {}
 
 ::google::protobuf::uint8* ThriftFramedMessage::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
@@ -119,9 +116,7 @@ void ThriftFramedMessage::CopyFrom(const ThriftFramedMessage& from) {
     LOG(ERROR) << "ThriftFramedMessage does not support CopyFrom";
 }
 
-bool ThriftFramedMessage::IsInitialized() const {
-    return true;
-}
+bool ThriftFramedMessage::IsInitialized() const { return true; }
 
 void ThriftFramedMessage::Swap(ThriftFramedMessage* other) {
     if (other != this) {
@@ -139,8 +134,7 @@ void ThriftFramedMessage::Swap(ThriftFramedMessage* other) {
     return metadata;
 }
 
-void ThriftStub::CallMethod(const char* method_name,
-                            Controller* cntl,
+void ThriftStub::CallMethod(const char* method_name, Controller* cntl,
                             const ThriftFramedMessage* req,
                             ThriftFramedMessage* res,
                             ::google::protobuf::Closure* done) {
@@ -148,4 +142,4 @@ void ThriftStub::CallMethod(const char* method_name,
     _channel->CallMethod(NULL, cntl, req, res, done);
 }
 
-} // namespace brpc
+}  // namespace brpc

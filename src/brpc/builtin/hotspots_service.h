@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_HOTSPOTS_SERVICE_H
 #define BRPC_HOTSPOTS_SERVICE_H
 
 #include "brpc/builtin/common.h"
-#include "brpc/builtin_service.pb.h"
 #include "brpc/builtin/tabbed.h"
-
+#include "brpc/builtin_service.pb.h"
 
 namespace brpc {
 
@@ -34,7 +32,7 @@ public:
              const ::brpc::HotspotsRequest* request,
              ::brpc::HotspotsResponse* response,
              ::google::protobuf::Closure* done);
-    
+
     void heap(::google::protobuf::RpcController* cntl_base,
               const ::brpc::HotspotsRequest* request,
               ::brpc::HotspotsResponse* response,
@@ -56,10 +54,10 @@ public:
                             ::google::protobuf::Closure* done);
 
     void heap_non_responsive(::google::protobuf::RpcController* cntl_base,
-                            const ::brpc::HotspotsRequest* request,
-                            ::brpc::HotspotsResponse* response,
-                            ::google::protobuf::Closure* done);
-    
+                             const ::brpc::HotspotsRequest* request,
+                             ::brpc::HotspotsResponse* response,
+                             ::google::protobuf::Closure* done);
+
     void growth_non_responsive(::google::protobuf::RpcController* cntl_base,
                                const ::brpc::HotspotsRequest* request,
                                ::brpc::HotspotsResponse* response,
@@ -73,8 +71,6 @@ public:
     void GetTabInfo(brpc::TabInfoList*) const;
 };
 
-} // namespace brpc
+}  // namespace brpc
 
-
-
-#endif // BRPC_HOTSPOTS_SERVICE_H
+#endif  // BRPC_HOTSPOTS_SERVICE_H

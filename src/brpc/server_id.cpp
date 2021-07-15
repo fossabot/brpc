@@ -15,9 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #include "brpc/server_id.h"
-
 
 namespace brpc {
 
@@ -26,8 +24,7 @@ ServerId2SocketIdMapper::ServerId2SocketIdMapper() {
     CHECK_EQ(0, _nref_map.init(128));
 }
 
-ServerId2SocketIdMapper::~ServerId2SocketIdMapper() {
-}
+ServerId2SocketIdMapper::~ServerId2SocketIdMapper() {}
 
 bool ServerId2SocketIdMapper::AddServer(const ServerId& server) {
     return (++_nref_map[server.id] == 1);
@@ -68,4 +65,4 @@ std::vector<SocketId>& ServerId2SocketIdMapper::RemoveServers(
     return _tmp;
 }
 
-} // namespace brpc
+}  // namespace brpc

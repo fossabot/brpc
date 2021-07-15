@@ -15,17 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <set>
-#include <pthread.h>
+#include "brpc/details/naming_service_thread.h"
 #include <gflags/gflags.h>
-#include "bthread/butex.h"
-#include "butil/scoped_lock.h"
-#include "butil/logging.h"
+#include <pthread.h>
+#include <set>
 #include "brpc/log.h"
 #include "brpc/socket_map.h"
-#include "brpc/details/naming_service_thread.h"
-
+#include "bthread/butex.h"
+#include "butil/logging.h"
+#include "butil/scoped_lock.h"
 
 namespace brpc {
 
@@ -34,11 +32,9 @@ struct NSKey {
     std::string service_name;
     ChannelSignature channel_signature;
 
-    NSKey(const std::string& prot_in,
-          const std::string& service_in,
+    NSKey(const std::string& prot_in, const std::string& service_in,
           const ChannelSignature& sig)
-        : protocol(prot_in), service_name(service_in), channel_signature(sig) {
-    }
+        : protocol(prot_in), service_name(service_in), channel_signature(sig) {}
 };
 struct NSKeyHasher {
     size_t operator()(const NSKey& nskey) const {
@@ -49,14 +45,14 @@ struct NSKeyHasher {
     }
 };
 inline bool operator==(const NSKey& k1, const NSKey& k2) {
-    return k1.protocol == k2.protocol &&
-        k1.service_name == k2.service_name &&
-        k1.channel_signature == k2.channel_signature;
+    return k1.protocol == k2.protocol && k1.service_name == k2.service_name &&
+           k1.channel_signature == k2.channel_signature;
 }
 
-typedef butil::FlatMap<NSKey, NamingServiceThread*, NSKeyHasher> NamingServiceMap;
+typedef butil::FlatMap<NSKey, NamingServiceThread*, NSKeyHasher>
+    NamingServiceMap;
 // Construct on demand to make the code work before main()
-static NamingServiceMap* g_nsthread_map = NULL;
+static NamingServiceMap* g_nsthread_map     = NULL;
 static pthread_mutex_t g_nsthread_map_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 NamingServiceThread::Actions::Actions(NamingServiceThread* owner)
@@ -77,8 +73,7 @@ NamingServiceThread::Actions::~Actions() {
     EndWait(0);
 }
 
-void NamingServiceThread::Actions::AddServers(
-    const std::vector<ServerNode>&) {
+void NamingServiceThread::Actions::AddServers(const std::vector<ServerNode>&) {
     // FIXME(gejun)
     abort();
 }
@@ -90,31 +85,29 @@ void NamingServiceThread::Actions::RemoveServers(
 }
 
 void NamingServiceThread::Actions::ResetServers(
-        const std::vector<ServerNode>& servers) {
+    const std::vector<ServerNode>& servers) {
     _servers.assign(servers.begin(), servers.end());
-    
+
     // Diff servers with _last_servers by comparing sorted vectors.
     // Notice that _last_servers is always sorted.
     std::sort(_servers.begin(), _servers.end());
-    const size_t dedup_size = std::unique(_servers.begin(), _servers.end())
-        - _servers.begin();
+    const size_t dedup_size =
+        std::unique(_servers.begin(), _servers.end()) - _servers.begin();
     if (dedup_size != _servers.size()) {
         LOG(WARNING) << "Removed " << _servers.size() - dedup_size
                      << " duplicated servers";
         _servers.resize(dedup_size);
     }
     _added.resize(_servers.size());
-    std::vector<ServerNode>::iterator _added_end = 
-        std::set_difference(_servers.begin(), _servers.end(),
-                            _last_servers.begin(), _last_servers.end(),
-                            _added.begin());
+    std::vector<ServerNode>::iterator _added_end = std::set_difference(
+        _servers.begin(), _servers.end(), _last_servers.begin(),
+        _last_servers.end(), _added.begin());
     _added.resize(_added_end - _added.begin());
 
     _removed.resize(_last_servers.size());
-    std::vector<ServerNode>::iterator _removed_end = 
+    std::vector<ServerNode>::iterator _removed_end =
         std::set_difference(_last_servers.begin(), _last_servers.end(),
-                            _servers.begin(), _servers.end(),
-                            _removed.begin());
+                            _servers.begin(), _servers.end(), _removed.begin());
     _removed.resize(_removed_end - _removed.begin());
 
     _added_sockets.clear();
@@ -122,10 +115,12 @@ void NamingServiceThread::Actions::ResetServers(
         ServerNodeWithId tagged_id;
         tagged_id.node = _added[i];
         // TODO: For each unique SocketMapKey (i.e. SSL settings), insert a new
-        //       Socket. SocketMapKey may be passed through AddWatcher. Make sure
-        //       to pick those Sockets with the right settings during OnAddedServers
+        //       Socket. SocketMapKey may be passed through AddWatcher. Make
+        //       sure to pick those Sockets with the right settings during
+        //       OnAddedServers
         const SocketMapKey key(_added[i], _owner->_options.channel_signature);
-        CHECK_EQ(0, SocketMapInsert(key, &tagged_id.id, _owner->_options.ssl_ctx));
+        CHECK_EQ(0,
+                 SocketMapInsert(key, &tagged_id.id, _owner->_options.ssl_ctx));
         _added_sockets.push_back(tagged_id);
     }
 
@@ -145,17 +140,17 @@ void NamingServiceThread::Actions::ResetServers(
         std::sort(_removed_sockets.begin(), _removed_sockets.end());
         _sockets.resize(_owner->_last_sockets.size());
         std::vector<ServerNodeWithId>::iterator _sockets_end =
-            std::set_difference(
-                _owner->_last_sockets.begin(), _owner->_last_sockets.end(),
-                _removed_sockets.begin(), _removed_sockets.end(),
-                _sockets.begin());
+            std::set_difference(_owner->_last_sockets.begin(),
+                                _owner->_last_sockets.end(),
+                                _removed_sockets.begin(),
+                                _removed_sockets.end(), _sockets.begin());
         _sockets.resize(_sockets_end - _sockets.begin());
     }
     if (!_added_sockets.empty()) {
         const size_t before_added = _sockets.size();
         std::sort(_added_sockets.begin(), _added_sockets.end());
-        _sockets.insert(_sockets.end(),
-                       _added_sockets.begin(), _added_sockets.end());
+        _sockets.insert(_sockets.end(), _added_sockets.begin(),
+                        _added_sockets.end());
         std::inplace_merge(_sockets.begin(), _sockets.begin() + before_added,
                            _sockets.end());
     }
@@ -167,8 +162,8 @@ void NamingServiceThread::Actions::ResetServers(
         _last_servers.swap(_servers);
         _owner->_last_sockets.swap(_sockets);
         for (std::map<NamingServiceWatcher*,
-                      const NamingServiceFilter*>::iterator
-                 it = _owner->_watchers.begin();
+                      const NamingServiceFilter*>::iterator it =
+                 _owner->_watchers.begin();
              it != _owner->_watchers.end(); ++it) {
             if (!_removed_sockets.empty()) {
                 it->first->OnRemovedServers(removed_ids);
@@ -183,7 +178,8 @@ void NamingServiceThread::Actions::ResetServers(
     }
 
     for (size_t i = 0; i < _removed.size(); ++i) {
-        // TODO: Remove all Sockets that have the same address in SocketMapKey.peer
+        // TODO: Remove all Sockets that have the same address in
+        // SocketMapKey.peer
         //       We may need another data structure to avoid linear cost
         const SocketMapKey key(_removed[i], _owner->_options.channel_signature);
         SocketMapRemove(key);
@@ -191,10 +187,10 @@ void NamingServiceThread::Actions::ResetServers(
 
     if (!_removed.empty() || !_added.empty()) {
         std::ostringstream info;
-        info << butil::class_name_str(*_owner->_ns) << "(\"" 
+        info << butil::class_name_str(*_owner->_ns) << "(\""
              << _owner->_service_name << "\"):";
         if (!_added.empty()) {
-            info << " added "<< _added.size();
+            info << " added " << _added.size();
         }
         if (!_removed.empty()) {
             info << " removed " << _removed.size();
@@ -223,10 +219,7 @@ int NamingServiceThread::Actions::WaitForFirstBatchOfServers() {
 }
 
 NamingServiceThread::NamingServiceThread()
-    : _tid(0)
-    , _ns(NULL)
-    , _actions(this) {
-}
+    : _tid(0), _ns(NULL), _actions(this) {}
 
 NamingServiceThread::~NamingServiceThread() {
     RPC_VLOG << "~NamingServiceThread(" << *this << ')';
@@ -252,8 +245,9 @@ NamingServiceThread::~NamingServiceThread() {
         ServerNodeWithId2ServerId(_last_sockets, &to_be_removed, NULL);
         if (!_last_sockets.empty()) {
             for (std::map<NamingServiceWatcher*,
-                          const NamingServiceFilter*>::iterator
-                     it = _watchers.begin(); it != _watchers.end(); ++it) {
+                          const NamingServiceFilter*>::iterator it =
+                     _watchers.begin();
+                 it != _watchers.end(); ++it) {
                 it->first->OnRemovedServers(to_be_removed);
             }
         }
@@ -279,8 +273,8 @@ int NamingServiceThread::Start(NamingService* naming_service,
         LOG(ERROR) << "Param[naming_service] is NULL";
         return -1;
     }
-    _ns = naming_service;
-    _protocol = protocol;
+    _ns           = naming_service;
+    _protocol     = protocol;
     _service_name = service_name;
     if (opt_in) {
         _options = *opt_in;
@@ -302,8 +296,9 @@ int NamingServiceThread::WaitForFirstBatchOfServers() {
     int rc = _actions.WaitForFirstBatchOfServers();
     if (rc == ENODATA && _options.succeed_without_server) {
         if (_options.log_succeed_without_server) {
-            LOG(WARNING) << '`' << *this << "' is empty! RPC over the channel"
-                " will fail until servers appear";
+            LOG(WARNING) << '`' << *this
+                         << "' is empty! RPC over the channel"
+                            " will fail until servers appear";
         }
         rc = 0;
     }
@@ -315,16 +310,16 @@ int NamingServiceThread::WaitForFirstBatchOfServers() {
 }
 
 void NamingServiceThread::ServerNodeWithId2ServerId(
-    const std::vector<ServerNodeWithId>& src,
-    std::vector<ServerId>* dst, const NamingServiceFilter* filter) {
+    const std::vector<ServerNodeWithId>& src, std::vector<ServerId>* dst,
+    const NamingServiceFilter* filter) {
     dst->reserve(src.size());
-    for (std::vector<ServerNodeWithId>::const_iterator
-             it = src.begin(); it != src.end(); ++it) {
+    for (std::vector<ServerNodeWithId>::const_iterator it = src.begin();
+         it != src.end(); ++it) {
         if (filter && !filter->Accept(it->node)) {
             continue;
         }
         ServerId socket;
-        socket.id = it->id;
+        socket.id  = it->id;
         socket.tag = it->node.tag;
         dst->push_back(socket);
     }
@@ -347,7 +342,7 @@ int NamingServiceThread::AddWatcher(NamingServiceWatcher* watcher,
     }
     return -1;
 }
-    
+
 int NamingServiceThread::RemoveWatcher(NamingServiceWatcher* watcher) {
     if (watcher == NULL) {
         LOG(ERROR) << "Param[watcher] is NULL";
@@ -369,7 +364,7 @@ void NamingServiceThread::Run() {
         LOG(WARNING) << "Fail to run naming service: " << berror(rc);
         if (rc == ENODATA) {
             LOG(ERROR) << "RunNamingService should not return ENODATA, "
-                "change it to ESTOP";
+                          "change it to ESTOP";
             rc = ESTOP;
         }
         _actions.EndWait(rc);
@@ -398,7 +393,7 @@ static const char* ParseNamingServiceUrl(const char* url, char* protocol) {
         }
         if (p1 <= url + MAX_PROTOCOL_LEN) {
             protocol[p1 - url] = '\0';
-            const char* p2 = p1;
+            const char* p2     = p1;
             if (*++p2 == '/' && *++p2 == '/') {
                 return p2 + 1;
             }
@@ -408,8 +403,7 @@ static const char* ParseNamingServiceUrl(const char* url, char* protocol) {
 }
 
 int GetNamingServiceThread(
-    butil::intrusive_ptr<NamingServiceThread>* nsthread_out,
-    const char* url,
+    butil::intrusive_ptr<NamingServiceThread>* nsthread_out, const char* url,
     const GetNamingServiceThreadOptions* options) {
     char protocol[MAX_PROTOCOL_LEN + 1];
     const char* const service_name = ParseNamingServiceUrl(url, protocol);
@@ -422,8 +416,9 @@ int GetNamingServiceThread(
         LOG(ERROR) << "Unknown protocol=" << protocol;
         return -1;
     }
-    const NSKey key(protocol, service_name,
-                    (options ? options->channel_signature : ChannelSignature()));
+    const NSKey key(
+        protocol, service_name,
+        (options ? options->channel_signature : ChannelSignature()));
     bool new_thread = false;
     butil::intrusive_ptr<NamingServiceThread> nsthread;
     {
@@ -445,11 +440,11 @@ int GetNamingServiceThread(
         if (ptr != NULL) {
             if (ptr->AddRefManually() == 0) {
                 // The ns thread's last intrusive_ptr was just destructed and
-                // the removal-from-global-map-code in ptr->~NamingServideThread()
-                // is about to run or already running, need to create another ns
-                // thread.
-                // Notice that we don't need to remove the reference because
-                // the object is already destructing.
+                // the removal-from-global-map-code in
+                // ptr->~NamingServideThread() is about to run or already
+                // running, need to create another ns thread. Notice that we
+                // don't need to remove the reference because the object is
+                // already destructing.
                 ptr = NULL;
             } else {
                 nsthread.reset(ptr, false);
@@ -468,7 +463,8 @@ int GetNamingServiceThread(
         }
     }
     if (new_thread) {
-        if (nsthread->Start(source_ns->New(), key.protocol, key.service_name, options) != 0) {
+        if (nsthread->Start(source_ns->New(), key.protocol, key.service_name,
+                            options) != 0) {
             LOG(ERROR) << "Fail to start NamingServiceThread";
             std::unique_lock<pthread_mutex_t> mu(g_nsthread_map_mutex);
             g_nsthread_map->erase(key);
@@ -498,4 +494,4 @@ std::ostream& operator<<(std::ostream& os, const NamingServiceThread& nsthr) {
     return os;
 }
 
-} // namespace brpc
+}  // namespace brpc

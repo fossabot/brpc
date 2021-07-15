@@ -17,17 +17,16 @@
 
 // Date: 2010/05/29
 
-#include <sys/stat.h>
-#include "butil/build_config.h"              // OS_MACOSX
 #include "butil/files/file_watcher.h"
+#include <sys/stat.h>
+#include "butil/build_config.h"  // OS_MACOSX
 
 namespace butil {
 
 static const FileWatcher::Timestamp NON_EXIST_TS =
     static_cast<FileWatcher::Timestamp>(-1);
 
-FileWatcher::FileWatcher() : _last_ts(NON_EXIST_TS) {
-}
+FileWatcher::FileWatcher() : _last_ts(NON_EXIST_TS) {}
 
 int FileWatcher::init(const char* file_path) {
     if (init_from_not_exist(file_path) != 0) {
@@ -92,8 +91,6 @@ FileWatcher::Change FileWatcher::check_and_consume(Timestamp* last_timestamp) {
     return e;
 }
 
-void FileWatcher::restore(Timestamp timestamp) {
-    _last_ts = timestamp;
-}
+void FileWatcher::restore(Timestamp timestamp) { _last_ts = timestamp; }
 
 }  // namespace butil

@@ -15,17 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_AMF_H
 #define BRPC_AMF_H
 
-#include <map>
-#include <deque>
 #include <google/protobuf/io/zero_copy_stream.h>
 #include <google/protobuf/message.h>
-#include "butil/sys_byteorder.h"
+#include <deque>
+#include <map>
 #include "butil/strings/string_piece.h"
-
+#include "butil/sys_byteorder.h"
 
 namespace brpc {
 
@@ -39,10 +37,9 @@ public:
         , _size(0)
         , _data(NULL)
         , _zc_stream(stream)
-        , _popped_bytes(0)
-    {}
+        , _popped_bytes(0) {}
 
-    ~AMFInputStream() { }
+    ~AMFInputStream() {}
 
     // Cut off at-most n bytes from front side and copy to `out'.
     // Returns bytes cut.
@@ -58,7 +55,7 @@ public:
 
     // Returns false if error occurred in other consuming functions.
     bool good() const { return _good; }
-    
+
     // If the error prevents parsing from going on, call this method.
     // This method is also called in other functions in this class.
     void set_bad() { _good = false; }
@@ -66,7 +63,7 @@ public:
     // Return true if the stream is empty. Notice that this function
     // may update _data and _size.
     bool check_emptiness();
-    
+
 private:
     bool _good;
     int _size;
@@ -83,8 +80,7 @@ public:
         , _size(0)
         , _data(NULL)
         , _zc_stream(stream)
-        , _pushed_bytes(0)
-    {}
+        , _pushed_bytes(0) {}
 
     ~AMFOutputStream() { done(); }
 
@@ -106,7 +102,7 @@ public:
 
     // Optionally called to backup buffered bytes to zero-copy stream.
     void done();
-    
+
 private:
     bool _good;
     int _size;
@@ -146,7 +142,8 @@ class AMFArray;
 
 // A field inside a AMF object.
 class AMFField {
-friend class AMFObject;
+    friend class AMFObject;
+
 public:
     static const size_t SSO_LIMIT = 8;
 
@@ -154,20 +151,27 @@ public:
     AMFField(const AMFField&);
     AMFField& operator=(const AMFField&);
     ~AMFField() { Clear(); }
-    void Clear() { if (_type != AMF_MARKER_UNDEFINED) { SlowerClear(); } }
+    void Clear() {
+        if (_type != AMF_MARKER_UNDEFINED) {
+            SlowerClear();
+        }
+    }
 
     AMFMarker type() const { return (AMFMarker)_type; }
-    
-    bool IsString() const
-    { return _type == AMF_MARKER_STRING || _type == AMF_MARKER_LONG_STRING; }
+
+    bool IsString() const {
+        return _type == AMF_MARKER_STRING || _type == AMF_MARKER_LONG_STRING;
+    }
     bool IsBool() const { return _type == AMF_MARKER_BOOLEAN; }
     bool IsNumber() const { return _type == AMF_MARKER_NUMBER; }
-    bool IsObject() const
-    { return _type == AMF_MARKER_OBJECT || _type == AMF_MARKER_ECMA_ARRAY; }
+    bool IsObject() const {
+        return _type == AMF_MARKER_OBJECT || _type == AMF_MARKER_ECMA_ARRAY;
+    }
     bool IsArray() const { return _type == AMF_MARKER_STRICT_ARRAY; }
-    
-    butil::StringPiece AsString() const
-    { return butil::StringPiece((_is_shortstr ? _shortstr : _str), _strsize); }
+
+    butil::StringPiece AsString() const {
+        return butil::StringPiece((_is_shortstr ? _shortstr : _str), _strsize);
+    }
     bool AsBool() const { return _b; }
     double AsNumber() const { return _num; }
     const AMFObject& AsObject() const { return *_obj; }
@@ -181,7 +185,7 @@ public:
     void SetUnsupported();
     AMFObject* MutableObject();
     AMFArray* MutableArray();
-        
+
 private:
     void SlowerClear();
 
@@ -191,7 +195,7 @@ private:
     union {
         double _num;
         char* _str;
-        char _shortstr[SSO_LIMIT]; // SSO
+        char _shortstr[SSO_LIMIT];  // SSO
         bool _b;
         AMFObject* _obj;
         AMFArray* _arr;
@@ -208,7 +212,7 @@ public:
     const AMFField* Find(const char* name) const;
     void Remove(const std::string& name) { _fields.erase(name); }
     void Clear() { _fields.clear(); }
-    
+
     void SetString(const std::string& name, const butil::StringPiece& val);
     void SetBool(const std::string& name, bool val);
     void SetNumber(const std::string& name, double val);
@@ -241,7 +245,9 @@ public:
     AMFField& operator[](size_t index);
     size_t size() const { return _size; }
 
-    void AddString(const butil::StringPiece& val) { AddField()->SetString(val); }
+    void AddString(const butil::StringPiece& val) {
+        AddField()->SetString(val);
+    }
     void AddBool(bool val) { AddField()->SetBool(val); }
     void AddNumber(double val) { AddField()->SetNumber(val); }
     void AddNull() { AddField()->SetNull(); }
@@ -253,7 +259,7 @@ public:
 private:
     AMFField* AddField();
     void RemoveLastField();
-    
+
     uint32_t _size;
     AMFField _fields[4];
     std::deque<AMFField> _morefields;
@@ -261,12 +267,14 @@ private:
 std::ostream& operator<<(std::ostream& os, const AMFArray&);
 
 inline const AMFField& AMFArray::operator[](size_t index) const {
-    return (index < arraysize(_fields) ? _fields[index] :
-            _morefields[index - arraysize(_fields)]);
+    return (index < arraysize(_fields)
+                ? _fields[index]
+                : _morefields[index - arraysize(_fields)]);
 }
 inline AMFField& AMFArray::operator[](size_t index) {
-    return (index < arraysize(_fields) ? _fields[index] :
-            _morefields[index - arraysize(_fields)]);
+    return (index < arraysize(_fields)
+                ? _fields[index]
+                : _morefields[index - arraysize(_fields)]);
 }
 
 // Parse types of the stream.
@@ -296,8 +304,7 @@ void WriteAMFObject(const google::protobuf::Message& msg,
 void WriteAMFObject(const AMFObject& obj, AMFOutputStream* stream);
 void WriteAMFArray(const AMFArray& arr, AMFOutputStream* stream);
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #include "brpc/amf_inl.h"
 

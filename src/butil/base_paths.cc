@@ -11,36 +11,34 @@
 namespace butil {
 
 bool PathProvider(int key, FilePath* result) {
-  // NOTE: DIR_CURRENT is a special case in PathService::Get
+    // NOTE: DIR_CURRENT is a special case in PathService::Get
 
-  switch (key) {
+    switch (key) {
     case DIR_EXE:
-      PathService::Get(FILE_EXE, result);
-      *result = result->DirName();
-      return true;
+        PathService::Get(FILE_EXE, result);
+        *result = result->DirName();
+        return true;
     case DIR_MODULE:
-      PathService::Get(FILE_MODULE, result);
-      *result = result->DirName();
-      return true;
+        PathService::Get(FILE_MODULE, result);
+        *result = result->DirName();
+        return true;
     case DIR_TEMP:
-      if (!GetTempDir(result))
-        return false;
-      return true;
+        if (!GetTempDir(result)) return false;
+        return true;
     case butil::DIR_HOME:
-      *result = GetHomeDir();
-      return true;
+        *result = GetHomeDir();
+        return true;
     case DIR_TEST_DATA:
-      if (!PathService::Get(DIR_SOURCE_ROOT, result))
-        return false;
-      *result = result->Append(FILE_PATH_LITERAL("base"));
-      *result = result->Append(FILE_PATH_LITERAL("test"));
-      *result = result->Append(FILE_PATH_LITERAL("data"));
-      if (!PathExists(*result))  // We don't want to create this.
-        return false;
-      return true;
+        if (!PathService::Get(DIR_SOURCE_ROOT, result)) return false;
+        *result = result->Append(FILE_PATH_LITERAL("base"));
+        *result = result->Append(FILE_PATH_LITERAL("test"));
+        *result = result->Append(FILE_PATH_LITERAL("data"));
+        if (!PathExists(*result))  // We don't want to create this.
+            return false;
+        return true;
     default:
-      return false;
-  }
+        return false;
+    }
 }
 
 }  // namespace butil

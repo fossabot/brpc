@@ -15,16 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_SELECTIVE_CHANNEL_H
 #define BRPC_SELECTIVE_CHANNEL_H
 
 // To brpc developers: This is a header included by user, don't depend
 // on internal structures, use opaque pointers instead.
 
-#include "brpc/socket_id.h"
 #include "brpc/channel.h"
-
+#include "brpc/socket_id.h"
 
 namespace brpc {
 
@@ -49,7 +47,7 @@ namespace brpc {
 // valid before the RPC ends. Other channels do not. If you're doing async
 // calls with SelectiveChannel, make sure that `request' is owned and deleted
 // in `done'.
-class SelectiveChannel : public ChannelBase/*non-copyable*/ {
+class SelectiveChannel : public ChannelBase /*non-copyable*/ {
 public:
     typedef SocketId ChannelHandle;
 
@@ -86,11 +84,10 @@ public:
 
 private:
     int CheckHealth();
-    
+
     Channel _chan;
 };
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_SELECTIVE_CHANNEL_H

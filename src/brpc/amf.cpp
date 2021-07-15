@@ -15,49 +15,63 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <google/protobuf/descriptor.h>
-#include "butil/sys_byteorder.h"
-#include "butil/logging.h"
-#include "butil/find_cstr.h"
-#include "brpc/log.h"
 #include "brpc/amf.h"
+#include <google/protobuf/descriptor.h>
+#include "brpc/log.h"
+#include "butil/find_cstr.h"
+#include "butil/logging.h"
+#include "butil/sys_byteorder.h"
 
 namespace brpc {
 
 const char* marker2str(AMFMarker marker) {
     switch (marker) {
-    case AMF_MARKER_NUMBER:          return "number";
-    case AMF_MARKER_BOOLEAN:         return "boolean";
-    case AMF_MARKER_STRING:          return "string";
-    case AMF_MARKER_OBJECT:          return "object";
-    case AMF_MARKER_MOVIECLIP:       return "movieclip";
-    case AMF_MARKER_NULL:            return "null";
-    case AMF_MARKER_UNDEFINED:       return "undefined";
-    case AMF_MARKER_REFERENCE:       return "reference";
-    case AMF_MARKER_ECMA_ARRAY:      return "ecma-array";
-    case AMF_MARKER_OBJECT_END:      return "object-end";
-    case AMF_MARKER_STRICT_ARRAY:    return "strict-array";
-    case AMF_MARKER_DATE:            return "date";
-    case AMF_MARKER_LONG_STRING:     return "long-string";
-    case AMF_MARKER_UNSUPPORTED:     return "unsupported";
-    case AMF_MARKER_RECORDSET:       return "recordset";
-    case AMF_MARKER_XML_DOCUMENT:    return "xml-document";
-    case AMF_MARKER_TYPED_OBJECT:    return "typed-object";
-    case AMF_MARKER_AVMPLUS_OBJECT:  return "avmplus-object";
+    case AMF_MARKER_NUMBER:
+        return "number";
+    case AMF_MARKER_BOOLEAN:
+        return "boolean";
+    case AMF_MARKER_STRING:
+        return "string";
+    case AMF_MARKER_OBJECT:
+        return "object";
+    case AMF_MARKER_MOVIECLIP:
+        return "movieclip";
+    case AMF_MARKER_NULL:
+        return "null";
+    case AMF_MARKER_UNDEFINED:
+        return "undefined";
+    case AMF_MARKER_REFERENCE:
+        return "reference";
+    case AMF_MARKER_ECMA_ARRAY:
+        return "ecma-array";
+    case AMF_MARKER_OBJECT_END:
+        return "object-end";
+    case AMF_MARKER_STRICT_ARRAY:
+        return "strict-array";
+    case AMF_MARKER_DATE:
+        return "date";
+    case AMF_MARKER_LONG_STRING:
+        return "long-string";
+    case AMF_MARKER_UNSUPPORTED:
+        return "unsupported";
+    case AMF_MARKER_RECORDSET:
+        return "recordset";
+    case AMF_MARKER_XML_DOCUMENT:
+        return "xml-document";
+    case AMF_MARKER_TYPED_OBJECT:
+        return "typed-object";
+    case AMF_MARKER_AVMPLUS_OBJECT:
+        return "avmplus-object";
     }
     return "Unknown marker";
 }
 
-const char* marker2str(uint8_t marker) {
-    return marker2str((AMFMarker)marker);
-}
+const char* marker2str(uint8_t marker) { return marker2str((AMFMarker)marker); }
 
 // =============== AMFField ==============
 
 AMFField::AMFField()
-    : _type(AMF_MARKER_UNDEFINED), _is_shortstr(false), _strsize(0) {
-}
+    : _type(AMF_MARKER_UNDEFINED), _is_shortstr(false), _strsize(0) {}
 
 AMFField::AMFField(const AMFField& rhs)
     : _type(rhs._type), _is_shortstr(rhs._is_shortstr), _strsize(rhs._strsize) {
@@ -76,10 +90,10 @@ AMFField::AMFField(const AMFField& rhs)
 
 AMFField& AMFField::operator=(const AMFField& rhs) {
     Clear();
-    _type = rhs._type;
+    _type        = rhs._type;
     _is_shortstr = rhs._is_shortstr;
-    _strsize = rhs._strsize;
-    _num = rhs._num;
+    _strsize     = rhs._strsize;
+    _num         = rhs._num;
     if (rhs.IsString()) {
         if (!_is_shortstr) {
             _str = (char*)malloc(rhs._strsize + 1);
@@ -119,7 +133,7 @@ void AMFField::SlowerClear() {
             free(_str);
             _str = NULL;
         }
-        _strsize = 0;
+        _strsize     = 0;
         _is_shortstr = false;
         break;
     case AMF_MARKER_OBJECT:
@@ -144,20 +158,20 @@ void AMFField::SetString(const butil::StringPiece& str) {
     // TODO: Try to reuse the space.
     Clear();
     if (str.size() < SSO_LIMIT) {
-        _type = AMF_MARKER_STRING;
+        _type        = AMF_MARKER_STRING;
         _is_shortstr = true;
-        _strsize = str.size();
+        _strsize     = str.size();
         memcpy(_shortstr, str.data(), str.size());
         _shortstr[str.size()] = '\0';
     } else {
-        _type = (str.size() < 65536u ?
-                 AMF_MARKER_STRING : AMF_MARKER_LONG_STRING);
+        _type =
+            (str.size() < 65536u ? AMF_MARKER_STRING : AMF_MARKER_LONG_STRING);
         char* buf = (char*)malloc(str.size() + 1);
         memcpy(buf, str.data(), str.size());
         buf[str.size()] = '\0';
-        _is_shortstr = false;
-        _strsize = str.size();
-        _str = buf;
+        _is_shortstr    = false;
+        _strsize        = str.size();
+        _str            = buf;
     }
 }
 
@@ -202,7 +216,7 @@ AMFObject* AMFField::MutableObject() {
     if (!IsObject()) {
         Clear();
         _type = AMF_MARKER_OBJECT;
-        _obj = new AMFObject;
+        _obj  = new AMFObject;
     }
     return _obj;
 }
@@ -211,14 +225,15 @@ AMFArray* AMFField::MutableArray() {
     if (!IsArray()) {
         Clear();
         _type = AMF_MARKER_STRICT_ARRAY;
-        _arr = new AMFArray;
+        _arr  = new AMFArray;
     }
     return _arr;
 }
 
 // ============= AMFObject =============
 
-void AMFObject::SetString(const std::string& name, const butil::StringPiece& str) {
+void AMFObject::SetString(const std::string& name,
+                          const butil::StringPiece& str) {
     _fields[name].SetString(str);
 }
 
@@ -230,9 +245,7 @@ void AMFObject::SetNumber(const std::string& name, double val) {
     _fields[name].SetNumber(val);
 }
 
-void AMFObject::SetNull(const std::string& name) {
-    _fields[name].SetNull();
-}
+void AMFObject::SetNull(const std::string& name) { _fields[name].SetNull(); }
 
 void AMFObject::SetUndefined(const std::string& name) {
     _fields[name].SetUndefined();
@@ -401,7 +414,8 @@ static bool ReadAMFObjectField(AMFInputStream* stream,
             return false;
         }
         if (field) {
-            if (field->cpp_type() != google::protobuf::FieldDescriptor::CPPTYPE_DOUBLE) {
+            if (field->cpp_type() !=
+                google::protobuf::FieldDescriptor::CPPTYPE_DOUBLE) {
                 LOG(WARNING) << "Can't set double=" << val << " to "
                              << field->full_name();
             } else {
@@ -417,7 +431,8 @@ static bool ReadAMFObjectField(AMFInputStream* stream,
             return false;
         }
         if (field) {
-            if (field->cpp_type() != google::protobuf::FieldDescriptor::CPPTYPE_BOOL) {
+            if (field->cpp_type() !=
+                google::protobuf::FieldDescriptor::CPPTYPE_BOOL) {
                 LOG(WARNING) << "Can't set bool to " << field->full_name();
             } else {
                 reflection->SetBool(message, field, !!val);
@@ -430,9 +445,10 @@ static bool ReadAMFObjectField(AMFInputStream* stream,
             return false;
         }
         if (field) {
-            if (field->cpp_type() != google::protobuf::FieldDescriptor::CPPTYPE_STRING) {
+            if (field->cpp_type() !=
+                google::protobuf::FieldDescriptor::CPPTYPE_STRING) {
                 LOG(WARNING) << "Can't set string=`" << val << "' to "
-                           << field->full_name();
+                             << field->full_name();
             } else {
                 reflection->SetString(message, field, val);
             }
@@ -447,10 +463,12 @@ static bool ReadAMFObjectField(AMFInputStream* stream,
     // fall through
     case AMF_MARKER_OBJECT: {
         if (field) {
-            if (field->cpp_type() != google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE) {
+            if (field->cpp_type() !=
+                google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE) {
                 LOG(WARNING) << "Can't set object to " << field->full_name();
             } else {
-                google::protobuf::Message* m = reflection->MutableMessage(message, field);
+                google::protobuf::Message* m =
+                    reflection->MutableMessage(message, field);
                 if (!ReadAMFObjectBody(m, stream)) {
                     return false;
                 }
@@ -486,7 +504,8 @@ static bool ReadAMFObjectField(AMFInputStream* stream,
             return false;
         }
         if (field) {
-            if (field->cpp_type() != google::protobuf::FieldDescriptor::CPPTYPE_STRING) {
+            if (field->cpp_type() !=
+                google::protobuf::FieldDescriptor::CPPTYPE_STRING) {
                 LOG(WARNING) << "Can't set string=`" << val << "' to "
                              << field->full_name();
             } else {
@@ -494,7 +513,7 @@ static bool ReadAMFObjectField(AMFInputStream* stream,
             }
         }
     } break;
-    } // switch
+    }  // switch
     return true;
 }
 
@@ -516,9 +535,10 @@ static bool ReadAMFObjectBody(google::protobuf::Message* message,
             }
             break;
         }
-        const google::protobuf::FieldDescriptor* field = desc->FindFieldByName(name);
-        RPC_VLOG_IF(field == NULL) << "Unknown field=" << desc->full_name()
-                                   << "." << name;
+        const google::protobuf::FieldDescriptor* field =
+            desc->FindFieldByName(name);
+        RPC_VLOG_IF(field == NULL)
+            << "Unknown field=" << desc->full_name() << "." << name;
         if (!ReadAMFObjectField(stream, message, field)) {
             return false;
         }
@@ -563,9 +583,10 @@ static bool ReadAMFEcmaArrayBody(google::protobuf::Message* message,
             LOG(ERROR) << "Fail to read name from the stream";
             return false;
         }
-        const google::protobuf::FieldDescriptor* field = desc->FindFieldByName(name);
-        RPC_VLOG_IF(field == NULL) << "Unknown field=" << desc->full_name()
-                                   << "." << name;
+        const google::protobuf::FieldDescriptor* field =
+            desc->FindFieldByName(name);
+        RPC_VLOG_IF(field == NULL)
+            << "Unknown field=" << desc->full_name() << "." << name;
         if (!ReadAMFObjectField(stream, message, field)) {
             return false;
         }
@@ -606,8 +627,7 @@ static bool ReadAMFObjectBody(AMFObject* obj, AMFInputStream* stream);
 static bool ReadAMFEcmaArrayBody(AMFObject* obj, AMFInputStream* stream);
 static bool ReadAMFArrayBody(AMFArray* arr, AMFInputStream* stream);
 
-static bool ReadAMFObjectField(AMFInputStream* stream,
-                               AMFObject* obj,
+static bool ReadAMFObjectField(AMFInputStream* stream, AMFObject* obj,
                                const std::string& name) {
     uint8_t marker;
     if (stream->cut_u8(&marker) != 1u) {
@@ -689,7 +709,7 @@ static bool ReadAMFObjectField(AMFInputStream* stream,
         }
         obj->SetString(name, val);
     } break;
-    } // switch
+    }  // switch
     return true;
 }
 
@@ -838,7 +858,7 @@ static bool ReadAMFArrayItem(AMFInputStream* stream, AMFArray* arr) {
         }
         arr->AddString(val);
     } break;
-    } // switch
+    }  // switch
     return true;
 }
 
@@ -876,11 +896,9 @@ bool ReadAMFArray(AMFArray* arr, AMFInputStream* stream) {
 
 // ======== AMFArray =========
 
-AMFArray::AMFArray() : _size(0) {
-}
+AMFArray::AMFArray() : _size(0) {}
 
-AMFArray::AMFArray(const AMFArray& rhs) 
-    : _size(rhs._size) {
+AMFArray::AMFArray(const AMFArray& rhs) : _size(rhs._size) {
     const size_t inline_size = std::min((size_t)_size, arraysize(_fields));
     for (size_t i = 0; i < inline_size; ++i) {
         _fields[i] = rhs._fields[i];
@@ -968,9 +986,7 @@ void WriteAMFUint32(uint32_t val, AMFOutputStream* stream) {
     return WriteAMFNumber((double)val, stream);
 }
 
-void WriteAMFNull(AMFOutputStream* stream) {
-    stream->put_u8(AMF_MARKER_NULL);
-}
+void WriteAMFNull(AMFOutputStream* stream) { stream->put_u8(AMF_MARKER_NULL); }
 
 void WriteAMFUndefined(AMFOutputStream* stream) {
     stream->put_u8(AMF_MARKER_UNDEFINED);
@@ -983,7 +999,7 @@ void WriteAMFUnsupported(AMFOutputStream* stream) {
 void WriteAMFObject(const google::protobuf::Message& message,
                     AMFOutputStream* stream) {
     stream->put_u8(AMF_MARKER_OBJECT);
-    const google::protobuf::Descriptor* desc = message.GetDescriptor();
+    const google::protobuf::Descriptor* desc       = message.GetDescriptor();
     const google::protobuf::Reflection* reflection = message.GetReflection();
     for (int i = 0; i < desc->field_count(); ++i) {
         const google::protobuf::FieldDescriptor* field = desc->field(i);
@@ -1017,7 +1033,7 @@ void WriteAMFObject(const google::protobuf::Message& message,
         case google::protobuf::FieldDescriptor::CPPTYPE_DOUBLE: {
             stream->put_u8(AMF_MARKER_NUMBER);
             const double val = reflection->GetDouble(message, field);
-            uint64_t* uptr = (uint64_t*)&val;
+            uint64_t* uptr   = (uint64_t*)&val;
             stream->put_u64(*uptr);
         } break;
         case google::protobuf::FieldDescriptor::CPPTYPE_FLOAT:
@@ -1046,7 +1062,7 @@ void WriteAMFObject(const google::protobuf::Message& message,
         case google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE:
             WriteAMFObject(reflection->GetMessage(message, field), stream);
             break;
-        } // switch
+        }  // switch
         if (!stream->good()) {
             LOG(ERROR) << "Fail to serialize field=" << field->full_name();
             return;
@@ -1061,7 +1077,7 @@ static void WriteAMFField(const AMFField& field, AMFOutputStream* stream) {
     case AMF_MARKER_NUMBER: {
         stream->put_u8(AMF_MARKER_NUMBER);
         const double val = field.AsNumber();
-        uint64_t* uptr = (uint64_t*)&val;
+        uint64_t* uptr   = (uint64_t*)&val;
         stream->put_u64(*uptr);
     } break;
     case AMF_MARKER_BOOLEAN:
@@ -1097,7 +1113,7 @@ static void WriteAMFField(const AMFField& field, AMFOutputStream* stream) {
         stream->put_u8(AMF_MARKER_UNSUPPORTED);
         break;
     case AMF_MARKER_MOVIECLIP:
-    case AMF_MARKER_REFERENCE:        
+    case AMF_MARKER_REFERENCE:
     case AMF_MARKER_DATE:
     case AMF_MARKER_RECORDSET:
     case AMF_MARKER_XML_DOCUMENT:
@@ -1108,7 +1124,7 @@ static void WriteAMFField(const AMFField& field, AMFOutputStream* stream) {
     case AMF_MARKER_OBJECT_END:
         CHECK(false) << "object-end shouldn't be present here";
         break;
-    } // switch
+    }  // switch
 }
 
 void WriteAMFObject(const AMFObject& obj, AMFOutputStream* stream) {
@@ -1184,7 +1200,7 @@ std::ostream& operator<<(std::ostream& os, const AMFObject& obj) {
             os << ' ';
         } else {
             first = false;
-        }        
+        }
         os << it->first << '=' << it->second;
     }
     return os << '}';
@@ -1202,10 +1218,10 @@ std::ostream& operator<<(std::ostream& os, const AMFArray& arr) {
             os << ' ';
         } else {
             first = false;
-        }        
+        }
         os << arr[i];
     }
     return os << ']';
 }
 
-} // namespace brpc
+}  // namespace brpc

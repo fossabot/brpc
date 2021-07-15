@@ -8,10 +8,10 @@
 #include <stdio.h>
 
 #include "butil/base_export.h"
+#include "butil/build_config.h"
 #include "butil/logging.h"
 #include "butil/memory/scoped_ptr.h"
 #include "butil/scoped_generic.h"
-#include "butil/build_config.h"
 
 namespace butil {
 
@@ -19,10 +19,8 @@ namespace internal {
 
 #if defined(OS_POSIX)
 struct BUTIL_EXPORT ScopedFDCloseTraits {
-  static int InvalidValue() {
-    return -1;
-  }
-  static void Free(int fd);
+    static int InvalidValue() { return -1; }
+    static void Free(int fd);
 };
 #endif
 
@@ -48,21 +46,20 @@ typedef ScopedGeneric<int, internal::ScopedFDCloseTraits> ScopedFD;
 //// Automatically closes |FILE*|s.
 class ScopedFILE {
     MOVE_ONLY_TYPE_FOR_CPP_03(ScopedFILE, RValue);
+
 public:
     ScopedFILE() : _fp(NULL) {}
 
     // Open file at |path| with |mode|.
     // If fopen failed, operator FILE* returns NULL and errno is set.
-    ScopedFILE(const char *path, const char *mode) {
-        _fp = fopen(path, mode);
-    }
+    ScopedFILE(const char* path, const char* mode) { _fp = fopen(path, mode); }
 
     // |fp| must be the return value of fopen as we use fclose in the
     // destructor, otherwise the behavior is undefined
-    explicit ScopedFILE(FILE *fp) :_fp(fp) {}
+    explicit ScopedFILE(FILE* fp) : _fp(fp) {}
 
     ScopedFILE(RValue rvalue) {
-        _fp = rvalue.object->_fp;
+        _fp                = rvalue.object->_fp;
         rvalue.object->_fp = NULL;
     }
 
@@ -74,13 +71,11 @@ public:
     }
 
     // Close current opened file and open another file at |path| with |mode|
-    void reset(const char* path, const char* mode) {
-        reset(fopen(path, mode));
-    }
+    void reset(const char* path, const char* mode) { reset(fopen(path, mode)); }
 
     void reset() { reset(NULL); }
 
-    void reset(FILE *fp) {
+    void reset(FILE* fp) {
         if (_fp != NULL) {
             fclose(_fp);
             _fp = NULL;
@@ -91,14 +86,14 @@ public:
     // Set internal FILE* to NULL and return previous value.
     FILE* release() {
         FILE* const prev_fp = _fp;
-        _fp = NULL;
+        _fp                 = NULL;
         return prev_fp;
     }
-    
+
     operator FILE*() const { return _fp; }
 
     FILE* get() { return _fp; }
-    
+
 private:
     FILE* _fp;
 };

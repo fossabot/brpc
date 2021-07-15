@@ -15,34 +15,32 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <ostream>
-#include "brpc/closure_guard.h"        // ClosureGuard
-#include "brpc/controller.h"           // Controller
-#include "brpc/builtin/common.h"
 #include "brpc/builtin/bthreads_service.h"
+#include <ostream>
+#include "brpc/builtin/common.h"
+#include "brpc/closure_guard.h"  // ClosureGuard
+#include "brpc/controller.h"     // Controller
 
 namespace bthread {
 void print_task(std::ostream& os, bthread_t tid);
 }
 
-
 namespace brpc {
 
-void BthreadsService::default_method(::google::protobuf::RpcController* cntl_base,
-                                     const ::brpc::BthreadsRequest*,
-                                     ::brpc::BthreadsResponse*,
-                                     ::google::protobuf::Closure* done) {
+void BthreadsService::default_method(
+    ::google::protobuf::RpcController* cntl_base,
+    const ::brpc::BthreadsRequest*, ::brpc::BthreadsResponse*,
+    ::google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
-    Controller *cntl = static_cast<Controller*>(cntl_base);
+    Controller* cntl = static_cast<Controller*>(cntl_base);
     cntl->http_response().set_content_type("text/plain");
     butil::IOBufBuilder os;
     const std::string& constraint = cntl->http_request().unresolved_path();
-    
+
     if (constraint.empty()) {
         os << "Use /bthreads/<bthread_id>";
     } else {
-        char* endptr = NULL;
+        char* endptr  = NULL;
         bthread_t tid = strtoull(constraint.c_str(), &endptr, 10);
         if (*endptr == '\0' || *endptr == '/') {
             ::bthread::print_task(os, tid);
@@ -54,4 +52,4 @@ void BthreadsService::default_method(::google::protobuf::RpcController* cntl_bas
     os.move_to(cntl->response_attachment());
 }
 
-} // namespace brpc
+}  // namespace brpc

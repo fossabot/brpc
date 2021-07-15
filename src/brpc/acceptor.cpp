@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-#include <inttypes.h>
-#include <gflags/gflags.h>
-#include "butil/fd_guard.h"                 // fd_guard 
-#include "butil/fd_utility.h"               // make_close_on_exec
-#include "butil/time.h"                     // gettimeofday_us
 #include "brpc/acceptor.h"
-
+#include <gflags/gflags.h>
+#include <inttypes.h>
+#include "butil/fd_guard.h"    // fd_guard
+#include "butil/fd_utility.h"  // make_close_on_exec
+#include "butil/time.h"        // gettimeofday_us
 
 namespace brpc {
 
@@ -37,8 +35,7 @@ Acceptor::Acceptor(bthread_keytable_pool_t* pool)
     , _listened_fd(-1)
     , _acception_id(0)
     , _empty_cond(&_map_mutex)
-    , _ssl_ctx(NULL) {
-}
+    , _ssl_ctx(NULL) {}
 
 Acceptor::~Acceptor() {
     StopAccept(0);
@@ -51,7 +48,7 @@ int Acceptor::StartAccept(int listened_fd, int idle_timeout_sec,
         LOG(FATAL) << "Invalid listened_fd=" << listened_fd;
         return -1;
     }
-    
+
     BAIDU_SCOPED_LOCK(_map_mutex);
     if (_status == UNINITIALIZED) {
         if (Initialize() != 0) {
@@ -72,22 +69,22 @@ int Acceptor::StartAccept(int listened_fd, int idle_timeout_sec,
         }
     }
     _idle_timeout_sec = idle_timeout_sec;
-    _ssl_ctx = ssl_ctx;
-    
+    _ssl_ctx          = ssl_ctx;
+
     // Creation of _acception_id is inside lock so that OnNewConnections
     // (which may run immediately) should see sane fields set below.
     SocketOptions options;
-    options.fd = listened_fd;
-    options.user = this;
+    options.fd                       = listened_fd;
+    options.user                     = this;
     options.on_edge_triggered_events = OnNewConnections;
     if (Socket::Create(options, &_acception_id) != 0) {
         // Close-idle-socket thread will be stopped inside destructor
         LOG(FATAL) << "Fail to create _acception_id";
         return -1;
     }
-    
+
     _listened_fd = listened_fd;
-    _status = RUNNING;
+    _status      = RUNNING;
     return 0;
 }
 
@@ -109,8 +106,8 @@ void* Acceptor::CloseIdleConnections(void* arg) {
 }
 
 void Acceptor::StopAccept(int /*closewait_ms*/) {
-    // Currently `closewait_ms' is useless since we have to wait until 
-    // existing requests are finished. Otherwise, contexts depended by 
+    // Currently `closewait_ms' is useless since we have to wait until
+    // existing requests are finished. Otherwise, contexts depended by
     // the requests may be deleted and invalid.
 
     {
@@ -128,7 +125,7 @@ void Acceptor::StopAccept(int /*closewait_ms*/) {
     // of code will be SetFailed directly in OnNewConnectionsUntilEAGAIN
     std::vector<SocketId> erasing_ids;
     ListConnections(&erasing_ids);
-    
+
     for (size_t i = 0; i < erasing_ids.size(); ++i) {
         SocketUniquePtr socket;
         if (Socket::Address(erasing_ids[i], &socket) == 0) {
@@ -145,7 +142,7 @@ void Acceptor::StopAccept(int /*closewait_ms*/) {
                 // requests have been processed.
                 socket->ReleaseAdditionalReference();
             }
-        } // else: This socket already called `SetFailed' before
+        }  // else: This socket already called `SetFailed' before
     }
 }
 
@@ -155,7 +152,7 @@ int Acceptor::Initialize() {
                    << INITIAL_CONNECTION_CAP;
         return -1;
     }
-    return 0;    
+    return 0;
 }
 
 // NOTE: Join() can happen before StopAccept()
@@ -168,8 +165,8 @@ void Acceptor::Join() {
     while (_listened_fd > 0 || !_socket_map.empty()) {
         _empty_cond.Wait();
     }
-    const int saved_idle_timeout_sec = _idle_timeout_sec;
-    _idle_timeout_sec = 0;
+    const int saved_idle_timeout_sec     = _idle_timeout_sec;
+    _idle_timeout_sec                    = 0;
     const bthread_t saved_close_idle_tid = _close_idle_tid;
     mu.unlock();
 
@@ -178,7 +175,7 @@ void Acceptor::Join() {
         bthread_stop(saved_close_idle_tid);
         bthread_join(saved_close_idle_tid, NULL);
     }
-    
+
     {
         BAIDU_SCOPED_LOCK(_map_mutex);
         _status = READY;
@@ -210,20 +207,20 @@ void Acceptor::ListConnections(std::vector<SocketId>* conn_list,
     // Copy all the SocketId (protected by mutex) into a temporary
     // container to avoid dealing with sockets inside the mutex.
     size_t ntotal = 0;
-    size_t n = 0;
+    size_t n      = 0;
     for (SocketMap::const_iterator it = _socket_map.begin();
          it != _socket_map.end(); ++it, ++ntotal) {
         if (ntotal >= max_copied) {
             return;
         }
-        if (++n >= 256/*max iterated one pass*/) {
+        if (++n >= 256 /*max iterated one pass*/) {
             SocketMap::PositionHint hint;
             _socket_map.save_iterator(it, &hint);
             n = 0;
             mu.unlock();  // yield
             mu.lock();
             it = _socket_map.restore_iterator(hint);
-            if (it == _socket_map.begin()) { // resized
+            if (it == _socket_map.begin()) {  // resized
                 conn_list->clear();
             }
             if (it == _socket_map.end()) {
@@ -251,7 +248,7 @@ void Acceptor::OnNewConnectionsUntilEAGAIN(Socket* acception) {
             // Do NOT return -1 when `accept' failed, otherwise `_listened_fd'
             // will be closed. Continue to consume all the events until EAGAIN
             // instead.
-            // If the accept was failed, the error may repeat constantly, 
+            // If the accept was failed, the error may repeat constantly,
             // limit frequency of logging.
             PLOG_EVERY_SECOND(ERROR)
                 << "Fail to accept from listened_fd=" << acception->fd();
@@ -261,23 +258,24 @@ void Acceptor::OnNewConnectionsUntilEAGAIN(Socket* acception) {
         Acceptor* am = dynamic_cast<Acceptor*>(acception->user());
         if (NULL == am) {
             LOG(FATAL) << "Impossible! acception->user() MUST be Acceptor";
-            acception->SetFailed(EINVAL, "Impossible! acception->user() MUST be Acceptor");
+            acception->SetFailed(
+                EINVAL, "Impossible! acception->user() MUST be Acceptor");
             return;
         }
-        
+
         SocketId socket_id;
         SocketOptions options;
         options.keytable_pool = am->_keytable_pool;
-        options.fd = in_fd;
-        options.remote_side = butil::EndPoint(*(sockaddr_in*)&in_addr);
-        options.user = acception->user();
+        options.fd            = in_fd;
+        options.remote_side   = butil::EndPoint(*(sockaddr_in*)&in_addr);
+        options.user          = acception->user();
         options.on_edge_triggered_events = InputMessenger::OnNewMessages;
-        options.initial_ssl_ctx = am->_ssl_ctx;
+        options.initial_ssl_ctx          = am->_ssl_ctx;
         if (Socket::Create(options, &socket_id) != 0) {
             LOG(ERROR) << "Fail to create Socket";
             continue;
         }
-        in_fd.release(); // transfer ownership to socket_id
+        in_fd.release();  // transfer ownership to socket_id
 
         // There's a funny race condition here. After Socket::Create, messages
         // from the socket are already handled and a RPC is possibly done
@@ -300,15 +298,17 @@ void Acceptor::OnNewConnectionsUntilEAGAIN(Socket* acception) {
                 am->_socket_map.insert(socket_id, ConnectStatistics());
             }
             if (!is_running) {
-                LOG(WARNING) << "Acceptor on fd=" << acception->fd()
+                LOG(WARNING)
+                    << "Acceptor on fd=" << acception->fd()
                     << " has been stopped, discard newly created " << *sock;
-                sock->SetFailed(ELOGOFF, "Acceptor on fd=%d has been stopped, "
-                        "discard newly created %s", acception->fd(),
-                        sock->description().c_str());
+                sock->SetFailed(ELOGOFF,
+                                "Acceptor on fd=%d has been stopped, "
+                                "discard newly created %s",
+                                acception->fd(), sock->description().c_str());
                 return;
             }
-        } // else: The socket has already been destroyed, Don't add its id
-          // into _socket_map
+        }  // else: The socket has already been destroyed, Don't add its id
+           // into _socket_map
     }
 }
 
@@ -340,4 +340,4 @@ void Acceptor::BeforeRecycle(Socket* sock) {
     }
 }
 
-} // namespace brpc
+}  // namespace brpc

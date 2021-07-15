@@ -29,12 +29,10 @@ namespace butil {
 // Note: You should almost always use the ThreadChecker class to get the
 // right version for your build configuration.
 class ThreadCheckerDoNothing {
- public:
-  bool CalledOnValidThread() const {
-    return true;
-  }
+public:
+    bool CalledOnValidThread() const { return true; }
 
-  void DetachFromThread() {}
+    void DetachFromThread() {}
 };
 
 // ThreadChecker is a helper class used to help verify that some methods of a
@@ -69,11 +67,9 @@ class ThreadCheckerDoNothing {
 //
 // In Release mode, CalledOnValidThread will always return true.
 #if ENABLE_THREAD_CHECKER
-class ThreadChecker : public ThreadCheckerImpl {
-};
+class ThreadChecker : public ThreadCheckerImpl {};
 #else
-class ThreadChecker : public ThreadCheckerDoNothing {
-};
+class ThreadChecker : public ThreadCheckerDoNothing {};
 #endif  // ENABLE_THREAD_CHECKER
 
 #undef ENABLE_THREAD_CHECKER

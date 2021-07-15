@@ -17,17 +17,16 @@
 
 #ifdef BAIDU_INTERNAL
 
-
 #ifndef BRPC_POLICY_GIANO_AUTHENTICATOR_H
 #define BRPC_POLICY_GIANO_AUTHENTICATOR_H
 
-#include <baas-lib-c/baas.h>                   // Giano stuff
+#include <baas-lib-c/baas.h>  // Giano stuff
 #include "brpc/authenticator.h"
 
 namespace brpc {
 namespace policy {
 
-class GianoAuthenticator: public Authenticator {
+class GianoAuthenticator : public Authenticator {
 public:
     // Either `gen' or `ver' can be NULL (but not at the same time),
     // in which case it can only verify/generate credential data
@@ -47,10 +46,8 @@ private:
     baas::CredentialVerifier* _verifier;
 };
 
-
 }  // namespace policy
-} // namespace brpc
+}  // namespace brpc
 
-
-#endif // BRPC_POLICY_GIANO_AUTHENTICATOR_H
-#endif // BAIDU_INTERNAL
+#endif  // BRPC_POLICY_GIANO_AUTHENTICATOR_H
+#endif  // BAIDU_INTERNAL

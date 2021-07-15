@@ -15,10 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
+#include <gflags/gflags.h>
 #include <deque>
 #include <vector>
-#include <gflags/gflags.h>
 #include "butil/scoped_lock.h"
 #ifdef BAIDU_INTERNAL
 #include "butil/comlog_sink.h"
@@ -28,12 +27,12 @@
 namespace bthread {
 // Defined in bthread/task_control.cpp
 void run_worker_startfn();
-}
-
+}  // namespace bthread
 
 namespace brpc {
 
-DEFINE_int32(usercode_backup_threads, 5, "# of backup threads to run user code"
+DEFINE_int32(usercode_backup_threads, 5,
+             "# of backup threads to run user code"
              " when too many pthread worker of bthreads are used");
 DEFINE_int32(max_pending_in_each_backup_thread, 10,
              "Max number of un-run user code in each backup thread, requests"
@@ -51,7 +50,8 @@ struct UserCodeBackupPool {
     bvar::PassiveStatus<size_t> queue_size_var;
     bvar::Adder<size_t> inpool_count;
     bvar::PerSecond<bvar::Adder<size_t> > inpool_per_second;
-    // NOTE: we don't use Adder<double> directly which does not compile in gcc 3.4
+    // NOTE: we don't use Adder<double> directly which does not compile in
+    // gcc 3.4
     bvar::Adder<int64_t> inpool_elapse_us;
     bvar::PassiveStatus<double> inpool_elapse_s;
     bvar::PerSecond<bvar::PassiveStatus<double> > pool_usage;
@@ -61,12 +61,12 @@ struct UserCodeBackupPool {
     void UserCodeRunningLoop();
 };
 
-static pthread_mutex_t s_usercode_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t s_usercode_cond = PTHREAD_COND_INITIALIZER;
-static pthread_once_t s_usercode_init = PTHREAD_ONCE_INIT;
+static pthread_mutex_t s_usercode_mutex      = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t s_usercode_cond        = PTHREAD_COND_INITIALIZER;
+static pthread_once_t s_usercode_init        = PTHREAD_ONCE_INIT;
 butil::static_atomic<int> g_usercode_inplace = BUTIL_STATIC_ATOMIC_INIT(0);
-bool g_too_many_usercode = false;
-static UserCodeBackupPool* s_usercode_pool = NULL;
+bool g_too_many_usercode                     = false;
+static UserCodeBackupPool* s_usercode_pool   = NULL;
 
 static int GetUserCodeInPlace(void*) {
     return g_usercode_inplace.load(butil::memory_order_relaxed);
@@ -87,8 +87,7 @@ UserCodeBackupPool::UserCodeBackupPool()
     , inpool_count("rpc_usercode_backup_count")
     , inpool_per_second("rpc_usercode_backup_second", &inpool_count)
     , inpool_elapse_s(GetInPoolElapseInSecond, &inpool_elapse_us)
-    , pool_usage("rpc_usercode_backup_usage", &inpool_elapse_s, 1) {
-}
+    , pool_usage("rpc_usercode_backup_usage", &inpool_elapse_s, 1) {}
 
 static void* UserCodeRunner(void* args) {
     static_cast<UserCodeBackupPool*>(args)->UserCodeRunningLoop();
@@ -114,11 +113,11 @@ void UserCodeBackupPool::UserCodeRunningLoop() {
 #ifdef BAIDU_INTERNAL
     logging::ComlogInitializer comlog_initializer;
 #endif
-    
+
     int64_t last_time = butil::cpuwide_time_us();
     while (true) {
-        bool blocked = false;
-        UserCode usercode = { NULL, NULL };
+        bool blocked      = false;
+        UserCode usercode = {NULL, NULL};
         {
             BAIDU_SCOPED_LOCK(s_usercode_mutex);
             while (queue.empty()) {
@@ -132,7 +131,8 @@ void UserCodeBackupPool::UserCodeRunningLoop() {
                 g_too_many_usercode = false;
             }
         }
-        const int64_t begin_time = (blocked ? butil::cpuwide_time_us() : last_time);
+        const int64_t begin_time =
+            (blocked ? butil::cpuwide_time_us() : last_time);
         usercode.fn(usercode.arg);
         const int64_t end_time = butil::cpuwide_time_us();
         inpool_count << 1;
@@ -158,13 +158,13 @@ void InitUserCodeBackupPoolOnceOrDie() {
 
 void EndRunningUserCodeInPool(void (*fn)(void*), void* arg) {
     InitUserCodeBackupPoolOnceOrDie();
-    
+
     g_usercode_inplace.fetch_sub(1, butil::memory_order_relaxed);
 
     // Not enough idle workers, run the code in backup threads to prevent
     // all workers from being blocked and no responses will be processed
     // anymore (deadlocked).
-    const UserCode usercode = { fn, arg };
+    const UserCode usercode = {fn, arg};
     pthread_mutex_lock(&s_usercode_mutex);
     s_usercode_pool->queue.push_back(usercode);
     // If the queue has too many items, we can't drop the user code
@@ -181,4 +181,4 @@ void EndRunningUserCodeInPool(void (*fn)(void*), void* arg) {
     pthread_cond_signal(&s_usercode_cond);
 }
 
-} // namespace brpc
+}  // namespace brpc

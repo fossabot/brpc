@@ -26,32 +26,34 @@
 #endif
 
 #include "butil/base_export.h"
-#include "butil/macros.h"
 #include "butil/compat.h"
+#include "butil/macros.h"
 
 namespace butil {
 
-// A convenient wrapper for an OS specific critical section.  
+// A convenient wrapper for an OS specific critical section.
 class BUTIL_EXPORT Mutex {
     DISALLOW_COPY_AND_ASSIGN(Mutex);
+
 public:
 #if defined(OS_WIN)
-  typedef CRITICAL_SECTION NativeHandle;
+    typedef CRITICAL_SECTION NativeHandle;
 #elif defined(OS_POSIX)
-  typedef pthread_mutex_t NativeHandle;
+    typedef pthread_mutex_t NativeHandle;
 #endif
 
 public:
     Mutex() {
 #if defined(OS_WIN)
-    // The second parameter is the spin count, for short-held locks it avoid the
-    // contending thread from going to sleep which helps performance greatly.
+        // The second parameter is the spin count, for short-held locks it avoid
+        // the contending thread from going to sleep which helps performance
+        // greatly.
         ::InitializeCriticalSectionAndSpinCount(&_native_handle, 2000);
 #elif defined(OS_POSIX)
         pthread_mutex_init(&_native_handle, NULL);
 #endif
     }
-    
+
     ~Mutex() {
 #if defined(OS_WIN)
         ::DeleteCriticalSection(&_native_handle);
@@ -79,7 +81,7 @@ public:
         pthread_mutex_unlock(&_native_handle);
 #endif
     }
-    
+
     // Tries to lock the mutex. Returns immediately.
     // On successful lock acquisition returns true, otherwise returns false.
     bool try_lock() {
@@ -98,11 +100,11 @@ private:
     // The posix implementation of ConditionVariable needs to be able
     // to see our lock and tweak our debugging counters, as it releases
     // and acquires locks inside of pthread_cond_{timed,}wait.
-friend class ConditionVariable;
+    friend class ConditionVariable;
 #elif defined(OS_WIN)
-// The Windows Vista implementation of ConditionVariable needs the
-// native handle of the critical section.
-friend class WinVistaCondVar;
+    // The Windows Vista implementation of ConditionVariable needs the
+    // native handle of the critical section.
+    friend class WinVistaCondVar;
 #endif
 
     NativeHandle _native_handle;
@@ -111,6 +113,7 @@ friend class WinVistaCondVar;
 // TODO: Remove this type.
 class BUTIL_EXPORT Lock : public Mutex {
     DISALLOW_COPY_AND_ASSIGN(Lock);
+
 public:
     Lock() {}
     ~Lock() {}
@@ -125,9 +128,7 @@ class AutoLock {
 public:
     struct AlreadyAcquired {};
 
-    explicit AutoLock(Lock& lock) : lock_(lock) {
-        lock_.Acquire();
-    }
+    explicit AutoLock(Lock& lock) : lock_(lock) { lock_.Acquire(); }
 
     AutoLock(Lock& lock, const AlreadyAcquired&) : lock_(lock) {
         lock_.AssertAcquired();
@@ -153,9 +154,7 @@ public:
         lock_.Release();
     }
 
-    ~AutoUnlock() {
-        lock_.Acquire();
-    }
+    ~AutoUnlock() { lock_.Acquire(); }
 
 private:
     Lock& lock_;

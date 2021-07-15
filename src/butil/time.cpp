@@ -17,24 +17,24 @@
 
 // Date: Fri Aug 29 15:01:15 CST 2014
 
-#include <unistd.h>                          // close
-#include <sys/types.h>                       // open
-#include <sys/stat.h>                        // ^
-#include <fcntl.h>                           // ^
+#include <fcntl.h>      // ^
+#include <sys/stat.h>   // ^
+#include <sys/types.h>  // open
+#include <unistd.h>     // close
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
-#include <string.h>                          // memmem
+#include <string.h>  // memmem
 #undef _GNU_SOURCE
 
 #include "butil/time.h"
 
 #if defined(NO_CLOCK_GETTIME_IN_MAC)
-#include <mach/clock.h>                      // mach_absolute_time
-#include <mach/mach_time.h>                  // mach_timebase_info
-#include <pthread.h>                         // pthread_once
-#include <stdlib.h>                          // exit
+#include <mach/clock.h>      // mach_absolute_time
+#include <mach/mach_time.h>  // mach_timebase_info
+#include <pthread.h>         // pthread_once
+#include <stdlib.h>          // exit
 
 static mach_timebase_info_data_t s_timebase;
 static timespec s_init_time;
@@ -49,9 +49,9 @@ static void InitClock() {
     if (gettimeofday(&now, NULL) != 0) {
         exit(1);
     }
-    s_init_time.tv_sec = now.tv_sec;
+    s_init_time.tv_sec  = now.tv_sec;
     s_init_time.tv_nsec = now.tv_usec * 1000L;
-    s_init_ticks = mach_absolute_time();
+    s_init_ticks        = mach_absolute_time();
 }
 
 int clock_gettime(clockid_t id, timespec* time) {
@@ -59,7 +59,8 @@ int clock_gettime(clockid_t id, timespec* time) {
         exit(1);
     }
     uint64_t clock = mach_absolute_time() - s_init_ticks;
-    uint64_t elapsed = clock * (uint64_t)s_timebase.numer / (uint64_t)s_timebase.denom;
+    uint64_t elapsed =
+        clock * (uint64_t)s_timebase.numer / (uint64_t)s_timebase.denom;
     *time = s_init_time;
     time->tv_sec += elapsed / 1000000000L;
     time->tv_nsec += elapsed % 1000000000L;
@@ -101,12 +102,12 @@ int64_t read_cpu_frequency(bool* invariant_tsc) {
     char buf[4096];  // should be enough
     const ssize_t n = read(fd, buf, sizeof(buf));
     if (n > 0) {
-        char *mhz = static_cast<char*>(memmem(buf, n, "cpu MHz", 7));
+        char* mhz = static_cast<char*>(memmem(buf, n, "cpu MHz", 7));
 
         if (mhz != NULL) {
-            char *endp = buf + n;
+            char* endp        = buf + n;
             int seen_decpoint = 0;
-            int ndigits = 0;
+            int ndigits       = 0;
 
             /* Search for the beginning of the string.  */
             while (mhz < endp && (*mhz < '0' || *mhz > '9') && *mhz != '\n') {
@@ -116,8 +117,7 @@ int64_t read_cpu_frequency(bool* invariant_tsc) {
                 if (*mhz >= '0' && *mhz <= '9') {
                     result *= 10;
                     result += *mhz - '0';
-                    if (seen_decpoint)
-                        ++ndigits;
+                    if (seen_decpoint) ++ndigits;
                 } else if (*mhz == '.') {
                     seen_decpoint = 1;
                 }
@@ -132,13 +132,13 @@ int64_t read_cpu_frequency(bool* invariant_tsc) {
 
         if (invariant_tsc) {
             char* flags_pos = static_cast<char*>(memmem(buf, n, "flags", 5));
-            *invariant_tsc = 
+            *invariant_tsc =
                 (flags_pos &&
                  memmem(flags_pos, buf + n - flags_pos, "constant_tsc", 12) &&
                  memmem(flags_pos, buf + n - flags_pos, "nonstop_tsc", 11));
         }
     }
-    close (fd);
+    close(fd);
     return result;
 }
 

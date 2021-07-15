@@ -15,15 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #ifndef BRPC_INPUT_MESSENGER_H
 #define BRPC_INPUT_MESSENGER_H
 
-#include "butil/iobuf.h"                    // butil::IOBuf
-#include "brpc/socket.h"              // SocketId, SocketUser
-#include "brpc/parse_result.h"        // ParseResult
 #include "brpc/input_message_base.h"  // InputMessageBase
-
+#include "brpc/parse_result.h"        // ParseResult
+#include "brpc/socket.h"              // SocketId, SocketUser
+#include "butil/iobuf.h"              // butil::IOBuf
 
 namespace brpc {
 
@@ -36,15 +34,15 @@ struct InputMessageHandler {
     //     `source' does not form a complete message yet.
     //   MakeParseError(PARSE_ERROR_TRY_OTHERS).
     //     `source' does not fit the protocol, the data should be tried by
-    //     other protocols. If the data is definitely corrupted (e.g. magic 
+    //     other protocols. If the data is definitely corrupted (e.g. magic
     //     header matches but other fields are wrong), pop corrupted part
     //     from `source' before returning.
     //  MakeMessage(InputMessageBase*):
     //     The message is parsed successfully and cut from `source'.
-    typedef ParseResult (*Parse)(butil::IOBuf* source, Socket *socket,
-                                 bool read_eof, const void *arg);
+    typedef ParseResult (*Parse)(butil::IOBuf* source, Socket* socket,
+                                 bool read_eof, const void* arg);
     Parse parse;
-    
+
     // The callback to handle `msg' created by a successful parse().
     // `msg' must be Destroy()-ed when the processing is done. To make sure
     // Destroy() is always called, consider using DestroyingPtr<> defined in
@@ -54,7 +52,7 @@ struct InputMessageHandler {
     Process process;
 
     // The callback to verify authentication of this socket. Only called
-    // on the first message that a socket receives. Can be NULL when 
+    // on the first message that a socket receives. Can be NULL when
     // authentication is not needed or this is the client side.
     // Returns true on successful authentication.
     typedef bool (*Verify)(const InputMessageBase* msg);
@@ -82,8 +80,7 @@ public:
 
     // [thread-safe] Create a socket to process input messages.
     int Create(const butil::EndPoint& remote_side,
-               time_t health_check_interval_s,
-               SocketId* id);
+               time_t health_check_interval_s, SocketId* id);
     // Overwrite necessary fields in `base_options' and create a socket with
     // the modified options.
     int Create(SocketOptions base_options, SocketId* id);
@@ -92,20 +89,20 @@ public:
     // Returns -1 when not found
     int FindProtocolIndex(const char* name) const;
     int FindProtocolIndex(ProtocolType type) const;
-    
+
     // Get name of the n-th handler
     const char* NameOfProtocol(int n) const;
 
     // Add a handler which doesn't belong to any registered protocol.
     // Note: Invoking this method indicates that you are using Socket without
-    // Channel nor Server. 
+    // Channel nor Server.
     int AddNonProtocolHandler(const InputMessageHandler& handler);
 
 protected:
     // Load data from m->fd() into m->read_buf, cut off new messages and
     // call callbacks.
     static void OnNewMessages(Socket* m);
-    
+
 private:
     // Find a valid scissor from `handlers' to cut off `header' and `payload'
     // from m->read_buf, save index of the scissor into `index'.
@@ -130,7 +127,6 @@ BUTIL_FORCE_INLINE InputMessenger* get_client_side_messenger() {
 
 InputMessenger* get_or_new_client_side_messenger();
 
-} // namespace brpc
-
+}  // namespace brpc
 
 #endif  // BRPC_INPUT_MESSENGER_H

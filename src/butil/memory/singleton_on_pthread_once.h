@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
- 
+
 // Date: Thu Dec 15 14:37:39 CST 2016
 
 #ifndef BUTIL_MEMORY_SINGLETON_ON_PTHREAD_ONCE_H
@@ -25,7 +25,8 @@
 
 namespace butil {
 
-template <typename T> class GetLeakySingleton {
+template <typename T>
+class GetLeakySingleton {
 public:
     static butil::subtle::AtomicWord g_leaky_singleton_untyped;
     static pthread_once_t g_create_leaky_singleton_once;
@@ -35,7 +36,8 @@ template <typename T>
 butil::subtle::AtomicWord GetLeakySingleton<T>::g_leaky_singleton_untyped = 0;
 
 template <typename T>
-pthread_once_t GetLeakySingleton<T>::g_create_leaky_singleton_once = PTHREAD_ONCE_INIT;
+pthread_once_t GetLeakySingleton<T>::g_create_leaky_singleton_once =
+    PTHREAD_ONCE_INIT;
 
 template <typename T>
 void GetLeakySingleton<T>::create_leaky_singleton() {
@@ -45,11 +47,10 @@ void GetLeakySingleton<T>::create_leaky_singleton() {
         reinterpret_cast<butil::subtle::AtomicWord>(obj));
 }
 
-// To get a never-deleted singleton of a type T, just call get_leaky_singleton<T>().
-// Most daemon threads or objects that need to be always-on can be created by
-// this function.
-// This function can be called safely before main() w/o initialization issues of
-// global variables.
+// To get a never-deleted singleton of a type T, just call
+// get_leaky_singleton<T>(). Most daemon threads or objects that need to be
+// always-on can be created by this function. This function can be called safely
+// before main() w/o initialization issues of global variables.
 template <typename T>
 inline T* get_leaky_singleton() {
     const butil::subtle::AtomicWord value = butil::subtle::Acquire_Load(
@@ -67,11 +68,10 @@ inline T* get_leaky_singleton() {
 // The returned object (if not NULL) can be used directly.
 template <typename T>
 inline T* has_leaky_singleton() {
-    return reinterpret_cast<T*>(
-        butil::subtle::Acquire_Load(
-            &GetLeakySingleton<T>::g_leaky_singleton_untyped));
+    return reinterpret_cast<T*>(butil::subtle::Acquire_Load(
+        &GetLeakySingleton<T>::g_leaky_singleton_untyped));
 }
 
-} // namespace butil
+}  // namespace butil
 
-#endif // BUTIL_MEMORY_SINGLETON_ON_PTHREAD_ONCE_H
+#endif  // BUTIL_MEMORY_SINGLETON_ON_PTHREAD_ONCE_H
